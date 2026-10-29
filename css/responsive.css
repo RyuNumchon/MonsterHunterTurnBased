@@ -1,0 +1,44 @@
+/* Loaded LAST so these override same-specificity rules in the other sheets */
+@container (max-width:600px) {
+  #panel {
+    flex-direction: column;
+  }
+  .cmds,
+  .baglist,
+  .yn {
+    width: 100%;
+  }
+  .yn {
+    flex-direction: row;
+    min-height: 3em;
+  }
+  .movebox,
+  .minfo {
+    flex: none;
+  }
+  #enemyBox {
+    width: 54%;
+  }
+  #playerBox {
+    width: 56%;
+  }
+  .rgrid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .legend {
+    display: none;
+  }
+  #fpad {
+    gap: 1cqw;
+  }
+  .dpad {
+    grid-template-columns: repeat(3, 2.8em);
+    grid-template-rows: repeat(3, 2.8em);
+  }
+  .keys {
+    display: none;
+  }
+  #mini {
+    width: 34%;
+  }
+}

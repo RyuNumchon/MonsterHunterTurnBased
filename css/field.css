@@ -1,0 +1,396 @@
+/* Overworld: location pop-up, toast, dialog, control pad, minimap, full map */
+#locPop {
+  position: absolute;
+  left: 3%;
+  top: 0;
+  z-index: 5;
+  background: linear-gradient(#f8f0d0, #e4d4a4);
+  color: #503818;
+  border: 0.3em solid #806030;
+  border-top: none;
+  border-radius: 0 0 0.6em 0.6em;
+  padding: 0.7em 1.1em;
+  font-size: 0.85em;
+  line-height: 1.7;
+  transform: translateY(-110%);
+  transition: transform 0.35s;
+  pointer-events: none;
+}
+#locPop small {
+  font-size: 0.75em;
+  color: #806040;
+}
+#locPop.show {
+  transform: none;
+}
+#toast {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  transform: translateX(-50%);
+  z-index: 5;
+  background: #000c;
+  color: #fff;
+  font-size: 0.62em;
+  padding: 0.7em 0.9em;
+  border-radius: 0.4em;
+  opacity: 0;
+  transition: opacity 0.3s;
+  max-width: 70%;
+  line-height: 1.7;
+  white-space: pre-line;
+  pointer-events: none;
+  text-align: center;
+}
+#toast.show {
+  opacity: 1;
+}
+#fDialog {
+  position: absolute;
+  left: 2%;
+  right: 2%;
+  bottom: 3%;
+  z-index: 8;
+  background: #f8f8f8;
+  color: #383838;
+  border: 0.35em solid #5870c0;
+  box-shadow:
+    inset 0 0 0 0.22em #c8d8f8,
+    0 0.2em 0 #0005;
+  border-radius: 0.6em;
+  padding: 0.9em 1.3em;
+  min-height: 6.2em;
+  font-size: 1.05em;
+  line-height: 2;
+  white-space: pre-line;
+  cursor: pointer;
+}
+
+/* GBA-style control pad */
+#fpad {
+  flex: 1;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 2cqw;
+}
+.dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 3.2em);
+  grid-template-rows: repeat(3, 3.2em);
+  gap: 0.15em;
+}
+.dpad button {
+  background: #2a2f38;
+  color: #ddd;
+  border: 0.2em solid #4a5260;
+  border-radius: 0.4em;
+  font-size: 1em;
+  touch-action: none;
+}
+.dpad button.on {
+  background: #f8c040;
+  color: #222;
+}
+.dpad [data-dir="up"] {
+  grid-column: 2;
+  grid-row: 1;
+}
+.dpad [data-dir="left"] {
+  grid-column: 1;
+  grid-row: 2;
+}
+.dpad [data-dir="right"] {
+  grid-column: 3;
+  grid-row: 2;
+}
+.dpad [data-dir="down"] {
+  grid-column: 2;
+  grid-row: 3;
+}
+.dpad .dc {
+  grid-column: 2;
+  grid-row: 2;
+  background: #2a2f38;
+  border-radius: 0.3em;
+}
+.fmid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+  min-width: 0;
+}
+.fstat {
+  background: #f8f8f8;
+  color: #383838;
+  border: 0.3em solid #6a7480;
+  border-radius: 0.6em;
+  padding: 0.5em 0.8em;
+  font-size: 0.62em;
+  line-height: 2.1;
+}
+.srow {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.srow b {
+  width: 3.6em;
+  flex: none;
+  color: #5870c0;
+}
+.mbar {
+  flex: 1;
+  height: 0.7em;
+  background: #5a6860;
+  border-radius: 0.3em;
+  overflow: hidden;
+  display: block;
+}
+.mbar i {
+  display: block;
+  height: 100%;
+  transition: width 0.5s;
+}
+.ss {
+  display: flex;
+  gap: 0.6em;
+  justify-content: center;
+}
+.ss button {
+  background: #5a6270;
+  color: #fff;
+  border: 0.2em solid #8a92a0;
+  border-radius: 1em;
+  padding: 0.45em 1em;
+  font-size: 0.65em;
+}
+.keys {
+  font-size: 0.45em;
+  color: #9aa4b0;
+  text-align: center;
+  line-height: 1.9;
+}
+.abtns {
+  display: flex;
+  gap: 0.7em;
+  align-items: flex-start;
+}
+.ab {
+  width: 3.6em;
+  height: 3.6em;
+  border-radius: 50%;
+  background: #a02848;
+  color: #fff;
+  border: 0.25em solid #d06080;
+  font-size: 1.1em;
+  box-shadow: 0 0.25em 0 #0006;
+  touch-action: manipulation;
+}
+.ab.b {
+  margin-top: 1.8em;
+}
+.ab:active {
+  transform: translateY(0.1em);
+}
+
+/* Always-on minimap (top-right): no background. A thin light rim plus a soft shadow
+   keeps areas and paths readable over any ground. */
+#mini {
+  position: absolute;
+  top: 2%;
+  right: 2%;
+  width: 27%;
+  aspect-ratio: 5/4;
+  z-index: 5;
+  cursor: pointer;
+  filter: drop-shadow(0 0 0.08em #fff) drop-shadow(0.1em 0.15em 0.1em #0009);
+}
+
+#mini svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.mblob {
+  position: absolute;
+  width: 15%;
+  height: 15%;
+  transform: translate(-50%, -50%);
+  border: 0.15em solid #34402a;
+  border-radius: 42% 58% 48% 52%/55% 45% 55% 45%;
+}
+.mblob.camp {
+  width: 10%;
+  height: 10%;
+  border-radius: 0.2em;
+}
+.mblob.cur {
+  box-shadow: 0 0 0 0.2em #f8e060;
+}
+.mnum {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 0.5em;
+  color: #fff;
+  z-index: 2;
+  text-shadow:
+    0.12em 0 #111,
+    -0.12em 0 #111,
+    0 0.12em #111,
+    0 -0.12em #111;
+}
+.mmk {
+  position: absolute;
+  width: 11%;
+  transform: translate(-50%, -85%);
+  z-index: 3;
+}
+.mmk.mon {
+  width: 22%;
+  animation: mkbob 0.5s infinite alternate;
+}
+.mtag {
+  position: absolute;
+  left: 3%;
+  bottom: 3%;
+  font-size: 0.36em;
+  color: #f8f8e0;
+  z-index: 4;
+  text-shadow: 0.12em 0.12em 0 #2a3420;
+}
+
+/* Full map (Mountain Stream) */
+#mapOv {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: #5e7c3c;
+  display: flex;
+  padding: 2%;
+  gap: 2%;
+}
+.mapL {
+  position: relative;
+  flex: 1;
+  background: #86a858;
+  border: 0.3em solid #34402a;
+  border-radius: 0.4em;
+  overflow: hidden;
+}
+.mapL svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.mapTitle {
+  position: absolute;
+  top: 2%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.15em;
+  color: #f8f8e0;
+  z-index: 4;
+  white-space: nowrap;
+  text-shadow:
+    0.1em 0 #2a3420,
+    -0.1em 0 #2a3420,
+    0 0.1em #2a3420,
+    0 -0.1em #2a3420;
+}
+.blob {
+  position: absolute;
+  width: 13%;
+  height: 15%;
+  transform: translate(-50%, -50%);
+  border: 0.22em solid #34402a;
+  border-radius: 42% 58% 48% 52%/55% 45% 55% 45%;
+  box-shadow: inset 0 0 0 0.25em #ffffff30;
+}
+.blob.camp {
+  width: 8%;
+  height: 10%;
+  border-radius: 0.4em;
+}
+.anum {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 1.5em;
+  color: #fff;
+  z-index: 2;
+  text-shadow:
+    0.12em 0 #111,
+    -0.12em 0 #111,
+    0 0.12em #111,
+    0 -0.12em #111;
+}
+.anum.cur {
+  color: #f8e060;
+}
+.gics {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  z-index: 2;
+  display: flex;
+  gap: 0.1em;
+}
+.gics img {
+  width: 1.3em;
+  height: 1.3em;
+}
+.mk {
+  position: absolute;
+  width: 6%;
+  transform: translate(-50%, -90%);
+  z-index: 3;
+  animation: mkbob 0.5s infinite alternate;
+}
+.mk.mon {
+  width: 11%;
+}
+.mk.npc {
+  width: 4%;
+  animation: none;
+}
+.legend {
+  width: 26%;
+  background: #d8e8b0;
+  color: #283818;
+  border: 0.3em solid #34402a;
+  border-radius: 0.4em;
+  padding: 0.6em;
+  font-size: 0.55em;
+  line-height: 2;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+.legend div {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+.lgh {
+  font-size: 1.4em;
+  justify-content: center;
+  border-bottom: 0.2em solid #34402a;
+  margin-bottom: 0.3em;
+}
+.lgs {
+  margin-top: 0.5em;
+  padding-top: 0.4em;
+  border-top: 0.2em solid #34402a;
+  line-height: 1.9;
+  display: block !important;
+}
+.legend .mi {
+  font-size: 1.3em;
+  margin-top: auto;
+  background: #f8f8f8;
+  border: 0.15em solid #34402a;
+}

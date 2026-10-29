@@ -1,0 +1,222 @@
+/* List menus (START, shop, bag, YES/NO) */
+#fMenu {
+  position: absolute;
+  right: 2%;
+  top: 3%;
+  z-index: 9;
+  max-height: 94%;
+  overflow: auto;
+}
+#fMenu.yn {
+  top: auto;
+  bottom: 32%;
+  right: 3%;
+}
+.menu {
+  background: #f8f8f8;
+  color: #383838;
+  border: 0.35em solid #5870c0;
+  border-radius: 0.6em;
+  box-shadow: inset 0 0 0 0.22em #c8d8f8;
+  padding: 0.5em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1em;
+  min-width: 12em;
+  max-width: 62cqw;
+  line-height: 1.8;
+  font-size: 0.9em;
+}
+.mh {
+  font-size: 0.8em;
+  color: #5870c0;
+  border-bottom: 0.15em solid #c8d8f8;
+  margin-bottom: 0.3em;
+  padding-bottom: 0.2em;
+}
+.mi {
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 1em;
+  color: #383838;
+  padding: 0.35em 0.5em 0.35em 1.6em;
+  position: relative;
+  border-radius: 0.3em;
+  line-height: 1.4;
+  display: flex;
+  gap: 0.6em;
+  align-items: center;
+}
+.mi.focus {
+  background: #eef2fa;
+}
+.mi.focus::before {
+  content: "▶";
+  position: absolute;
+  left: 0.4em;
+  color: #e05050;
+}
+.mi:disabled {
+  color: #b0b0b0;
+}
+.mi:disabled img {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+.mi .q {
+  margin-left: auto;
+}
+.mdesc {
+  font-size: 0.68em;
+  color: #606878;
+  border-top: 0.15em solid #c8d8f8;
+  margin-top: 0.3em;
+  padding-top: 0.5em;
+  min-height: 3.4em;
+  line-height: 1.7;
+}
+
+/* Quest rewards + Item Box storage (Monster Hunter style) */
+#rewardOv {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  background: linear-gradient(#2c2218, #120d08);
+  color: #f0e0b0;
+  padding: 3%;
+  display: flex;
+  flex-direction: column;
+  gap: 2%;
+  font-size: 0.8em;
+}
+.rhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1em;
+  border-bottom: 0.2em solid #c8a050;
+  padding-bottom: 0.5em;
+  flex-wrap: wrap;
+}
+.rhead h3 {
+  margin: 0;
+  color: #f8c850;
+  font-size: 1.5em;
+  text-shadow: 0.1em 0.1em 0 #603010;
+}
+.rhead.fail h3 {
+  color: #f07050;
+}
+.rhead span {
+  font-size: 0.75em;
+  color: #c8a878;
+  line-height: 1.6;
+}
+.rbody {
+  flex: 1;
+  overflow: auto;
+  padding-right: 0.4em;
+}
+.rsec h4 {
+  margin: 0.6em 0 0.4em;
+  font-size: 0.75em;
+  color: #c8a878;
+  letter-spacing: 0.05em;
+}
+.rsec.bonus h4 {
+  color: #f8e070;
+}
+.rgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4em;
+}
+.slot {
+  background: #3a2e20;
+  border: 0.15em solid #6a5236;
+  border-radius: 0.3em;
+  padding: 0.35em 0.5em;
+  font-size: 0.68em;
+  display: flex;
+  gap: 0.5em;
+  align-items: center;
+  line-height: 1.5;
+  animation: slotIn 0.35s backwards;
+}
+.slot .iname {
+  flex: 1;
+  min-width: 0;
+}
+.slot small {
+  font-size: 0.75em;
+  opacity: 0.7;
+}
+.r1 {
+  border-color: #8a8a8a;
+}
+.r2 {
+  border-color: #6aa050;
+}
+.r3 {
+  border-color: #4a88c0;
+}
+.r4 {
+  border-color: #c09030;
+}
+.r5 {
+  border-color: #c060b0;
+}
+.r6 {
+  border-color: #e05038;
+}
+.zen {
+  margin-top: 0.8em;
+  font-size: 0.85em;
+  color: #f8e0a0;
+  line-height: 1.8;
+}
+.zen small {
+  font-size: 0.75em;
+  color: #c8a878;
+}
+.ftxt {
+  line-height: 2;
+  font-size: 0.9em;
+}
+.rbtns {
+  display: flex;
+  gap: 0.6em;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.rbtn {
+  background: #c89a40;
+  color: #201408;
+  border: 0.2em solid #f0d080;
+  border-radius: 0.4em;
+  padding: 0.7em 1em;
+  font-size: 0.85em;
+}
+.rbtn:hover {
+  filter: brightness(1.12);
+}
+.rbtn.big {
+  font-size: 1.1em;
+  padding: 0.9em 2em;
+  animation: pulse 1s infinite;
+}
+.rbtn.alt {
+  background: #5a4a34;
+  color: #f0e0b0;
+  border-color: #9a8058;
+}
+.boxed {
+  width: 100%;
+  text-align: center;
+  color: #a8f0a0;
+  font-size: 0.8em;
+  margin-bottom: 0.3em;
+  line-height: 1.7;
+}

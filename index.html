@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Monster Hunt: Mountain Stream</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/battle.css" />
+    <link rel="stylesheet" href="css/field.css" />
+    <link rel="stylesheet" href="css/menus.css" />
+    <link rel="stylesheet" href="css/responsive.css" />
+  </head>
+  <body>
+    <div id="topbar">
+      <h1>MONSTER HUNT</h1>
+      <button class="tbtn" data-act="reset">⟲ RESTART HUNT</button>
+      <button class="tbtn" data-act="mute" id="muteBtn">♪ MUSIC: ON</button>
+      <button class="tbtn" data-act="auto" id="autoBtn">
+        BATTLE TEXT: AUTO
+      </button>
+      <div id="phases">
+        <span class="ph" data-p="1">1 ITEMS</span
+        ><span class="ph" data-p="2">2 ACTION</span>
+        <span class="ph" data-p="3">3 HIT CALC</span
+        ><span class="ph" data-p="4">4 MONSTER</span>
+      </div>
+    </div>
+
+    <div id="gb">
+      <div id="screen">
+        <canvas id="fieldCv" width="480" height="320"></canvas>
+
+        <div id="battle" class="hidden">
+          <div id="enemySprite" class="sprite">
+            <img alt="" /><span class="zzz">Z z</span>
+          </div>
+          <div id="playerSprite" class="sprite"><img alt="" /></div>
+          <div id="enemyBox" class="ibox">
+            <div class="nm">
+              <span id="eName"></span><span class="lv" id="eRank"></span>
+            </div>
+            <div class="hpr">
+              <b>HP</b>
+              <div class="trk"><div class="fill" id="eHp"></div></div>
+            </div>
+            <div class="parts" id="eParts"></div>
+            <div class="chips" id="eChips"></div>
+          </div>
+          <div id="playerBox" class="ibox">
+            <div class="nm">
+              <span>HUNTER <span class="lv" id="pWpn"></span></span
+              ><span class="balls" id="pBalls"></span>
+            </div>
+            <div class="hpr">
+              <b>HP</b>
+              <div class="trk"><div class="fill" id="pHp"></div></div>
+            </div>
+            <div class="hpnum" id="pHpNum"></div>
+            <div class="sharp">
+              <b>EDGE</b>
+              <div class="trk">
+                <div class="fill" id="pSharp"></div>
+                <i></i><i></i>
+              </div>
+            </div>
+            <div class="gauge">
+              <span id="pGauge"></span><span id="pSharpLbl"></span>
+            </div>
+            <div class="chips" id="pChips"></div>
+          </div>
+          <div id="flashFx"></div>
+        </div>
+
+        <div id="mini" class="hidden" data-act="fmap"></div>
+        <div id="locPop"></div>
+        <div id="toast"></div>
+        <div id="fDialog" class="hidden" data-act="advance">
+          <span id="fmsg"></span><span id="farrow" class="arrow">▼</span>
+        </div>
+        <div id="fMenu" class="hidden"></div>
+        <div id="mapOv" class="hidden"></div>
+        <div id="rewardOv" class="hidden"></div>
+        <div id="trans"></div>
+      </div>
+      <div id="panel"></div>
+    </div>
+
+    <details id="logWrap">
+      <summary>BATTLE LOG (rolls &amp; damage formulas)</summary>
+      <div id="log"></div>
+    </details>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
