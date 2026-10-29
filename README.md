@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Monster Hunt: Mountain Stream
 
 Turn-based Monster Hunter fan prototype with a Pokémon Gen-3 look.
@@ -19,3 +20,7 @@ Arrows/WASD move · Z/Space = A · X = B · Enter/Esc = menu · M = map · N = m
 - New monster: `src/data/monsters.js` (stats + loot) and `src/art/defs.js` (MON_ART)
 - New item: `src/data/items.js` and `src/art/defs.js` (ITEM_ART)
 - Map layout: `src/data/world.js` (AREAS, LINKS, THEMES)
+=======
+# MonsterHunterTurnBased
+A demo for a monster-hunter turn based game (Monster Hunter + Pokemon) 
+>>>>>>> 362633ef7d3d8e7b7a916ddc55dd562e0d1e7c23
