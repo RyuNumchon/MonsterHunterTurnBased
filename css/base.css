@@ -58,6 +58,13 @@ canvas {
   font-size: 11px;
   color: #f8c040;
   margin: 0 6px 0 0;
+  line-height: 0;
+}
+#logo {
+  height: 34px;
+  width: auto;
+  display: block;
+  image-rendering: auto;
 }
 .tbtn {
   background: #2c343e;

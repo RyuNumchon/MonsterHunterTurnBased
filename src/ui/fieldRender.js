@@ -115,7 +115,13 @@ export function drawField(now) {
   list.sort((a, b) => a.p.y - b.p.y);
   for (const { e, p } of list) {
     if (!e) { blit(SPR[f.dir][f.mv ? (f.step % 2 ? 'A' : 'B') : 'S'], p.x, p.y - 2); continue; }
-    if (e.kind === 'npc') { blit(e.look === 'hunter' ? NPCSPR[e.dir][e.mv ? 'A' : 'S'] : CATSPR[e.look], p.x, p.y - 2); continue; }
+    if (e.kind === 'npc') {
+  // Bottom-centred so sprites of any size stand on their tile; Palicos face the way they walk
+    const img = e.look === 'hunter' ? NPCSPR[e.dir][e.mv ? 'A' : 'S'] : CATSPR[e.look];
+    blit(img, p.x + 8 - img.width / 2, p.y + 14 - img.height, e.look !== 'hunter' && e.dir === 'right');
+    continue;
+  }
+
     const img = ART['mf_' + e.key], hop = e.mv ? -2 * Math.sin(Math.PI * p.t) : 0;
     const top = p.y + 16 - img.height;
     CX.fillStyle = 'rgba(0,0,0,.3)'; ellipse(p.x + 8, p.y + 14, img.width * 0.38, 3);
