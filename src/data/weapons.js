@@ -11,13 +11,13 @@ export const ATTACK_TYPES = ['attack', 'release', 'counter', 'finisher'];
 export const isAttack = mv => ATTACK_TYPES.includes(mv.type);
 
 export const WEAPONS = {
-  greatsword: { name: 'GREAT SWORD', short: 'GS', blurb: 'Slow but massive. Charge up to 3x damage and GUARD.', moves: [
+  greatsword: { name: 'GREAT SWORD', short: 'GS', element: null, elemPower: 0, elemChance: 0, blurb: 'Slow but massive. Charge up to 3x damage and GUARD.', moves: [
     { id: 'gs_slash',   name: 'OVERHEAD SLASH', type: 'attack',  tag: 'SLASH',  power: 24, acc: 0,  sharp: 2, desc: 'A reliable, heavy downward slash.' },
     { id: 'gs_charge',  name: 'CHARGE',         type: 'charge',  tag: 'CHARGE', sharp: 0, desc: 'Spend the turn charging. Holds up to Lv2.' },
     { id: 'gs_release', name: 'CHARGED SLASH',  type: 'release', tag: 'SLASH',  power: 24, acc: -5, sharp: 3, desc: 'Release: Lv1 1x, Lv2 2x, Lv3 3x damage.' },
     { id: 'gs_guard',   name: 'GUARD',          type: 'guard',   tag: 'DEFEND', sharp: 1, desc: 'Block with the blade. Take 40% damage.' }
   ]},
-  longsword: { name: 'LONGSWORD', short: 'LS', blurb: 'Fast and accurate. Builds SPIRIT for a big finisher.', moves: [
+  longsword:  { name: 'LONGSWORD',   short: 'LS', element: 'fire', elemPower: 6, elemChance: .25, blurb: 'Fast and accurate. Builds SPIRIT for a big finisher.', moves: [
     { id: 'ls_thrust',    name: 'THRUST',       type: 'attack',   tag: 'PIERCE',  power: 13, acc: 15, sharp: 1, desc: 'Fast, very accurate poke.' },
     { id: 'ls_spirit',    name: 'SPIRIT SLASH', type: 'attack',   tag: 'SLASH',   power: 18, acc: 5,  sharp: 2, spirit: 1, desc: 'Builds +1 Spirit (max 3).' },
     { id: 'ls_foresight', name: 'FORESIGHT',    type: 'counter',  tag: 'COUNTER', power: 14, acc: 0,  sharp: 2, desc: 'Costs 1 Spirit. Evades the monster attack this turn.' },

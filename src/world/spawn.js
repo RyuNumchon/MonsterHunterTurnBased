@@ -15,7 +15,7 @@ export function makeFoe(key, d, isBoss) {
     hp: d.hp, maxHp: d.hp, parts, sleeping: false, sleepTurns: 0, flash: 0, skipNext: null, atkMult: 1, armorCracked: false,
     trapped: 0, trapCount: 0, tranq: 0, turnsInArea: 0, roamTimer: 0, restTurns: 0,
     fleeAt: randInt(CONFIG.FLEE_MIN, CONFIG.FLEE_MAX), lowHpFled: false, warnedCap: false, roared: false,
-    dead: false, captured: false, area: null, posArea: null,
+    dead: false, captured: false, status: {}, stunBuild: 0, acted: false, area: null, posArea: null,
     x: 0, y: 0, hx: 0, hy: 0, mv: null, next: 0, dir: 'left', alerted: false, bang: 0
   };
 }

@@ -512,3 +512,11 @@
 .it:disabled {
   opacity: 0.4;
 }
+/* Status chips: coloured per effect; shadow keeps white text readable on light colours */
+.chip.st {
+  text-shadow: 0.08em 0.08em 0 #000a;
+}
+.back.wait {
+  background: #4878d8;
+  border-color: #a8c8f8;
+}

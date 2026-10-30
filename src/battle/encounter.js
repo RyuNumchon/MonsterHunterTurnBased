@@ -11,6 +11,7 @@ import { flow, say, pause } from '../ui/dialog.js';
 import { showScreen, renderBattle } from '../ui/hud.js';
 import { anim, pop } from '../ui/fx.js';
 import { captureWin } from './endings.js';
+import { applyStatus, blockedBy, clearBattleOnly, curable, cureStatuses } from './status.js';
 
 /** how: 'engage' (you walked into it) | 'ambush' (it walked into you) | 'sneak' (it was asleep) */
 export function startEncounter(e, how) {
@@ -19,7 +20,8 @@ export function startEncounter(e, how) {
   e.mv = null; e.alerted = false; e.bang = 0;
   flow(async () => {
     G.foe = e; G.itemsUsed = 0;
-    e.skipNext = null; e.trapped = 0; e.flash = 0;   // battle-only statuses reset per encounter
+    e.skipNext = null; e.trapped = 0; e.flash = 0;
+    clearBattleOnly(G.player); clearBattleOnly(e);
     Audio8.sfx('encounter');
     Audio8.music(e.isBoss ? 'boss' : 'battle');
 
@@ -43,27 +45,33 @@ export function startEncounter(e, how) {
     else if (how === 'ambush') await say(e.isBoss ? `The ${n} charged straight into you!` : `A wild ${n} attacked!`, 'warn');
     else await say(e.isBoss ? `You engaged the ${n}!` : `You attacked a wild ${n}!`);
 
+    // Opening roar: the hunter can't use items on turn 1
     if (e.isBoss && !e.roared && !e.sleeping) {
       e.roared = true;
       anim($('enemySprite'), 'a-shake', 400); Audio8.sfx('roar');
       await say(`The ${n} let out a mighty ROAR!`, 'warn');
+      const msg = applyStatus(G.player, 'roar', e);
+      if (msg) { renderBattle(); await say(msg, 'bad'); }
     }
     return 'main';
   });
 }
 
-/* PHASE 1 — ITEMS. "No effect" uses are refused and NOT consumed or counted. */
+/* PHASE 1: ITEMS. "No effect" uses are refused and NOT consumed or counted. */
 export function useItemBattle(key) {
   if (!G || G.itemsUsed >= CONFIG.MAX_ITEMS_PER_TURN || G.inventory[key] <= 0) return;
   flow(async () => {
     const p = G.player, m = G.foe, it = ITEMS[key];
+    const lock = blockedBy(p, 'item');
     let why = null;
-    if (key === 'potion' && p.hp >= p.maxHp) why = "It won't have any effect.";
+    if (lock) why = `HUNTER can't use items right now!\n(${lock.name})`;
+    else if (key === 'potion' && p.hp >= p.maxHp) why = "It won't have any effect.";
     else if (key === 'whetstone' && p.sharp >= CONFIG.SHARP_MAX) why = 'Your blade is already sharp.';
+    else if ((key === 'nullberry' || key === 'antidote') && !curable(p, key)) why = "It won't have any effect.";
     else if (BOSS_ONLY.includes(key) && !m.isBoss) why = `That won't work on a small monster\nlike the ${m.name}.`;
     else if (key === 'shock' && m.trapped > 0) why = `The ${m.name} is already trapped!`;
     else if (key === 'shock' && m.sleeping) why = "It's asleep... the trap won't trigger.\n(Asleep AND weak? Use TRANQ BOMBs!)";
-    if (why) { await say(why, 'dim'); return 'bag'; }
+    if (why) { await say(why, 'dim'); return lock ? 'main' : 'bag'; }
 
     G.inventory[key]--; G.itemsUsed++;
     Audio8.sfx('item');
@@ -81,6 +89,13 @@ export function useItemBattle(key) {
         p.sharp = CONFIG.SHARP_MAX; Audio8.sfx('sharpen'); renderBattle();
         await say('The blade is razor-sharp again!\n(EDGE: GREEN)', 'good');
         break;
+      case 'nullberry':
+      case 'antidote': {
+        const cured = cureStatuses(p, key);
+        Audio8.sfx('heal'); renderBattle();
+        await say(`HUNTER was cured of ${cured.join(' & ')}!`, 'good');
+        break;
+      }
       case 'paintball':
         G.paint = 8; renderBattle();
         await say(`The ${m.name} was marked!\nThe MAP will track it for 8 turns.`, 'good');
@@ -94,7 +109,6 @@ export function useItemBattle(key) {
         await say("HUNTER's ATTACK rose!\n(+25% damage for 3 turns)", 'good');
         break;
       case 'shock': {
-        // 3 turns the first time, 2 once the monster is trap-wary
         const turns = m.trapCount === 0 ? CONFIG.TRAP_TURNS_FIRST : CONFIG.TRAP_TURNS_AFTER;
         m.trapCount++; m.trapped = turns;
         Audio8.sfx('trap'); anim($('flashFx'), 'flashing', 700); renderBattle();
@@ -103,7 +117,6 @@ export function useItemBattle(key) {
         break;
       }
       case 'tranq': {
-        // Capture rule: (trapped OR asleep) AND HP <= 25%; TRANQ_NEEDED hits
         Audio8.sfx('tranq');
         const held = m.trapped > 0 || m.sleeping, weak = m.hp / m.maxHp <= CONFIG.CAPTURE_PCT;
         if (!held) await say('The TRANQ BOMB had no effect!\nThe monster must be TRAPPED or ASLEEP.', 'bad');

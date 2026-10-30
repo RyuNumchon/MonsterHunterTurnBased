@@ -9,6 +9,7 @@ import { AREAS } from '../data/world.js';
 import { DATA, pimg } from '../art/index.js';
 import { addLog, setPhase } from './fx.js';
 import { findMove, moveDisabled, hitChances } from '../battle/turn.js';
+import { blockedBy, statusChips, stunChance, hasStatus } from '../battle/status.js';
 
 export const hpColor = pct => pct > 50 ? '#58d080' : pct > 20 ? '#f8d030' : '#f05038';
 export const chip = (t, c) => `<span class="chip ${c}">${t}</span>`;
@@ -51,7 +52,7 @@ export function renderBattle() {
   if (m.skipNext) ec.push(chip('STUN', 'c-stun'));
   if (m.isBoss && m.parts.tail.broken) ec.push(chip('ATK↓', 'c-cut'));
   if (m.armorCracked) ec.push(chip('DEF↓', 'c-crk'));
-  $('eChips').innerHTML = ec.join('');
+  $('eChips').innerHTML = ec.join('') + statusChips(m);
 
   // --- Player box ---
   $('pWpn').textContent = w.short;
@@ -68,7 +69,9 @@ export function renderBattle() {
   if (p.guarding) pc.push(chip('GUARD', 'c-grd'));
   if (p.foresight) pc.push(chip('FORESIGHT', 'c-fs'));
   if (s.bounce) pc.push(chip('BOUNCE!', 'c-crk'));
-  $('pChips').innerHTML = pc.join('');
+  const dizzy = stunChance(p);
+  if (dizzy > 0 && !hasStatus(p, 'stun')) pc.push(chip(`DIZZY ${dizzy}%`, 'c-stun'));
+  $('pChips').innerHTML = pc.join('') + statusChips(p);
 
   // --- Sprite state classes ---
   const es = $('enemySprite');
@@ -130,10 +133,11 @@ export function renderPanel() {
     case 'message':
       h = `<div class="tb adv" data-act="advance"><span id="msg"></span><span id="arrow" class="arrow">▼</span></div>`;
       break;
-    case 'fight':
+      case 'fight':
       h = `<div class="movebox">${w.moves.map(mv =>
           `<button class="mv" data-act="move" data-val="${mv.id}" data-info="${mv.id}" ${moveDisabled(mv) ? 'disabled' : ''}>${mv.name}<small>${moveSub(mv)}</small></button>`).join('')}</div>
-        <div class="minfo"><div id="mInfo">${moveInfo(w.moves[0])}</div><button class="cmd back" data-act="back">BACK</button></div>`;
+        <div class="minfo"><div id="mInfo">${moveInfo(w.moves[0])}</div>
+        <button class="cmd back wait" data-act="wait">WAIT</button><button class="cmd back" data-act="back">BACK</button></div>`;
       break;
     case 'target': {
       const mv = findMove(d.moveId);
@@ -150,11 +154,11 @@ export function renderPanel() {
         <div class="yn"><button data-act="yes">YES</button><button data-act="no">NO</button></div>`;
       break;
     case 'bag': {
-      const left = CONFIG.MAX_ITEMS_PER_TURN - G.itemsUsed;
-      h = `<div class="tb" id="bagInfo">${left > 0 ? 'Choose an item.<br>It takes effect immediately.' : 'No more items this turn!'}
+      const left = CONFIG.MAX_ITEMS_PER_TURN - G.itemsUsed, itemLock = blockedBy(p, 'item');
+      h = `<div class="tb" id="bagInfo">${itemLock ? `Can't use items! (${itemLock.name})` : left > 0 ? 'Choose an item.<br>It takes effect immediately.' : 'No more items this turn!'}
           <div class="sub">ITEMS USED ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN} THIS TURN · no turn cost</div></div>
         <div class="baglist">${Object.keys(ITEMS).map(k => {
-          const dis = left <= 0 || G.inventory[k] <= 0 || (BOSS_ONLY.includes(k) && !m.isBoss);
+          const dis = !!itemLock || left <= 0 || G.inventory[k] <= 0 || (BOSS_ONLY.includes(k) && !m.isBoss);
           return `<button class="it" data-act="item" data-val="${k}" data-info="${k}" ${dis ? 'disabled' : ''}>
             ${pimg(DATA['item_' + k])}${ITEMS[k].name}<span class="q">x${G.inventory[k]}</span></button>`;
         }).join('')}<button class="cmd back" data-act="back">BACK</button></div>`;
@@ -165,14 +169,19 @@ export function renderPanel() {
           <div class="sub">Press CARVE or Z for each carve.</div></div>
         <div class="cmds"><button class="cmd k-fight carvebtn" data-act="carve">CARVE</button></div>`;
       break;
-    default: // 'main'
-      h = `<div class="tb">What will<br>HUNTER do?<div class="sub">TURN ${G.turn} · ITEMS ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN} · items don't end your turn</div></div>
+      default: { // 'main'
+      const act = blockedBy(p, 'act'), itemLock = blockedBy(p, 'item');
+      const left = CONFIG.MAX_ITEMS_PER_TURN - G.itemsUsed;
+      h = `<div class="tb">${act ? `HUNTER can't move!<br>(${act.name})` : 'What will<br>HUNTER do?'}
+          <div class="sub">TURN ${G.turn} · ITEMS ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN} · items don't end your turn</div></div>
         <div class="cmds">
-          <button class="cmd k-fight" data-act="fight">FIGHT</button>
-          <button class="cmd k-bag" data-act="bag">BAG<small>${CONFIG.MAX_ITEMS_PER_TURN - G.itemsUsed} LEFT</small></button>
+          ${act ? `<button class="cmd k-fight" data-act="wait">WAIT<small>${act.name}</small></button>`
+                : `<button class="cmd k-fight" data-act="fight">FIGHT</button>`}
+          <button class="cmd k-bag" data-act="bag" ${itemLock ? 'disabled' : ''}>BAG<small>${itemLock ? itemLock.name : left + ' LEFT'}</small></button>
           <button class="cmd k-map" data-act="map">MAP</button>
-          <button class="cmd k-run" data-act="run">RUN</button>
+          <button class="cmd k-run" data-act="run" ${act ? 'disabled' : ''}>RUN</button>
         </div>`;
+    }
   }
   P.innerHTML = h;
 }
@@ -187,6 +196,7 @@ export function renderFieldPanel(P) {
       <div class="fstat">
         <div class="srow"><b>AREA</b>${AREAS[f.area].name} · ${AREAS[f.area].sub}</div>
         <div class="srow"><b>HP</b><span class="mbar"><i style="width:${hp}%;background:${hpColor(hp)}"></i></span>${p.hp}/${p.maxHp}</div>
+        <div class="srow"><b>COND</b>${statusChips(p) || 'NORMAL'}</div>
         <div class="srow"><b>EDGE</b><span class="mbar"><i style="width:${p.sharp / CONFIG.SHARP_MAX * 100}%;background:${s.color}"></i></span>${s.name}</div>
         <div class="srow"><b>GEAR</b>${pimg(DATA['wpn_' + p.weapon])}${WEAPONS[p.weapon].name} · CARTS <span class="balls">${balls(p.carts)}</span></div>
       </div>

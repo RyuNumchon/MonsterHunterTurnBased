@@ -11,6 +11,9 @@ export const CONFIG = {
   TAIL_ATK_MULT: 0.75, BODY_CRACK_MULT: 1.10,
   // Traps & capture
   CAPTURE_PCT: 0.25, TRAP_TURNS_FIRST: 3, TRAP_TURNS_AFTER: 2, TRAP_HIT_BONUS: 25, TRANQ_NEEDED: 2,
+    // Status effects (definitions live in src/data/status.js)
+  STUN_BUILD: 15, STUN_BUILD_HEAVY: 25,             // % stun chance added per consecutive hit taken
+  SLOW_HIT_BONUS: 15, SLOW_ESCAPE_MULT: .5, SLOW_MOVE_MULT: 1.6,
   // Rewards
   CARVES: 3, SMALL_CARVES: 1, MAIN_REWARDS: 4, CAPTURE_MAIN_REWARDS: 5, CAPTURE_BONUS: 3, CAPTURE_ZENNY_MULT: 1.2,
   // Field movement (ms per tile). Chasing monsters are FASTER than the hunter.
