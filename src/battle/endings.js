@@ -12,6 +12,8 @@ import { buildEntities, refreshEntities } from '../world/spawn.js';
 import { worldTick } from '../world/field.js';
 import { addGathered } from '../world/interact.js';
 import { finishQuest } from '../quest/rewards.js';
+import { clearBattleOnly } from './status.js';
+
 
 /** Fade back to the overworld. graceMs = how long monsters ignore you afterwards. */
 export async function returnToField(graceMs) {
@@ -19,6 +21,7 @@ export async function returnToField(graceMs) {
   tr.className = 'fadeIn'; await pause(260);
   const p = G.player;
   p.charge = 0; p.guarding = false; p.foresight = false;
+  clearBattleOnly(p); if (G.foe) clearBattleOnly(G.foe);
   G.foe = null; G.itemsUsed = 0; G.screen = 'field';
   refreshEntities();
   const now = performance.now();
@@ -46,9 +49,10 @@ export async function checkFaint() {
 
   const tr = $('trans');
   tr.className = 'fadeIn'; await pause(300);
-  Object.assign(p, { hp: p.maxHp, charge: 0, spirit: 0, guarding: false, foresight: false, down: false });
+  Object.assign(p, { hp: p.maxHp, charge: 0, spirit: 0, guarding: false, foresight: false, down: false, status: {}, stunBuild: 0, acted: false });
   p.buffs.might = 0;
   const foe = G.foe; foe.trapped = 0; foe.flash = 0; foe.skipNext = null;
+  clearBattleOnly(foe);
   G.foe = null; G.itemsUsed = 0; G.screen = 'field';
   Object.assign(G.f, { area: 0, x: CAMP_SPAWN.x, y: CAMP_SPAWN.y, dir: CAMP_SPAWN.dir, mv: null });
   const msgs = worldTick();

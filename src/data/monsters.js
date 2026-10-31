@@ -2,12 +2,22 @@
 
 export const MONSTERS = {
   rathalos: { name: 'RATHALOS', rank: 6, hp: 650, parts: { head: 160, body: 260, legs: 150, tail: 140 },
-    attacks: [ { name: 'FIREBALL', power: 20 }, { name: 'TAIL WHIP', power: 16 },
-               { name: 'RUSHING CHARGE', power: 22 }, { name: 'POISON TALON DIVE', power: 30, heavy: true } ] },
+    attacks: [
+      { name: 'FIREBALL', power: 20, inflict: [{ id: 'fire', chance: .6 }] },
+      { name: 'TAIL WHIP', power: 16 },
+      { name: 'RUSHING CHARGE', power: 22 },
+      { name: 'POISON TALON DIVE', power: 30, heavy: true, inflict: [{ id: 'poison', chance: .7 }] },
+      { name: 'WING GUST', power: 8, inflict: [{ id: 'wind', chance: 1, aoe: true }] },
+      { name: 'ROAR', power: 0, roar: true, weight: .6 } ] },
   tigrex: { name: 'TIGREX', rank: 6, hp: 700, parts: { head: 180, body: 280, legs: 150, tail: 120 },
-    attacks: [ { name: 'BITE', power: 18 }, { name: 'ROCK THROW', power: 16 },
-               { name: 'SPINNING TAIL', power: 22 }, { name: 'FULL-BODY CHARGE', power: 32, heavy: true } ] }
-};
+      attacks: [
+      { name: 'BITE', power: 18 },
+      { name: 'ROCK THROW', power: 16 },
+      { name: 'SPINNING TAIL', power: 22 },
+      { name: 'FULL-BODY CHARGE', power: 32, heavy: true },
+      { name: 'GROUND SLAM', power: 14, inflict: [{ id: 'tremble', chance: 1, aoe: true }] },
+      { name: 'ROAR', power: 0, roar: true, weight: .6 } ] },
+  };
 
 // aggro = tile distance at which they start chasing
 export const SMALLS = {

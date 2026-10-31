@@ -2,7 +2,7 @@
    ART[name]  = canvas (for drawing on the field canvas)
    DATA[name] = data-URL (for <img> in menus, HUD, map) */
 import { renderArt } from './raster.js';
-import { ITEM_ART, WEAPON_ART, GATHER_ART, ICON_ART, MON_ART, hunterBackDef, RAR_COL, MAT_DEF, matType } from './defs.js';
+import { ITEM_ART, WEAPON_ART, GATHER_ART, ICON_ART, hunterBackDef, RAR_COL, MAT_DEF, matType } from './defs.js';
 import { SPR } from './tiles.js';
 
 export const ART = {}, DATA = {};
@@ -15,7 +15,6 @@ for (const k in ITEM_ART) bake('item_' + k, ITEM_ART[k]);
 for (const k in WEAPON_ART) bake('wpn_' + k, WEAPON_ART[k]);
 for (const k in GATHER_ART) { bake('g_' + k, GATHER_ART[k]); ART['gx_' + k] = renderArt(GATHER_ART[k], 1, true); }
 for (const k in ICON_ART) bake('ic_' + k, ICON_ART[k]);
-for (const k in MON_ART) { bake('mb_' + k, MON_ART[k], 1); bake('mf_' + k, MON_ART[k], .5); }   // battle / field
 bake('hb_greatsword', hunterBackDef('greatsword'));
 bake('hb_longsword', hunterBackDef('longsword'));
 DATA.player = SPR.down.S.toDataURL();

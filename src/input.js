@@ -13,7 +13,7 @@ import { openMap, closeMap } from './ui/map.js';
 import { canAct } from './world/field.js';
 import { interact, openStartMenu, fieldBag } from './world/interact.js';
 import { useItemBattle } from './battle/encounter.js';
-import { findMove, pickMove, confirmAttack, confirmRun, goBack, runTurn } from './battle/turn.js';
+import { findMove, pickMove, confirmAttack, confirmRun, confirmWait, goBack, runTurn } from './battle/turn.js';
 import { putAllInBox, renderStorage } from './quest/rewards.js';
 import { restart } from './game.js';
 
@@ -48,6 +48,7 @@ function onClick(e) {
     case 'menu':     pickMenu(+val); return;
     case 'closemap': closeMap(); return;
     case 'carve':    doCarve(); return;
+    case 'wait':  confirmWait(); break;
   }
   if (!G || G.over) return;
 

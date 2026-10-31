@@ -14,15 +14,24 @@
   width: 100%;
   display: block;
 }
+/* Fixed box; the sprite fits inside it and stands on the box's bottom edge,
+   so images of any shape stay on the platform and on-screen */
 #enemySprite {
-  left: 56%;
+  left: 54%;
   bottom: 55%;
-  width: 37.5%;
+  width: 40%;
+  height: 40%;
   z-index: 2;
 }
 #enemySprite.small {
-  left: 64%;
-  width: 22%;
+  left: 63%;
+  width: 24%;
+  height: 24%;
+}
+#enemySprite img {
+  height: 100%;
+  object-fit: contain;
+  object-position: 50% 100%;
 }
 #playerSprite {
   left: 6%;
@@ -502,4 +511,12 @@
 }
 .it:disabled {
   opacity: 0.4;
+}
+/* Status chips: coloured per effect; shadow keeps white text readable on light colours */
+.chip.st {
+  text-shadow: 0.08em 0.08em 0 #000a;
+}
+.back.wait {
+  background: #4878d8;
+  border-color: #a8c8f8;
 }

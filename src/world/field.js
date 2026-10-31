@@ -12,6 +12,7 @@ import { toast, showLocation } from '../ui/fx.js';
 import { MAPS } from './mapgen.js';
 import { buildEntities } from './spawn.js';
 import { startEncounter } from '../battle/encounter.js';
+import { isSlow, tickStatuses } from '../battle/status.js';
 
 /** True when the hunter can move or interact (no dialog, menu or overlay open). */
 export const canAct = () => !!G && G.screen === 'field' && !G.busy && !G.over && !UI.menu && !waits.map && !waits.store;
@@ -35,7 +36,7 @@ export function updateField(dt, now) {
   const f = G.f;
   // --- Hunter tween / input ---
   if (f.mv) {
-    f.mv.t += dt / CONFIG.MOVE_MS;
+    f.mv.t += dt / (CONFIG.MOVE_MS * (isSlow(G.player) ? CONFIG.SLOW_MOVE_MULT : 1));
     if (f.mv.t >= 1) { f.x = f.mv.tx; f.y = f.mv.ty; f.mv = null; if (onPlayerStep()) return; }
   }
   if (!f.mv) {
@@ -146,6 +147,7 @@ export function changeArea(to) {
 export function worldTick() {
   const msgs = [], p = G.player, m = G.monster;
   G.turn++;
+  for (const r of tickStatuses(p, false)) msgs.push(r.msg);
   if (G.paint > 0 && --G.paint === 0) msgs.push('The paintball scent faded...');
   if (p.buffs.might > 0 && --p.buffs.might === 0) msgs.push('The MIGHT SEED wore off.');
   if (m.dead || m.captured || m.area === G.f.area) return msgs;

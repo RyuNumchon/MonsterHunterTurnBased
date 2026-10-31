@@ -1,7 +1,8 @@
-/* Entry point: wire up the HUD and input, spawn into Base Camp, run the main loop. */
+/* Entry point: load sprites, wire up the HUD and input, spawn into Base Camp, run the main loop. */
 import { G } from './core/state.js';
 import { BOX } from './core/save.js';
 import { Audio8 } from './audio/audio8.js';
+import { loadSprites } from './art/sprites.js';
 import { initHud } from './ui/hud.js';
 import { renderMini } from './ui/map.js';
 import { drawField } from './ui/fieldRender.js';
@@ -17,7 +18,7 @@ function loop(now) {
     updateField(dt, now);
     if (G.screen === 'field') drawField(now);
   }
-  renderMini();                            // cheap: only rebuilds when its content changes
+  renderMini();
   requestAnimationFrame(loop);
 }
 
@@ -25,5 +26,6 @@ initHud();
 initInput();
 Audio8.setMuted(BOX.muted);
 updateMuteLabel();
+await loadSprites();   // swap in the ./resources images before anything is drawn
 newGame('rathalos');
 requestAnimationFrame(loop);
