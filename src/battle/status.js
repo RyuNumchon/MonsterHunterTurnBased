@@ -77,13 +77,13 @@ export function stunChance(u) {
   return Math.max(u.stunBuild || 0, floor);
 }
 
-/** Call when `target` takes a hit. build = % added to the buildup. Returns a message if stunned. */
-export function stunOnHit(target, build) {
-  if (hasStatus(target, "stun")) return null;
-  target.stunBuild = Math.min(100, (target.stunBuild || 0) + build);
+/** Call when `target` takes a hit. build = % added to the buildup (capped at `cap`). Returns a message if stunned. */
+export function stunOnHit(target, build, cap = 100) {
+  if (hasStatus(target, 'stun')) return null;
+  target.stunBuild = Math.min(cap, (target.stunBuild || 0) + build);
   if (Math.random() * 100 < stunChance(target)) {
     target.stunBuild = 0;
-    return applyStatus(target, "stun");
+    return applyStatus(target, 'stun');
   }
   return null;
 }

@@ -73,7 +73,7 @@ export function renderMenu() {
   if (!s) { el.className = 'hidden'; el.innerHTML = ''; return; }
   el.className = s.yn ? 'yn' : '';
   const cur = s.opts[s.idx];
-  el.innerHTML = `<div class="menu">${s.title ? `<div class="mh">${s.title}</div>` : ''}${s.opts.map((o, i) =>
+el.innerHTML = `<div class="menu${s.desc ? ' withdesc' : ''}">${s.title ? `<div class="mh">${s.title}</div>` : ''}${s.opts.map((o, i) =>
     `<button class="mi ${i === s.idx ? 'focus' : ''}" data-act="menu" data-val="${i}" ${o.disabled ? 'disabled' : ''}>${o.icon ? pimg(o.icon) : ''}<span>${o.label}</span>${o.right !== undefined ? `<span class="q">${o.right}</span>` : ''}</button>`
   ).join('')}${s.desc ? `<div class="mdesc">${(cur && cur.desc) || ''}</div>` : ''}</div>`;
 }

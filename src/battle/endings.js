@@ -1,4 +1,4 @@
-/* How a battle ends: return to the map, faint/cart, carving (slain), capture. */
+/* How a battle ends: return to the map, faint/cart, carving (body + severed tail), capture. */
 import { CONFIG } from '../core/config.js';
 import { $, weighted, Abort } from '../core/utils.js';
 import { G, waits } from '../core/state.js';
@@ -9,13 +9,22 @@ import { say, pause } from '../ui/dialog.js';
 import { showScreen, renderBattle, setMode } from '../ui/hud.js';
 import { anim, pop, setPhase, toast, showLocation } from '../ui/fx.js';
 import { buildEntities, refreshEntities } from '../world/spawn.js';
+import { MAPS, findFree } from '../world/mapgen.js';
 import { worldTick } from '../world/field.js';
 import { addGathered } from '../world/interact.js';
 import { finishQuest } from '../quest/rewards.js';
 import { clearBattleOnly } from './status.js';
 
+/** Puts a freshly severed tail on a free tile near where the fight happened. */
+export function placeTail() {
+  const t = G.tailDrop;
+  if (!t || t.placed || t.carved) return;
+  const here = t.area === G.f.area;
+  const p = findFree(MAPS[t.area], t.x, t.y,
+    (x, y) => (here && Math.abs(x - G.f.x) + Math.abs(y - G.f.y) < 2) || G.ents.some(e => e.x === x && e.y === y), true);
+  Object.assign(t, { x: p.x, y: p.y, placed: true });
+}
 
-/** Fade back to the overworld. graceMs = how long monsters ignore you afterwards. */
 export async function returnToField(graceMs) {
   const tr = $('trans');
   tr.className = 'fadeIn'; await pause(260);
@@ -24,14 +33,19 @@ export async function returnToField(graceMs) {
   clearBattleOnly(p); if (G.foe) clearBattleOnly(G.foe);
   G.foe = null; G.itemsUsed = 0; G.screen = 'field';
   refreshEntities();
+  placeTail();
   const now = performance.now();
   G.grace = now + graceMs;
-  G.ents.forEach(e => { e.alerted = false; e.bang = 0; e.mv = null; e.next = now + 500; });
+  G.ents.forEach(e => { e.alerted = false; e.bang = 0; e.mv = null; e.goal = null; e.next = now + 500; });
   showScreen(); setPhase(0); Audio8.music(fieldMusic());
   tr.className = 'fadeOut'; await pause(260); tr.className = '';
+  const t = G.tailDrop;
+  if (t && t.placed && !t.carved && !t.told && t.area === G.f.area) {
+    t.told = true;
+    toast('The severed TAIL is lying nearby.\nFace it and press A to carve!');
+  }
 }
 
-/** One shared HP bar; 3 faints = quest failed. Each cart cuts reward money by 1/3. */
 export async function checkFaint() {
   const p = G.player;
   if (p.hp > 0 || G.over) return false;
@@ -51,11 +65,13 @@ export async function checkFaint() {
   tr.className = 'fadeIn'; await pause(300);
   Object.assign(p, { hp: p.maxHp, charge: 0, spirit: 0, guarding: false, foresight: false, down: false, status: {}, stunBuild: 0, acted: false });
   p.buffs.might = 0;
-  const foe = G.foe; foe.trapped = 0; foe.flash = 0; foe.skipNext = null;
+  const foe = G.foe;
+  foe.trapped = 0; foe.flash = 0; foe.skipNext = null;
   clearBattleOnly(foe);
+  placeTail();   // the tail stays where the fight happened
   G.foe = null; G.itemsUsed = 0; G.screen = 'field';
   Object.assign(G.f, { area: 0, x: CAMP_SPAWN.x, y: CAMP_SPAWN.y, dir: CAMP_SPAWN.dir, mv: null });
-  const msgs = worldTick();
+  const msgs = worldTick(true);
   buildEntities(true);
   G.grace = performance.now() + CONFIG.GRACE_MS;
   ps.classList.remove('a-faint');
@@ -65,16 +81,29 @@ export async function checkFaint() {
   return true;
 }
 
-/** Shows the CARVE button and waits for the player (button or Z). */
-async function waitCarve(i, n) {
+async function waitCarve(i, n, what = 'BODY') {
   const g = G;
   setPhase(0);
-  setMode('carve', { i, n });
+  setMode('carve', { i, n, what });
   await new Promise(res => { waits.carve = res; });
   if (G !== g) throw new Abort();
 }
 
-/** HP reached 0. Small monster: 1 carve then back to the map. Boss: 3 carves then rewards. */
+/** If a severed tail hasn't been carved yet, offer it before the quest ends. */
+async function carveTail(es) {
+  const t = G.tailDrop;
+  if (!t || t.carved) return;
+  await say(`Don't forget the severed ${t.name} TAIL!`, 'good');
+  for (let i = 0; i < CONFIG.TAIL_CARVES; i++) {
+    await waitCarve(i, CONFIG.TAIL_CARVES, 'TAIL');
+    const r = weighted(LOOT[t.key].breaks.tail);
+    G.carves.push(r);
+    Audio8.sfx('carve'); pop(es, `+${r.name}`, 'loot');
+    await say(`TAIL CARVE\nHUNTER carved ${r.name}!`, 'good');
+  }
+  t.carved = true;
+}
+
 export async function foeDefeated() {
   const m = G.foe, es = $('enemySprite');
   m.dead = true;
@@ -94,19 +123,18 @@ export async function foeDefeated() {
 
   Audio8.music('win');
   await say(`The ${m.name} collapsed...\nThe ${m.name} was SLAIN!`, 'good');
-  G.carves = [];
   for (let i = 0; i < CONFIG.CARVES; i++) {
     await waitCarve(i, CONFIG.CARVES);
     const r = weighted(LOOT[m.key].carve);
-    G.carves.push(r);
+    G.carves.push(r);   // keeps any tail carves from earlier
     Audio8.sfx('carve'); anim(es, 'a-shake', 300); pop(es, `+${r.name}`, 'loot');
     await say(`CARVE ${i + 1}/${CONFIG.CARVES}\nHUNTER carved ${r.name}!`, 'good');
   }
+  await carveTail(es);
   await say('QUEST COMPLETE!\nReturning to the village...', 'good');
   await finishQuest('slay');
 }
 
-/** Captured: no carving, but bigger rewards. */
 export async function captureWin() {
   const m = G.foe;
   m.sleeping = true; m.trapped = 0; renderBattle();
@@ -114,5 +142,6 @@ export async function captureWin() {
   await say(`The ${m.name} fell into a deep sleep...`, 'good');
   await say(`The ${m.name} was CAPTURED!`, 'good');
   await say("Captured monsters can't be carved...\nbut the Guild pays a CAPTURE BONUS!", 'dim');
+  await carveTail($('enemySprite'));   // a severed tail can still be carved
   await finishQuest('capture');
 }

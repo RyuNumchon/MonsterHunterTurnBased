@@ -1,24 +1,40 @@
 /* Every balance knob lives here. */
 export const CONFIG = {
   PLAYER_MAX_HP: 150, MAX_CARTS: 3, MAX_ITEMS_PER_TURN: 3,
-  // Sharpness (PP equivalent), 40 points:
-  //   Green 26–40: DMG ×1.2, Hit +10 | Yellow 13–25: ×1.0 | Red 0–12: BOUNCE ×0.5, Hit −10, 5% max-HP recoil
+  // Sharpness: Green 26–40 ×1.2/+10 hit | Yellow 13–25 ×1.0 | Red 0–12 BOUNCE ×0.5/−10 hit + 5% recoil
   SHARP_MAX: 40, SHARP_GREEN: 26, SHARP_YELLOW: 13, BOUNCE_RECOIL_PCT: 0.05,
   OVERALL_HIT: 90, MONSTER_HIT: 60, MONSTER_HIT_FLASHED: 30,
   MIGHT_MULT: 1.25, WAKE_MULT: 2, GUARD_TAKEN: 0.4, HEAVY_INTERRUPT_CHANCE: 0.30,
-  FLEE_MIN: 4, FLEE_MAX: 6, FLEE_CHANCE: 0.5, LOW_HP_FLEE: 0.25, LOW_HP_FLEE_CHANCE: 0.4,
-  REST_HEAL_PCT: 0.03, SLEEP_CHANCE: 0.35, NEST_SLEEP_CHANCE: 0.8, WAKE_AFTER: 6, ROAM_CHANCE: 0.5,
   TAIL_ATK_MULT: 0.75, BODY_CRACK_MULT: 1.10,
+
+  // Big monster: fleeing mid-battle, limping, sleeping, healing
+  FLEE_MIN: 4, FLEE_MAX: 6, FLEE_CHANCE: 0.5, LOW_HP_FLEE: 0.25, LOW_HP_FLEE_CHANCE: 0.4,
+  SLEEP_AFTER_AREAS: 3,    // a limping monster sleeps once the hunter moves 3 areas without finding it
+  REST_HEAL_PCT: 0.03,     // healed per world turn ONLY while asleep
+  WAKE_AFTER: 6,           // world turns of sleep before it wakes on its own
+
+  // Roaming on the field (real time)
+  ROAM_MIN_MS: 20000, ROAM_MAX_MS: 35000,   // big monster changes area every 20–35 s
+  SMALL_ROAM_RADIUS: 8,                     // tiles a small monster may wander from home
+
   // Traps & capture
   CAPTURE_PCT: 0.25, TRAP_TURNS_FIRST: 3, TRAP_TURNS_AFTER: 2, TRAP_HIT_BONUS: 25, TRANQ_NEEDED: 2,
-    // Status effects (definitions live in src/data/status.js)
-  STUN_BUILD: 15, STUN_BUILD_HEAVY: 25,             // % stun chance added per consecutive hit taken
-  SLOW_HIT_BONUS: 15, SLOW_ESCAPE_MULT: .5, SLOW_MOVE_MULT: 1.6,
+
+  // Stun. Hunter: % added per consecutive hit taken, capped. Monsters: blunt weapons only (KO).
+  STUN_BUILD: 6, STUN_BUILD_HEAVY: 12, STUN_CAP: 30,
+  KO_BUILD: 10, KO_BUILD_HEAD: 25,
+
+  // Speed (battle/speed.js)
+  HUNTER_SPEED: 100, SLOW_SPEED_MULT: .5,
+  SPEED_HIT_FACTOR: .25, SPEED_HIT_CAP: 15, SPEED_ESCAPE_FACTOR: .005,
+
   // Rewards
-  CARVES: 3, SMALL_CARVES: 1, MAIN_REWARDS: 4, CAPTURE_MAIN_REWARDS: 5, CAPTURE_BONUS: 3, CAPTURE_ZENNY_MULT: 1.2,
-  // Field movement (ms per tile). Chasing monsters are FASTER than the hunter.
-  MOVE_MS: 150, BOSS_CHASE_MS: 95, SMALL_CHASE_MS: 115, WANDER_MS: 320,
+  CARVES: 3, SMALL_CARVES: 1, TAIL_CARVES: 1, MAIN_REWARDS: 4, CAPTURE_MAIN_REWARDS: 5, CAPTURE_BONUS: 3, CAPTURE_ZENNY_MULT: 1.2,
+
+  // Field movement: ms per tile at speed 100 (scaled by speed). Chasing monsters stay faster than the hunter.
+  MOVE_MS: 140, BOSS_CHASE_MS: 105, SMALL_CHASE_MS: 115, WANDER_MS: 300,
   ESCAPE_CHANCE: 0.75, GRACE_MS: 2500, BOSS_AGGRO: 5, GATHER_USES: 2, START_ZENNY: 1500,
+
   // Text
   TEXT_SPEED: 14, AUTO_ADVANCE: 900, AUTO: true
 };

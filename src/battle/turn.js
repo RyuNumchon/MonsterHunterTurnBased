@@ -1,6 +1,7 @@
-/* Turn controller: strict order  Action (2) -> Hit Calc (3) -> Monster (4) -> end-of-turn ticks.
-   Also owns move selection and the YES/NO prompts (actions confirm, items don't).
-   Status effects plug in through battle/status.js. */
+/* Turn controller.
+   Each turn the faster side acts first (speed roll, see battle/speed.js), then the other,
+   then end-of-turn ticks. GUARD / FORESIGHT have priority; RUN and WAIT resolve first.
+   Phase pills: 2 ACTION + 3 HIT CALC for the hunter, 4 MONSTER for the monster. */
 import { CONFIG, CHARGE_MULT } from '../core/config.js';
 import { $, rand, randInt, pick, clamp } from '../core/utils.js';
 import { G, UI } from '../core/state.js';
@@ -13,41 +14,48 @@ import { flow, say, pause } from '../ui/dialog.js';
 import { renderBattle, setMode } from '../ui/hud.js';
 import { anim, pop, addLog, setPhase } from '../ui/fx.js';
 import { checkFaint, foeDefeated, returnToField } from './endings.js';
-import { applyStatus, blockedBy, hasStatus, defMult, atkMult, accMod, isSlow, elementSealed, stunOnHit, tickStatuses } from './status.js';
+import { applyStatus, blockedBy, defMult, atkMult, accMod, elementSealed, stunOnHit, tickStatuses } from './status.js';
+import { speedOf, speedHitMod, firstChance } from './speed.js';
 
 /* ---------- Moves ---------- */
 export function findMove(id) { return G ? WEAPONS[G.player.weapon].moves.find(m => m.id === id) || null : null; }
 
 export function moveDisabled(mv) {
   const p = G.player;
-  if (blockedBy(p, 'act')) return true;                                          // paralysis / tremor / stun
-  if (isAttack(mv) && blockedBy(p, 'attack')) return true;                       // wind pressure
-  if (mv.type === 'charge' && p.charge >= 2) return true;                        // Lv2 is the max you can hold
+  if (blockedBy(p, 'act')) return true;
+  if (isAttack(mv) && blockedBy(p, 'attack')) return true;
+  if (mv.type === 'charge' && p.charge >= 2) return true;
   if ((mv.type === 'counter' || mv.type === 'finisher') && p.spirit < 1) return true;
   return false;
 }
 
+/** The monster can't act this turn (so the hunter effectively goes first and escape is sure). */
+const foeHeld = m => m.trapped > 0 || m.sleeping || !!m.skipNext || !!blockedBy(m, 'act');
+
 /* HUNTER HIT CHANCES
-   acc     = move.acc + sharp.hit + statuses(water -20) + (trapped ? 25 : 0) + (monster slowed ? 15 : 0)
-   PartHit = clamp(part.baseHit + acc, 5, 98)
-   Overall = max(PartHit, clamp(90 + acc, 5, 99))
-   One roll R: R < PartHit = clean hit | R < Overall = DRIFT to an adjacent part | else miss */
+   acc     = move.acc + sharp.hit + statuses (water −20) + speed mod (±15) + (trapped ? 25 : 0)
+   PartHit = clamp(part.baseHit + acc, 5, 98);  Overall = max(PartHit, clamp(90 + acc, 5, 99))
+   Roll R: R < PartHit = clean hit | R < Overall = DRIFT to an adjacent part | else miss */
 export function hitChances(move, partKey, sharpLv = getSharp(G.player.sharp)) {
   const m = G.foe, p = G.player;
-  const acc = (move.acc || 0) + sharpLv.hit + accMod(p)
-    + (m && m.trapped > 0 ? CONFIG.TRAP_HIT_BONUS : 0)
-    + (m && isSlow(m) ? CONFIG.SLOW_HIT_BONUS : 0);
+  const acc = (move.acc || 0) + sharpLv.hit + accMod(p) + speedHitMod(p, m) + (m.trapped > 0 ? CONFIG.TRAP_HIT_BONUS : 0);
   const target = clamp(PARTS[partKey].baseHit + acc, 5, 98);
   return { target, overall: Math.max(target, clamp(CONFIG.OVERALL_HIT + acc, 5, 99)) };
 }
 
-/** Monster accuracy: 60% (30% blinded) + its own accuracy effects + 15 vs a slowed hunter. */
+/** Monster accuracy: 60% (30% blinded) + its accuracy effects + speed mod. */
 export function monsterHitChance(m, p) {
   const base = m.flash > 0 ? CONFIG.MONSTER_HIT_FLASHED : CONFIG.MONSTER_HIT;
-  return clamp(base + accMod(m) + (isSlow(p) ? CONFIG.SLOW_HIT_BONUS : 0), 5, 95);
+  return clamp(base + accMod(m) + speedHitMod(m, p), 5, 95);
 }
-const escapeChance = () => CONFIG.ESCAPE_CHANCE * (isSlow(G.player) ? CONFIG.SLOW_ESCAPE_MULT : 1);
-const escapeSure = m => m.trapped > 0 || m.sleeping || !!m.skipNext || !!blockedBy(m, 'act');
+
+const escapeChance = () => clamp(CONFIG.ESCAPE_CHANCE + (speedOf(G.player) - speedOf(G.foe)) * CONFIG.SPEED_ESCAPE_FACTOR, .2, .95);
+
+/** % chance the hunter acts first with this move. */
+export function firstPct(mv) {
+  if (!mv || mv.priority || foeHeld(G.foe)) return 100;
+  return Math.round(firstChance(G.player, G.foe) * 100);
+}
 
 /* ---------- Confirmation prompts ---------- */
 export function pickMove(id) {
@@ -60,7 +68,7 @@ export function pickMove(id) {
     sub: `Lv${p.charge} -> Lv${p.charge + 1} held. A HEAVY hit may break it (30%).`,
     action: { kind: 'move', moveId: id }, back: 'fight' });
   else if (mv.type === 'guard') setMode('confirm', { q: 'Raise your GUARD?',
-    sub: `Take only 40% damage this turn.${drop}`, action: { kind: 'move', moveId: id }, back: 'fight' });
+    sub: `Take only 40% damage this turn. GUARD always goes first.${drop}`, action: { kind: 'move', moveId: id }, back: 'fight' });
 }
 
 export function confirmAttack(moveId, part) {
@@ -75,6 +83,7 @@ export function confirmAttack(moveId, part) {
     sub = `HIT ${c.target}% · DRIFT ${c.overall - c.target}% (to ${PARTS[part].drift.map(d => PARTS[d].label).join('/')}) · MISS ${100 - c.overall}%`;
     if (m.trapped > 0) sub += ' (TRAPPED +25)';
   }
+  sub += `<br>FIRST ${firstPct(mv)}% · SPD ${speedOf(p)} vs ${speedOf(m)}`;
   if (p.charge > 0 && mv.type !== 'release') sub += '<br>Your held charge will be lost!';
   if (getSharp(p.sharp).bounce) sub += '<br>WARNING: RED edge, the attack will BOUNCE!';
   Audio8.sfx('select');
@@ -87,12 +96,11 @@ export function confirmRun() {
   if (blockedBy(G.player, 'act')) return;
   Audio8.sfx('select');
   setMode('confirm', { q: `Retreat from the ${m.name}?`,
-    sub: escapeSure(m) ? "It can't chase you right now: 100% escape."
-      : `${Math.round(escapeChance() * 100)}% chance${isSlow(G.player) ? ' (SLOWED)' : ''}. A failed escape costs your turn.`,
+    sub: foeHeld(m) ? "It can't chase you right now: 100% escape."
+      : `${Math.round(escapeChance() * 100)}% chance (SPD ${speedOf(G.player)} vs ${speedOf(m)}). A failed escape costs your turn.`,
     action: { kind: 'run' }, back: 'main' });
 }
 
-/** WAIT: pass the turn. Always available; the only option when you can't act. */
 export function confirmWait() {
   const why = blockedBy(G.player, 'act');
   Audio8.sfx('select');
@@ -109,35 +117,78 @@ export function goBack() {
 }
 
 /* ---------- Turn controller (triggered by YES) ---------- */
+const ended = () => G.over || G.screen !== 'battle';
+
+function hunterFirst(action) {
+  if (action.kind !== 'move') return true;              // RUN / WAIT resolve first
+  const mv = findMove(action.moveId);
+  if (mv.priority || foeHeld(G.foe)) return true;       // GUARD / FORESIGHT, or the monster can't act
+  return Math.random() < firstChance(G.player, G.foe);
+}
+
 export function runTurn(action) {
   flow(async () => {
     const m = G.foe, p = G.player;
-    setPhase(2);
+    const first = hunterFirst(action);
+    addLog(`[order: ${first ? 'HUNTER' : m.name} first · SPD ${speedOf(p)} vs ${speedOf(m)}]`, 'dim');
+
+    if (!first) {
+      setPhase(4);
+      await say(`The ${m.name} is quicker!`, 'warn');
+      await monsterTurn(m);
+      if (ended()) return;
+    }
+
     if (action.kind === 'run') {
+      setPhase(2);
       if (await tryEscape()) return;
-    } else if (action.kind === 'wait') {
-      const why = blockedBy(p, 'act');
-      await say(why ? `HUNTER can't move! (${why.name})` : 'HUNTER waits and watches...', 'dim');
+      p.acted = true;
     } else {
-      const intent = await playerActionPhase(action);
-      setPhase(3);
-      if (intent) await hitCalculationPhase(intent);
-      if (G.over || G.screen !== 'battle') return;
+      await hunterTurn(action);
+      if (ended()) return;
       if (m.hp <= 0) { await foeDefeated(); return; }
     }
-    p.acted = true;   // effects landing on the hunter from now on start next turn
-    setPhase(4);
-    await monsterActionPhase();
-    if (G.over || G.screen !== 'battle') return;
-    m.acted = true;
+
+    if (first) {
+      setPhase(4);
+      await monsterTurn(m);
+      if (ended()) return;
+    }
+
     await endOfTurnTicks();
-    if (G.over || G.screen !== 'battle') return;
+    if (ended()) return;
     if (m.hp <= 0) { await foeDefeated(); return; }   // e.g. poisoned to death
     return 'main';
   });
 }
 
-/* PHASE 2: returns an "intent" for attacks; charge / guard resolve here. */
+/** The hunter's half of the turn. Re-checks locks: a faster monster may have stunned or toppled the hunter. */
+async function hunterTurn(action) {
+  const p = G.player;
+  setPhase(2);
+  if (action.kind === 'wait') {
+    const why = blockedBy(p, 'act');
+    await say(why ? `HUNTER can't move! (${why.name})` : 'HUNTER waits and watches...', 'dim');
+  } else {
+    const mv = findMove(action.moveId);
+    const lock = blockedBy(p, 'act') || (isAttack(mv) ? blockedBy(p, 'attack') : null);
+    if (lock) await say(`HUNTER can't ${(lock.blocks || []).includes('act') ? 'move' : 'attack'}! (${lock.name})`, 'bad');
+    else {
+      const intent = await playerActionPhase(action);
+      setPhase(3);
+      if (intent) await hitCalculationPhase(intent);
+    }
+  }
+  p.acted = true;   // effects landing on the hunter from now on start next turn
+}
+
+async function monsterTurn(m) {
+  await monsterActionPhase();
+  m.acted = true;
+}
+
+/* PHASE 2: returns an "intent" for attacks; charge / guard resolve here.
+   Sharpness is spent in phase 3, and only if the attack connects. */
 async function playerActionPhase(action) {
   const p = G.player, w = WEAPONS[p.weapon], move = findMove(action.moveId);
   if (p.charge > 0 && move.type !== 'charge' && move.type !== 'release') {
@@ -151,13 +202,12 @@ async function playerActionPhase(action) {
     return null;
   }
   if (move.type === 'guard') {
-    p.guarding = true; p.sharp = Math.max(0, p.sharp - move.sharp);
+    p.guarding = true; p.sharp = Math.max(0, p.sharp - move.sharp);   // blocking wears the edge
     Audio8.sfx('clang'); renderBattle();
     await say('HUNTER raised the blade to GUARD!');
     return null;
   }
   const sharpLv = getSharp(p.sharp);
-  p.sharp = Math.max(0, p.sharp - move.sharp);
   let chargeMult = 1, label = move.name;
   if (move.type === 'release') { chargeMult = CHARGE_MULT[p.charge]; label = `${move.name} Lv${p.charge + 1}`; p.charge = 0; }
   if (move.type === 'finisher') { chargeMult = 1 + 0.5 * p.spirit; p.spirit = 0; }
@@ -172,7 +222,7 @@ async function playerActionPhase(action) {
 /* PHASE 3: HIT CALCULATION
    DAMAGE = power × partMult × sharpMult × might × charge × wake × crack × variance(0.9–1.1)
             × hunter atkMult (dragon 0.8) × monster defMult (fire 1.15, bleed 1.3)
-            + weapon element power (unless the hunter is Dragonblighted) */
+            + weapon element power (unless Dragonblighted) */
 async function hitCalculationPhase(intent) {
   const p = G.player, m = G.foe, w = WEAPONS[p.weapon], { target, sharpLv } = intent, wake = m.sleeping;
   let hitPart = null, drifted = false;
@@ -183,7 +233,8 @@ async function hitCalculationPhase(intent) {
     if (roll < c.target) hitPart = target;
     else if (roll < c.overall) { hitPart = pick(PARTS[target].drift); drifted = true; }
   }
-  if (!hitPart) { Audio8.sfx('miss'); await say("HUNTER's attack missed!", 'bad'); return; }
+  if (!hitPart) { Audio8.sfx('miss'); await say("HUNTER's attack missed!", 'bad'); return; }   // a miss costs no sharpness
+  p.sharp = Math.max(0, p.sharp - intent.move.sharp);
   if (drifted) await say(`The swing drifted off the ${PARTS[target].label}...\nand struck the ${PARTS[hitPart].label}!`, 'warn');
 
   const part = m.parts[hitPart], pdef = PARTS[hitPart];
@@ -213,9 +264,10 @@ async function hitCalculationPhase(intent) {
     const msg = applyStatus(m, elem, p);
     if (msg) { renderBattle(); await say(msg, 'good'); }
   }
-  // A Thunderblighted monster can be stunned by hits
-  if (m.hp > 0 && hasStatus(m, 'thunder')) {
-    const s = stunOnHit(m, 0);
+  // Stun (KO) on monsters: BLUNT weapons only. Every demo weapon cuts, so this stays dormant.
+  // Thunderblight on the monster raises the minimum chance through stunChance().
+  if (m.hp > 0 && w.dmgType === 'blunt') {
+    const s = stunOnHit(m, hitPart === 'head' ? CONFIG.KO_BUILD_HEAD : CONFIG.KO_BUILD);
     if (s) { renderBattle(); await say(s, 'good'); }
   }
 
@@ -225,7 +277,10 @@ async function hitCalculationPhase(intent) {
     anim($('playerSprite'), 'a-shake', 400); pop($('playerSprite'), `-${recoil}`); renderBattle();
     await say(`The dull blade BOUNCED off!\nHalf damage, and ${recoil} recoil to HUNTER!`, 'bad');
   }
-  if (wake && m.hp > 0) { m.sleeping = false; renderBattle(); Audio8.sfx('roar'); await say(`The ${m.name} woke up in a rage!`, 'warn'); }
+  if (wake && m.hp > 0) {
+    m.sleeping = false; m.limping = false; renderBattle(); Audio8.sfx('roar');
+    await say(`The ${m.name} woke up in a rage!`, 'warn');
+  }
   if (m.isBoss && !part.broken && part.hp <= 0) { part.broken = true; await applyBreak(hitPart); }
   if (m.isBoss && m.hp > 0 && m.hp / m.maxHp <= CONFIG.CAPTURE_PCT && !m.warnedCap) {
     m.warnedCap = true; renderBattle();
@@ -244,13 +299,17 @@ async function applyBreak(k) {
       await say(`The ${m.name}'s armor CRACKED!\nAll damage +10%!`, 'good'); break;
     case 'legs': m.skipNext = 'tripped over its broken legs';
       await say(`The ${m.name}'s LEGS were broken!\nIt's about to trip!`, 'good'); break;
-    case 'tail': m.atkMult *= CONFIG.TAIL_ATK_MULT;
-      await say(`The ${m.name}'s TAIL was severed!\nIts ATTACK fell! (x${m.atkMult.toFixed(2)})`, 'good'); break;
+    case 'tail':
+      m.atkMult *= CONFIG.TAIL_ATK_MULT;
+      // The tail drops where the fight happened; it's placed on the map when the battle ends
+      G.tailDrop = { area: G.f.area, x: m.x, y: m.y, key: m.key, name: m.name, placed: false, carved: false };
+      await say(`The ${m.name}'s TAIL was severed!\nIts ATTACK fell! (x${m.atkMult.toFixed(2)})`, 'good');
+      await say('The tail crashed to the ground.\nCarve it after the battle!', 'dim');
+      break;
   }
   renderBattle();
 }
 
-/** Weighted attack pick (weight defaults to 1). */
 function pickAttack(m) {
   const total = m.attacks.reduce((s, a) => s + (a.weight ?? 1), 0);
   let r = Math.random() * total;
@@ -258,7 +317,6 @@ function pickAttack(m) {
   return m.attacks[0];
 }
 
-/** Applies an attack's `inflict` list. missed=true: only area effects (aoe) still land. */
 async function inflictAll(atk, src, target, missed) {
   for (const f of atk.inflict || []) {
     if (missed && !f.aoe) continue;
@@ -271,8 +329,8 @@ async function inflictAll(atk, src, target, missed) {
 /* PHASE 4: MONSTER AI
    Order: trapped -> asleep -> staggered -> can't act (status) -> flee check (boss) -> attack
    Monster DMG = power × atkMult(tail) × atkMult(status) × hunter defMult(status) × variance × (guard ? 0.4 : 1)
-   STUN: each hit taken in a row adds STUN_BUILD % (heavy: STUN_BUILD_HEAVY, guarding: half).
-         A monster turn that doesn't hit the hunter resets the buildup. Thunder raises the minimum. */
+   HUNTER STUN: each hit in a row adds STUN_BUILD % (heavy: STUN_BUILD_HEAVY, guarding: half), capped at
+   STUN_CAP. A monster turn that doesn't hit the hunter resets it. Thunderblight raises the minimum. */
 async function monsterActionPhase() {
   const m = G.foe, p = G.player;
   const noHit = () => { p.stunBuild = 0; renderBattle(); };
@@ -299,7 +357,7 @@ async function monsterActionPhase() {
   }
 
   const atk = pickAttack(m);
-  if (atk.roar) {   // no damage, no accuracy roll
+  if (atk.roar) {
     Audio8.sfx('roar'); anim($('enemySprite'), 'a-shake', 400);
     await say(`The ${m.name} let out a deafening ROAR!`, 'warn');
     if (p.foresight) { await say('HUNTER read it and braced through the roar!', 'good'); return noHit(); }
@@ -317,7 +375,7 @@ async function monsterActionPhase() {
   if (roll >= hitChance) {
     Audio8.sfx('miss');
     await say(m.flash > 0 ? `The blinded ${m.name} missed wildly!` : 'HUNTER dodged! The attack missed!', 'good');
-    await inflictAll(atk, m, p, true);   // shockwaves / gusts still land
+    await inflictAll(atk, m, p, true);
     return noHit();
   }
   let dmg = atk.power * m.atkMult * atkMult(m) * defMult(p) * rand(0.9, 1.1);
@@ -331,9 +389,8 @@ async function monsterActionPhase() {
 
   await inflictAll(atk, m, p, false);
 
-  // Stun buildup from consecutive hits
   const build = (atk.heavy ? CONFIG.STUN_BUILD_HEAVY : CONFIG.STUN_BUILD) * (p.guarding ? .5 : 1);
-  const stunned = stunOnHit(p, build);
+  const stunned = stunOnHit(p, build, CONFIG.STUN_CAP);
   if (stunned) {
     Audio8.sfx('flash'); anim($('playerSprite'), 'a-shake', 400); renderBattle();
     await say(stunned, 'bad');
@@ -351,8 +408,11 @@ async function monsterFlee(limping) {
   const dest = limping && m.area !== NEST ? NEST : pick(neighbors(m.area).filter(a => a !== 0));
   Audio8.sfx('swoosh'); $('enemySprite').classList.add('a-flee');
   await pause(650);
-  Object.assign(m, { area: dest, posArea: null, turnsInArea: 0, roamTimer: 0, restTurns: 0, sleeping: false,
-                     fleeAt: randInt(CONFIG.FLEE_MIN, CONFIG.FLEE_MAX) });
+  Object.assign(m, {
+    area: dest, posArea: null, turnsInArea: 0, sleeping: false, goal: null, leaving: null,
+    limping: limping || m.limping, searched: 0,              // limping -> sleeps after 3 unfound areas
+    roamMs: rand(CONFIG.ROAM_MIN_MS, CONFIG.ROAM_MAX_MS), fleeAt: randInt(CONFIG.FLEE_MIN, CONFIG.FLEE_MAX)
+  });
   await say(G.paint > 0
     ? `The ${m.name} fled to AREA ${dest}!\nThe paintball marks its trail.`
     : `The ${m.name} fled!\nWithout a paintball you'll have to search...`, 'warn');
@@ -361,7 +421,7 @@ async function monsterFlee(limping) {
 
 async function tryEscape() {
   const m = G.foe;
-  if (escapeSure(m) || Math.random() < escapeChance()) {
+  if (foeHeld(m) || Math.random() < escapeChance()) {
     Audio8.sfx('area');
     await say('HUNTER got away safely!', 'good');
     G.turn++;

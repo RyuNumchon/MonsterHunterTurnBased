@@ -146,7 +146,7 @@ canvas {
   display: flex;
   gap: 1.2cqw;
   padding: 1.4cqw;
-  min-height: clamp(150px, 25cqw, 230px);
+  height:clamp(150px,25cqw,230px);
   background: linear-gradient(#3a4450, #283038);
   font-size: clamp(9px, 1.7cqw, 15px);
   border-top: 0.3em solid #1a1f26;
@@ -162,6 +162,7 @@ canvas {
   padding: 1em 1.3em;
   line-height: 2;
   min-width: 0;
+  overflow:hidden;
 }
 .tb.adv {
   cursor: pointer;
