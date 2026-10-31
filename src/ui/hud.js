@@ -10,6 +10,7 @@ import { DATA, pimg } from '../art/index.js';
 import { addLog, setPhase } from './fx.js';
 import { findMove, moveDisabled, hitChances } from '../battle/turn.js';
 import { blockedBy, statusChips, stunChance, hasStatus } from '../battle/status.js';
+import { speedOf } from '../battle/speed.js';
 
 export const hpColor = pct => pct > 50 ? '#58d080' : pct > 20 ? '#f8d030' : '#f05038';
 export const chip = (t, c) => `<span class="chip ${c}">${t}</span>`;
@@ -33,7 +34,7 @@ export function renderBattle() {
   const p = G.player, m = G.foe, w = WEAPONS[p.weapon];
   // --- Enemy box ---
   $('eName').textContent = m.name;
-  $('eRank').textContent = m.isBoss ? `★${m.rank}` : `Lv${m.rank}`;
+  $('eRank').textContent = `${m.isBoss ? '★' + m.rank : 'Lv' + m.rank} · SPD ${speedOf(m)}`;
   const eP = m.hp / m.maxHp * 100;
   setBar($('eHp'), eP, hpColor(eP));
   for (const k in PARTS) {
@@ -63,7 +64,7 @@ export function renderBattle() {
   const s = getSharp(p.sharp);
   setBar($('pSharp'), p.sharp / CONFIG.SHARP_MAX * 100, s.color);
   $('pSharpLbl').innerHTML = `<span style="color:${s.text}">${s.name}</span> ${p.sharp}/${CONFIG.SHARP_MAX}`;
-  $('pGauge').innerHTML = p.weapon === 'greatsword' ? `CHG${pips(p.charge, 2)}` : `SPR${pips(p.spirit, 3)}`;
+  $('pGauge').innerHTML = (p.weapon === 'greatsword' ? `CHG${pips(p.charge, 2)}` : `SPR${pips(p.spirit, 3)}`) + ` · SPD ${speedOf(p)}`;
   const pc = [];
   if (p.buffs.might > 0) pc.push(chip(`MIGHT ${p.buffs.might}`, 'c-mgt'));
   if (p.guarding) pc.push(chip('GUARD', 'c-grd'));
@@ -165,10 +166,11 @@ export function renderPanel() {
       break;
     }
     case 'carve':
-      h = `<div class="tb">The ${m.name} lies still...<br>Carve it for materials! (${d.i + 1}/${d.n})
+      h = `<div class="tb">${d.what === 'TAIL' ? `The severed ${m.name} TAIL...` : `The ${m.name} lies still...`}<br>Carve it for materials! (${d.i + 1}/${d.n})
           <div class="sub">Press CARVE or Z for each carve.</div></div>
         <div class="cmds"><button class="cmd k-fight carvebtn" data-act="carve">CARVE</button></div>`;
       break;
+
       default: { // 'main'
       const act = blockedBy(p, 'act'), itemLock = blockedBy(p, 'item');
       const left = CONFIG.MAX_ITEMS_PER_TURN - G.itemsUsed;
@@ -198,7 +200,7 @@ export function renderFieldPanel(P) {
         <div class="srow"><b>HP</b><span class="mbar"><i style="width:${hp}%;background:${hpColor(hp)}"></i></span>${p.hp}/${p.maxHp}</div>
         <div class="srow"><b>COND</b>${statusChips(p) || 'NORMAL'}</div>
         <div class="srow"><b>EDGE</b><span class="mbar"><i style="width:${p.sharp / CONFIG.SHARP_MAX * 100}%;background:${s.color}"></i></span>${s.name}</div>
-        <div class="srow"><b>GEAR</b>${pimg(DATA['wpn_' + p.weapon])}${WEAPONS[p.weapon].name} · CARTS <span class="balls">${balls(p.carts)}</span></div>
+        <div class="srow"><b>GEAR</b>${pimg(DATA['wpn_' + p.weapon])}${WEAPONS[p.weapon].short} · SPD ${speedOf(p)} · CARTS <span class="balls">${balls(p.carts)}</span></div>
       </div>
       <div class="ss"><button data-act="fstart">START</button><button data-act="fmap">MAP</button><button data-act="fbag">BAG</button></div>
       <div class="keys">ARROWS/WASD move · Z talk/A · X back · ENTER menu · M map · N music</div>

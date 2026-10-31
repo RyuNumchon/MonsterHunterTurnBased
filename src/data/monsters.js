@@ -1,7 +1,7 @@
 /* Large (quest target) monsters, small monsters, body parts and loot tables. */
 
 export const MONSTERS = {
-  rathalos: { name: 'RATHALOS', rank: 6, hp: 650, parts: { head: 160, body: 260, legs: 150, tail: 140 },
+  rathalos: { name: 'RATHALOS', rank: 6, spd: 110, hp: 650, parts: { head: 160, body: 260, legs: 150, tail: 140 },
     attacks: [
       { name: 'FIREBALL', power: 20, inflict: [{ id: 'fire', chance: .6 }] },
       { name: 'TAIL WHIP', power: 16 },
@@ -9,7 +9,7 @@ export const MONSTERS = {
       { name: 'POISON TALON DIVE', power: 30, heavy: true, inflict: [{ id: 'poison', chance: .7 }] },
       { name: 'WING GUST', power: 8, inflict: [{ id: 'wind', chance: 1, aoe: true }] },
       { name: 'ROAR', power: 0, roar: true, weight: .6 } ] },
-  tigrex: { name: 'TIGREX', rank: 6, hp: 700, parts: { head: 180, body: 280, legs: 150, tail: 120 },
+  tigrex: { name: 'TIGREX', rank: 6, spd: 120, hp: 700, parts: { head: 180, body: 280, legs: 150, tail: 120 },
       attacks: [
       { name: 'BITE', power: 18 },
       { name: 'ROCK THROW', power: 16 },
@@ -21,10 +21,10 @@ export const MONSTERS = {
 
 // aggro = tile distance at which they start chasing
 export const SMALLS = {
-  jaggi: { name: 'JAGGI', rank: 1, hp: 80, aggro: 3, parts: { head: 30, body: 40, legs: 30, tail: 25 },
+  jaggi: { name: 'JAGGI', rank: 1, spd: 105, hp: 80, aggro: 3, parts: { head: 30, body: 40, legs: 30, tail: 25 },
     attacks: [ { name: 'BITE', power: 8 }, { name: 'TAIL SLAP', power: 6 }, { name: 'POUNCE', power: 11 } ],
     carve: [['JAGGI HIDE', 60, 1], ['JAGGI SCALE', 30, 2], ['SCREAMER', 10, 3]] },
-  bullfango: { name: 'BULLFANGO', rank: 1, hp: 100, aggro: 4, parts: { head: 35, body: 45, legs: 30, tail: 20 },
+  bullfango: { name: 'BULLFANGO', rank: 1, spd: 95,  hp: 100, aggro: 4, parts: { head: 35, body: 45, legs: 30, tail: 20 },
     attacks: [ { name: 'TUSK CHARGE', power: 12, heavy: true }, { name: 'HEADBUTT', power: 8 }, { name: 'STOMP', power: 7 } ],
     carve: [['RAW MEAT', 55, 1], ['BULLFANGO PELT', 35, 2], ['BULLFANGO HEAD', 10, 3]] }
 };

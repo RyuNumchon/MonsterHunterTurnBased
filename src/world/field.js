@@ -1,25 +1,34 @@
-/* Overworld simulation: grid movement, monster AI, encounters, area changes, world turns.
-   Encounters are collision-based: you walk into a monster, or it walks into you. */
+/* Overworld simulation: grid movement, monster AI (wander / chase / leave), real-time
+   big-monster roaming between areas, area changes and world turns.
+   Encounters are collision-based: you walk into a monster, or it walks into you.
+   Step times scale with speed: ms = base × 100 / speed (battle/speed.js). */
 import { CONFIG } from '../core/config.js';
-import { rand, pick, randInt } from '../core/utils.js';
+import { $, rand, pick } from '../core/utils.js';
 import { G, UI, waits, input } from '../core/state.js';
 import { SMALLS } from '../data/monsters.js';
-import { SOLID, DIRV, dirOf, CAMP_SPAWN, NEST, neighbors } from '../data/world.js';
+import { SOLID, DIRV, dirOf, CAMP_SPAWN, neighbors } from '../data/world.js';
 import { Audio8, fieldMusic } from '../audio/audio8.js';
-import { $ } from '../core/utils.js';
 import { flow, pause } from '../ui/dialog.js';
 import { toast, showLocation } from '../ui/fx.js';
-import { MAPS } from './mapgen.js';
+import { MAPS, findFree } from './mapgen.js';
 import { buildEntities } from './spawn.js';
 import { startEncounter } from '../battle/encounter.js';
-import { isSlow, tickStatuses } from '../battle/status.js';
+import { tickStatuses } from '../battle/status.js';
+import { stepMs } from '../battle/speed.js';
 
-/** True when the hunter can move or interact (no dialog, menu or overlay open). */
+const DIRS4 = Object.values(DIRV);
+
 export const canAct = () => !!G && G.screen === 'field' && !G.busy && !G.over && !UI.menu && !waits.map && !waits.store;
 
-export const tileWalk = (M, x, y) => x >= 0 && y >= 0 && x < M.w && y < M.h && !SOLID.has(M.tiles[y][x]) && !M.blockers.has(x + ',' + y);
+/** A severed tail lying on this tile of the current area (blocks movement; face it + A to carve). */
+export const tailAt = (x, y) => {
+  const t = G.tailDrop;
+  return !!t && t.placed && !t.carved && t.area === G.f.area && t.x === x && t.y === y;
+};
 
-/** Entity standing on (or stepping into) a tile. */
+export const tileWalk = (M, x, y) => x >= 0 && y >= 0 && x < M.w && y < M.h
+  && !SOLID.has(M.tiles[y][x]) && !M.blockers.has(x + ',' + y) && !tailAt(x, y);
+
 export function entAt(x, y, except) {
   return G.ents.find(e => e !== except && !e.dead && ((e.x === x && e.y === y) || (e.mv && e.mv.tx === x && e.mv.ty === y)));
 }
@@ -30,13 +39,67 @@ function entFree(x, y, self) {
 }
 function beginMove(e, tx, ty, dur) { e.mv = { tx, ty, t: 0, dur }; }
 
-/** Called every frame while on the field. */
+/* ---------- Pathfinding ---------- */
+/** BFS over walkable tiles (other entities ignored). First [dx, dy] toward the goal, or null. */
+function stepToward(M, sx, sy, tx, ty, exitOk) {
+  if (sx === tx && sy === ty) return null;
+  const W = M.w, prev = new Int32Array(W * M.h).fill(-1), start = sy * W + sx, goal = ty * W + tx, q = [start];
+  prev[start] = start;
+  for (let i = 0; i < q.length && prev[goal] === -1; i++) {
+    const k = q[i], x = k % W, y = (k / W) | 0;
+    for (const [dx, dy] of DIRS4) {
+      const nx = x + dx, ny = y + dy;
+      if (!tileWalk(M, nx, ny)) continue;
+      const nk = ny * W + nx;
+      if (prev[nk] !== -1) continue;
+      if (M.tiles[ny][nx] === 'E' && !(exitOk && nk === goal)) continue;
+      prev[nk] = k; q.push(nk);
+    }
+  }
+  if (prev[goal] === -1) return null;
+  let k = goal;
+  while (prev[k] !== start) k = prev[k];
+  return [k % W - sx, ((k / W) | 0) - sy];
+}
+
+/** Walkable, non-exit tiles of an area (cached). */
+function openTiles(M) {
+  return M.open ||= [...M.reach].map(k => k.split(',').map(Number))
+    .filter(([x, y]) => M.tiles[y][x] !== 'E' && M.tiles[y][x] !== '-' && !M.blockers.has(x + ',' + y));
+}
+
+/** Random wander target: anywhere in the area (boss) or within SMALL_ROAM_RADIUS of home (small). */
+function pickGoal(e, M) {
+  const rad = e.kind === 'boss' ? Infinity : CONFIG.SMALL_ROAM_RADIUS;
+  const c = openTiles(M).filter(([x, y]) =>
+    Math.abs(x - e.hx) + Math.abs(y - e.hy) <= rad && Math.abs(x - e.x) + Math.abs(y - e.y) >= 4);
+  if (!c.length) return null;
+  const [x, y] = pick(c);
+  e.stuck = 0;
+  return { x, y };
+}
+
+/** One step toward e.goal. Returns false when the goal should be dropped. */
+function walkStep(e, M, now, ms, exitOk) {
+  const g = e.goal, st = stepToward(M, e.x, e.y, g.x, g.y, exitOk);
+  if (!st) return false;
+  const tx = e.x + st[0], ty = e.y + st[1];
+  if (st[0]) e.dir = dirOf(st[0], 0);
+  const free = exitOk && tx === g.x && ty === g.y ? !entAt(tx, ty, e) && !playerOn(tx, ty) : entFree(tx, ty, e);
+  if (!free) { e.next = now + 250; return ++e.stuck < 6; }   // blocked: wait a moment, give up after 6 tries
+  e.stuck = 0;
+  beginMove(e, tx, ty, ms);
+  e.next = now + ms;
+  return true;
+}
+
+/* ---------- Per-frame update ---------- */
 export function updateField(dt, now) {
   if (!canAct()) return;
   const f = G.f;
-  // --- Hunter tween / input ---
+  roamClock(dt);
   if (f.mv) {
-    f.mv.t += dt / (CONFIG.MOVE_MS * (isSlow(G.player) ? CONFIG.SLOW_MOVE_MULT : 1));
+    f.mv.t += dt / stepMs(G.player, CONFIG.MOVE_MS);
     if (f.mv.t >= 1) { f.x = f.mv.tx; f.y = f.mv.ty; f.mv = null; if (onPlayerStep()) return; }
   }
   if (!f.mv) {
@@ -48,15 +111,13 @@ export function updateField(dt, now) {
       else if (tileWalk(MAPS[f.area], tx, ty)) { f.mv = { tx, ty, t: 0 }; f.step++; }
     }
   }
-  // --- Entities ---
-  for (const e of G.ents) {
-    if (G.busy) return;   // an encounter just started
+  for (const e of [...G.ents]) {
+    if (G.busy) return;
     if (e.mv) { e.mv.t += dt / e.mv.dur; if (e.mv.t >= 1) { e.x = e.mv.tx; e.y = e.mv.ty; e.mv = null; } }
     else if (now >= e.next) aiStep(e, now);
   }
 }
 
-/** Returns true if the step triggered an area change. */
 function onPlayerStep() {
   const f = G.f, M = MAPS[f.area];
   if (M.tiles[f.y][f.x] === 'E') {
@@ -66,14 +127,10 @@ function onPlayerStep() {
   return false;
 }
 
-/* Monster AI (one decision per "next" tick):
-   - Sleeping boss: stays put.
-   - Within aggro range: shows "!", then CHASES at 95 ms/tile (boss) or 115 ms/tile (small),
-     faster than the hunter's 150 ms/tile. Stepping onto the hunter = AMBUSH battle.
-   - Otherwise: wanders within a few tiles of home.
-   - NPCs: Felynes shuffle around; the Veteran just looks around. */
+/* ---------- Monster & NPC AI ----------
+   Priority: asleep -> chase the hunter (aggro range) -> walk to an exit (boss leaving) -> wander. */
 function aiStep(e, now) {
-  const f = G.f;
+  const f = G.f, M = MAPS[f.area];
   if (e.kind === 'npc') {
     if (e.wander && Math.random() < 0.5) {
       const [dn, [sx, sy]] = pick(Object.entries(DIRV)), tx = e.x + sx, ty = e.y + sy;
@@ -84,19 +141,21 @@ function aiStep(e, now) {
     return;
   }
   if (e.kind === 'boss' && e.sleeping) { e.next = now + 800; return; }
+
+  // Chase
   const aggro = e.kind === 'boss' ? CONFIG.BOSS_AGGRO : SMALLS[e.key].aggro;
   const d = Math.abs(e.x - f.x) + Math.abs(e.y - f.y);
   if (now >= G.grace && d <= aggro) {
+    e.leaving = null; e.goal = null;   // forget about leaving: there's a hunter here
     if (!e.alerted) {
       e.alerted = true; e.bang = now + 600; e.next = now + 450;
       Audio8.sfx(e.kind === 'boss' ? 'roar' : 'bang');
       return;
     }
-    // Step along the longer axis first, fall back to the other
     const ddx = f.x - e.x, ddy = f.y - e.y, opts = [];
     if (Math.abs(ddx) >= Math.abs(ddy)) { if (ddx) opts.push([Math.sign(ddx), 0]); if (ddy) opts.push([0, Math.sign(ddy)]); }
     else { if (ddy) opts.push([0, Math.sign(ddy)]); if (ddx) opts.push([Math.sign(ddx), 0]); }
-    const dur = e.kind === 'boss' ? CONFIG.BOSS_CHASE_MS : CONFIG.SMALL_CHASE_MS;
+    const dur = stepMs(e, e.kind === 'boss' ? CONFIG.BOSS_CHASE_MS : CONFIG.SMALL_CHASE_MS);
     let moved = false;
     for (const [sx, sy] of opts) {
       const tx = e.x + sx, ty = e.y + sy;
@@ -108,15 +167,62 @@ function aiStep(e, now) {
     return;
   }
   e.alerted = false;
-  if (Math.random() < 0.55) {
-    const [dn, [sx, sy]] = pick(Object.entries(DIRV)), tx = e.x + sx, ty = e.y + sy, rad = e.kind === 'boss' ? 4 : 3;
-    if (sx) e.dir = dn;
-    if (Math.abs(tx - e.hx) <= rad && Math.abs(ty - e.hy) <= rad && entFree(tx, ty, e)) beginMove(e, tx, ty, CONFIG.WANDER_MS);
+  const ms = stepMs(e, CONFIG.WANDER_MS);
+
+  // Boss walking to an exit to roam into the next area
+  if (e.leaving) {
+    const ex = e.leaving;
+    if (e.x === ex.x && e.y === ex.y) { bossLeaves(e); return; }
+    e.goal = { x: ex.x, y: ex.y };
+    if (!walkStep(e, M, now, ms, true)) bossLeaves(e);   // path blocked: slip away anyway
+    return;
   }
-  e.next = now + rand(800, 1800);
+
+  // Wander: walk to a spot, linger, pick another
+  if (e.goal && e.x === e.goal.x && e.y === e.goal.y) { e.goal = null; e.next = now + rand(700, 2200); return; }
+  if (!e.goal) { e.goal = pickGoal(e, M); if (!e.goal) { e.next = now + 1500; return; } }
+  if (!walkStep(e, M, now, ms, false)) { e.goal = null; e.next = now + 400; }
 }
 
-/** Where the hunter appears when arriving in `to` from `from`. */
+/* ---------- Big monster roaming (real time) ----------
+   Every ROAM_MIN–MAX ms on the field the boss heads to a neighbouring area (never camp).
+   Same area as the hunter: it walks to the exit visibly (unless it has spotted the hunter).
+   Elsewhere: it simply moves; if it moves INTO the hunter's area, it walks in through that exit.
+   Sleeping or limping monsters stay put. */
+function roamClock(dt) {
+  const m = G.monster;
+  if (m.dead || m.captured || m.sleeping || m.limping || m.leaving) return;
+  if (m.area === G.f.area && m.alerted) return;
+  if ((m.roamMs -= dt) > 0) return;
+  m.roamMs = rand(CONFIG.ROAM_MIN_MS, CONFIG.ROAM_MAX_MS);
+  const to = pick(neighbors(m.area).filter(a => a !== 0));
+  if (m.area === G.f.area) { m.leaving = MAPS[m.area].exits.find(e => e.to === to); m.goal = null; return; }
+  const from = m.area;
+  m.area = to; m.posArea = null;
+  if (to === G.f.area) bossEnters(m, from);
+  else if (G.paint > 0) toast(`PAINTBALL: the ${m.name} moved to AREA ${to}.`);
+}
+
+function bossLeaves(e) {
+  const to = e.leaving.to;
+  Object.assign(e, { area: to, posArea: null, leaving: null, goal: null, mv: null });
+  G.ents = G.ents.filter(x => x !== e);
+  Audio8.sfx('swoosh');
+  toast(`The ${e.name} left for AREA ${to}!`);
+}
+
+function bossEnters(m, from) {
+  const M = MAPS[G.f.area], ex = M.exits.find(e => e.to === from), f = G.f;
+  const p = findFree(M, ex ? ex.x : 12, ex ? ex.y : 9,
+    (x, y) => Math.abs(x - f.x) + Math.abs(y - f.y) < 3 || !!entAt(x, y), true);
+  Object.assign(m, { x: p.x, y: p.y, hx: p.x, hy: p.y, mv: null, goal: null, leaving: null,
+                     posArea: G.f.area, alerted: false, next: performance.now() + 900 });
+  G.ents.push(m);
+  Audio8.sfx('roar');
+  toast(`The ${m.name} entered the area!`);
+}
+
+/* ---------- Area changes & world turns ---------- */
 function spawnFor(to, from) {
   const ex = MAPS[to].exits.find(e => e.to === from);
   return ex ? { x: ex.x + ex.ix, y: ex.y + ex.iy, dir: ex.idir } : { ...CAMP_SPAWN };
@@ -129,9 +235,9 @@ export function changeArea(to) {
     tr.className = 'fadeIn'; await pause(260);
     const from = G.f.area, sp = spawnFor(to, from);
     Object.assign(G.f, { area: to, x: sp.x, y: sp.y, dir: sp.dir, mv: null });
-    const msgs = worldTick();                  // moving between areas = 1 turn
+    const msgs = worldTick(true);
     buildEntities(true);
-    G.grace = performance.now() + 1200;        // a short beat before anything charges
+    G.grace = performance.now() + 1200;
     Audio8.music(fieldMusic());
     tr.className = 'fadeOut'; showLocation(to);
     await pause(260); tr.className = '';
@@ -139,35 +245,29 @@ export function changeArea(to) {
   });
 }
 
-/* World turn (area change, resting, carting). While the hunter is in ANOTHER area, the boss:
-   heals 3% max HP per turn; below 60% HP after 2+ rest turns it may fall asleep
-   (80% in the NEST, 35% elsewhere); wakes after WAKE_AFTER turns or at 70% HP;
-   otherwise, once its 4–6 turn timer is up, has a 50%/turn chance to roam to a linked area.
-   Returns toast messages (only revealing details while a paintball is active). */
-export function worldTick() {
+/* World turn: area change (moved = true), resting or carting.
+   Statuses tick (they can't knock anyone out on the map).
+   HEALING RULE: the big monster heals ONLY while asleep. It only falls asleep after limping away,
+   once the hunter has moved through SLEEP_AFTER_AREAS areas without finding it.
+   Asleep: +REST_HEAL_PCT per world turn until it wakes (WAKE_AFTER turns) or is attacked. */
+export function worldTick(moved = true) {
   const msgs = [], p = G.player, m = G.monster;
   G.turn++;
   for (const r of tickStatuses(p, false)) msgs.push(r.msg);
   if (G.paint > 0 && --G.paint === 0) msgs.push('The paintball scent faded...');
   if (p.buffs.might > 0 && --p.buffs.might === 0) msgs.push('The MIGHT SEED wore off.');
-  if (m.dead || m.captured || m.area === G.f.area) return msgs;
-  m.restTurns++;
-  m.hp = Math.min(m.maxHp, m.hp + Math.round(m.maxHp * CONFIG.REST_HEAL_PCT));
+  if (m.dead || m.captured) return msgs;
+  tickStatuses(m, false);
+  if (m.area === G.f.area) { m.searched = 0; return msgs; }   // found it
   if (m.sleeping) {
-    m.sleepTurns++;
-    if (m.sleepTurns >= CONFIG.WAKE_AFTER || m.hp / m.maxHp >= 0.7) {
-      m.sleeping = false;
-      if (G.paint > 0) msgs.push(`The ${m.name} woke up.`);
+    m.hp = Math.min(m.maxHp, m.hp + Math.round(m.maxHp * CONFIG.REST_HEAL_PCT));
+    if (++m.sleepTurns >= CONFIG.WAKE_AFTER) {
+      m.sleeping = false; m.limping = false;
+      if (G.paint > 0) msgs.push(`The ${m.name} woke up, partly healed.`);
     }
-  } else if (m.restTurns >= 2 && m.hp / m.maxHp < 0.6
-             && Math.random() < (m.area === NEST ? CONFIG.NEST_SLEEP_CHANCE : CONFIG.SLEEP_CHANCE)) {
+  } else if (m.limping && moved && ++m.searched >= CONFIG.SLEEP_AFTER_AREAS) {
     m.sleeping = true; m.sleepTurns = 0;
-    if (G.paint > 0) msgs.push(`PAINTBALL: the ${m.name} fell ASLEEP in AREA ${m.area}!`);
-  }
-  if (!m.sleeping && ++m.roamTimer >= m.fleeAt && Math.random() < CONFIG.ROAM_CHANCE) {
-    m.area = pick(neighbors(m.area).filter(a => a !== 0));
-    m.roamTimer = 0; m.restTurns = 0; m.posArea = null; m.fleeAt = randInt(CONFIG.FLEE_MIN, CONFIG.FLEE_MAX);
-    msgs.push(G.paint > 0 ? `PAINTBALL: the ${m.name} moved to AREA ${m.area}.` : 'You hear a distant roar...');
+    msgs.push(G.paint > 0 ? `PAINTBALL: the ${m.name} fell ASLEEP in AREA ${m.area}!` : 'The mountain has gone quiet...');
   }
   return msgs;
 }

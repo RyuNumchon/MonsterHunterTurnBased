@@ -17,7 +17,7 @@ import { applyStatus, blockedBy, clearBattleOnly, curable, cureStatuses } from '
 export function startEncounter(e, how) {
   if (!G || G.busy || G.screen !== 'field' || G.over) return;
   G.f.mv = null; input.dirs = [];
-  e.mv = null; e.alerted = false; e.bang = 0;
+    e.mv = null; e.alerted = false; e.bang = 0; e.goal = null; e.leaving = null;
   flow(async () => {
     G.foe = e; G.itemsUsed = 0;
     e.skipNext = null; e.trapped = 0; e.flash = 0;

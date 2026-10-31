@@ -221,12 +221,33 @@
   background: #9a9a9a;
   opacity: 0.55;
 }
+/* Two rows of status tags at most: the HP boxes never grow */
 .chips {
   display: flex;
   flex-wrap: wrap;
   gap: 0.3em;
   margin-top: 0.4em;
-  min-height: 0.9em;
+  height: 2.1em;
+  overflow: hidden;
+  align-content: flex-start;
+}
+/* Panel contents stay inside the fixed-height panel */
+.cmds,
+.movebox,
+.minfo {
+  min-height: 0;
+}
+.movebox,
+.minfo {
+  overflow: hidden;
+}
+#mInfo {
+  min-height: 0;
+  overflow: hidden;
+}
+.baglist {
+  align-content: start;
+  overflow-y: auto;
 }
 .chip {
   font-size: 0.55em;

@@ -13,11 +13,12 @@ import { say, ask, choose, flow, pause } from "../ui/dialog.js";
 import { toast } from "../ui/fx.js";
 import { openMap } from "../ui/map.js";
 import { MAPS } from "./mapgen.js";
-import { entAt, worldTick } from "./field.js";
+import { entAt, worldTick, tailAt } from './field.js';
 import { NPC_TALK } from "../npc/dialogue.js";
 import { startEncounter } from "../battle/encounter.js";
 import { finishQuest, showStorage } from "../quest/rewards.js";
 import { curable, cureStatuses } from "../battle/status.js";
+import { LOOT } from '../data/monsters.js';
 
 /** Items gathered or carved during the hunt (paid out only on success). */
 export const addGathered = (name) => {
@@ -41,6 +42,7 @@ export function interact() {
       startEncounter(e, e.kind === "boss" && e.sleeping ? "sneak" : "engage");
     return;
   }
+  if (tailAt(tx, ty)) { flow(carveTailField); return; }
   const obj = M.objects.find(
     (o) => tx >= o.x && tx < o.x + o.w && ty >= o.y && ty < o.y + o.h,
   );
@@ -59,6 +61,21 @@ export function interact() {
     flow(async () => {
       await say("The mountain water is clear and cold.");
     });
+}
+
+/** Severed tail on the map: carve once (CONFIG.TAIL_CARVES). Paid out with the quest rewards. */
+async function carveTailField() {
+  const t = G.tailDrop;
+  await say(`The severed ${t.name} TAIL is lying here.`);
+  if (!(await ask('Carve the tail?'))) return;
+  for (let i = 0; i < CONFIG.TAIL_CARVES; i++) {
+    Audio8.sfx('carve');
+    const r = weighted(LOOT[t.key].breaks.tail);
+    G.carves.push(r);
+    Audio8.sfx('gather');
+    await say(`HUNTER carved ${r.name}!`, 'good');
+  }
+  t.carved = true;
 }
 
 async function gatherAt(gp) {

@@ -1,6 +1,6 @@
 /* Creates monsters/NPCs and builds the list of entities walking around the current area. */
 import { CONFIG } from '../core/config.js';
-import { pick, randInt } from '../core/utils.js';
+import { pick, randInt, rand } from '../core/utils.js';
 import { G } from '../core/state.js';
 import { SMALLS, SMALL_SPAWNS } from '../data/monsters.js';
 import { NPC_DEFS, CXT, CYT } from '../data/world.js';
@@ -11,12 +11,14 @@ export function makeFoe(key, d, isBoss) {
   const parts = {};
   for (const k in d.parts) parts[k] = { hp: d.parts[k], max: d.parts[k], broken: false };
   return {
-    kind: isBoss ? 'boss' : 'small', key, isBoss, name: d.name, rank: d.rank, attacks: d.attacks,
+    kind: isBoss ? 'boss' : 'small', key, isBoss, name: d.name, rank: d.rank, spd: d.spd || 100, attacks: d.attacks,
     hp: d.hp, maxHp: d.hp, parts, sleeping: false, sleepTurns: 0, flash: 0, skipNext: null, atkMult: 1, armorCracked: false,
-    trapped: 0, trapCount: 0, tranq: 0, turnsInArea: 0, roamTimer: 0, restTurns: 0,
-    fleeAt: randInt(CONFIG.FLEE_MIN, CONFIG.FLEE_MAX), lowHpFled: false, warnedCap: false, roared: false,
-    dead: false, captured: false, status: {}, stunBuild: 0, acted: false, area: null, posArea: null,
-    x: 0, y: 0, hx: 0, hy: 0, mv: null, next: 0, dir: 'left', alerted: false, bang: 0
+    status: {}, stunBuild: 0, acted: false,
+    trapped: 0, trapCount: 0, tranq: 0, turnsInArea: 0,
+    fleeAt: randInt(CONFIG.FLEE_MIN, CONFIG.FLEE_MAX), lowHpFled: false, limping: false, searched: 0,
+    warnedCap: false, roared: false, dead: false, captured: false, area: null, posArea: null,
+    roamMs: rand(CONFIG.ROAM_MIN_MS, CONFIG.ROAM_MAX_MS),
+    x: 0, y: 0, hx: 0, hy: 0, mv: null, next: 0, dir: 'left', alerted: false, bang: 0, goal: null, leaving: null, stuck: 0
   };
 }
 
@@ -61,14 +63,14 @@ export function buildEntities(reset) {
     n.next = now + 1000; list.push(n);
   });
   (G.smalls[a] || []).filter(s => !s.dead).forEach(s => {
-    if (reset) { s.x = s.hx; s.y = s.hy; s.mv = null; s.alerted = false; }
+    if (reset) { s.x = s.hx; s.y = s.hy; s.mv = null; s.alerted = false; s.goal = null;}
     s.next = now + 800 + Math.random() * 800; list.push(s);
   });
   const m = G.monster;
   if (!m.dead && !m.captured && m.area === a) {
     if (reset || m.posArea !== a) {
       const p = findFree(M, 11, 8, (x, y) => list.some(e => Math.abs(e.x - x) + Math.abs(e.y - y) < 2), true);
-      Object.assign(m, { x: p.x, y: p.y, hx: p.x, hy: p.y, mv: null, posArea: a, alerted: false, turnsInArea: 0 });
+      Object.assign(m, { x: p.x, y: p.y, hx: p.x, hy: p.y, mv: null, posArea: a, alerted: false, turnsInArea: 0, goal: null, leaving: null});
       m.next = now + 1500;
     }
     list.push(m);

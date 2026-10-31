@@ -2,6 +2,8 @@
 @container (max-width:600px) {
   #panel {
     flex-direction: column;
+    height: auto;
+    min-height: clamp(150px, 25cqw, 230px);
   }
   .cmds,
   .baglist,

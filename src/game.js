@@ -21,7 +21,7 @@ export function newGame(mk = 'rathalos') {
     screen: 'field', turn: 1, loggedTurn: 0, busy: false, over: false, outcome: null,
     paint: 0, itemsUsed: 0, monsterKey: mk, foe: null, grace: 0, ents: [],
     inventory: { potion: 5, whetstone: 3, might: 1, nullberry: 1, antidote: 1, paintball: 1, flash: 1, shock: 0, tranq: 0 },
-    gathered: {}, gatherUses: {}, carves: [], rewards: null, boxed: false,
+    gathered: {}, gatherUses: {}, carves: [], tailDrop: null, rewards: null, boxed: false,
     flags: { supply: false, vetHint: false, fishTraded: false, tip: 0 },
     f: { area: 0, x: CAMP_SPAWN.x, y: CAMP_SPAWN.y, dir: CAMP_SPAWN.dir, mv: null, step: 0 },
      player: { maxHp: CONFIG.PLAYER_MAX_HP, hp: CONFIG.PLAYER_MAX_HP, carts: 0, weapon: wk,
