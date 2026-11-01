@@ -14,7 +14,7 @@ const TIPS = [
   'Walk into a monster to start a battle.\nThey run faster than you, so plan ahead!',
   'Hit the big monster with a PAINTBALL.\nThen the MAP shows where it goes, nya!',
   'Weak monsters limp to the WYVERN NEST\n(AREA 8) to sleep. Sneak attacks deal x2!',
-  'To CAPTURE: get it under 25% HP,\nset a SHOCK TRAP, then throw 2 TRANQ BOMBs!',
+  'To CAPTURE: weaken it until it limps,\nset a SHOCK TRAP, then throw TRANQ BOMBs!',
   "Captures can't be carved, meow...\nbut the Guild pays bigger rewards!",
   'RED sharpness makes your blade BOUNCE.\nUse a WHETSTONE before that happens!'
 ];
@@ -56,7 +56,7 @@ async function talkVeteran() {
       G.flags.vetHint = true;
       G.paint = Math.max(G.paint, 4);   // acts like a short paintball
       Audio8.sfx('item');
-      await say(`It was heading for AREA ${m.area}.\nI marked it on your MAP. (4 turns)`, 'good');
+      await say(`It was heading for AREA ${m.area}.\nI marked it on your MAP for a while.`, 'good');
     } else await say('Suit yourself. The MOUNTAIN STREAM\nis a big place, rookie.');
   } else {
     await say(pick([

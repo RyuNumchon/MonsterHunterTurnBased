@@ -2,13 +2,13 @@ import { LOOT, SMALLS } from './monsters.js';
 
 // field:true = usable outside battle. price = Camp Felyne shop price.
 export const ITEMS = {
-  potion:    { name: 'POTION',     field: true, price: 60,  desc: 'Restores 30 HP.' },
-  whetstone: { name: 'WHETSTONE',  field: true, price: 40,  desc: 'Restores sharpness to MAX.' },
-  might:     { name: 'MIGHT SEED', field: true, price: 150, desc: 'ATTACK +1 stage (+25% DMG) for 3 turns.' },
-  paintball: { name: 'PAINTBALL',  price: 80,  desc: 'Mark the big monster: the MAP tracks it for 8 turns.' },
-  flash:     { name: 'FLASH BOMB', price: 120, desc: 'Monster hit chance 60% -> 30% for 2 turns.' },
-  shock:     { name: 'SHOCK TRAP', price: 400, desc: 'Paralyzes the big monster 3 turns (2 once trap-wary). +25 hit.' },
-  tranq:     { name: 'TRANQ BOMB', price: 150, desc: '2 hits on a TRAPPED or SLEEPING monster under 25% HP = CAPTURE.' },
+  potion:    { name: 'POTION',     field: true, price: 60,  desc: 'Restores some HP.' },
+  whetstone: { name: 'WHETSTONE',  field: true, price: 40,  desc: 'Sharpens your weapon back to its best edge.' },
+  might:     { name: 'MIGHT SEED', field: true, price: 150, desc: 'Boosts ATTACK for a few turns.' },
+  paintball: { name: 'PAINTBALL',  price: 80,  desc: 'Mark the big monster so the MAP can track it for a while.' },
+  flash:     { name: 'FLASH BOMB', price: 120, desc: 'Blinds the monster. Its attacks will often miss for a short time.' },
+  shock:     { name: 'SHOCK TRAP', price: 400, desc: 'Paralyzes the big monster for a few turns. It grows wary of traps.' },
+  tranq:     { name: 'TRANQ BOMB', price: 150, desc: 'Throw at a TRAPPED or SLEEPING monster that is weak enough to CAPTURE it.' },
   nullberry: { name: 'NULL-BERRY', field: true, price: 30, desc: 'Cures elemental blights: FIRE, WATER, ICE, THUNDER, DRAGON.' },
   antidote:  { name: 'ANTIDOTE',   field: true, price: 40, desc: 'Cures POISON.' },
 };

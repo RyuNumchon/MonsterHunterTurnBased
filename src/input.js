@@ -16,6 +16,7 @@ import { useItemBattle } from './battle/encounter.js';
 import { findMove, pickMove, confirmAttack, confirmRun, confirmWait, goBack, runTurn } from './battle/turn.js';
 import { putAllInBox, renderStorage } from './quest/rewards.js';
 import { restart } from './game.js';
+import { fitText } from './ui/fx.js';
 
 const KEYDIR = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right' };
 
@@ -91,11 +92,15 @@ function onHover(e) {
   if (!t || !G || !G.foe) return;
   if (UI.mode === 'fight') {
     const mv = findMove(t.dataset.info);
-    if (mv && $('mInfo')) $('mInfo').innerHTML = moveInfo(mv);
+    if (mv && $('mInfo')) {
+      $('mInfo').innerHTML = moveInfo(mv);
+      fitText($('mInfo'));
+    }
   }
   if (UI.mode === 'bag' && $('bagInfo')) {
     const k = t.dataset.info, it = ITEMS[k];
     $('bagInfo').innerHTML = `${pimg(DATA['item_' + k])} ${it.name}<br>${it.desc}<div class="sub">ITEMS USED ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN} THIS TURN</div>`;
+    fitText($('bagInfo'));
   }
 }
 

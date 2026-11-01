@@ -15,6 +15,7 @@ for (const k in ITEM_ART) bake('item_' + k, ITEM_ART[k]);
 for (const k in WEAPON_ART) bake('wpn_' + k, WEAPON_ART[k]);
 for (const k in GATHER_ART) { bake('g_' + k, GATHER_ART[k]); ART['gx_' + k] = renderArt(GATHER_ART[k], 1, true); }
 for (const k in ICON_ART) bake('ic_' + k, ICON_ART[k]);
+ART.icx_tail = renderArt(ICON_ART.tail, 1, true);
 bake('hb_greatsword', hunterBackDef('greatsword'));
 bake('hb_longsword', hunterBackDef('longsword'));
 DATA.player = SPR.down.S.toDataURL();

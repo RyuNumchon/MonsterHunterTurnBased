@@ -74,7 +74,6 @@
   align-items: center;
   gap: 2cqw;
   min-height: 0;
-  overflow: hidden;
 }
 .dpad {
   display: grid;
@@ -136,7 +135,6 @@
   align-items: center;
   gap: 0.6em;
   white-space: nowrap;
-  overflow: hidden;
 }
 .srow b {
   width: 3.6em;

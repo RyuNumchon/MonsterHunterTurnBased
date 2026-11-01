@@ -6,6 +6,7 @@ import { pick } from "../core/utils.js";
 import { G } from "../core/state.js";
 import { STATUS } from "../data/status.js";
 import { ITEMS } from "../data/items.js";
+import { addLog } from '../ui/fx.js';
 
 export const uname = (u) =>
   !u ? "Something" : u === G.player ? "HUNTER" : `The ${u.name}`;
@@ -51,6 +52,7 @@ export function applyStatus(u, id, source = null) {
   const cur = u.status[id];
   if (cur) cur.turns = Math.max(cur.turns, d.turns);
   else u.status[id] = { turns: d.turns, age: 0, fresh: !!u.acted };
+  addLog(`[${uname(u)} +${id} ${u.status[id].turns} turns]`, 'dim');
   return fmt(d.onMsg, u);
 }
 
@@ -81,7 +83,9 @@ export function stunChance(u) {
 export function stunOnHit(target, build, cap = 100) {
   if (hasStatus(target, 'stun')) return null;
   target.stunBuild = Math.min(cap, (target.stunBuild || 0) + build);
-  if (Math.random() * 100 < stunChance(target)) {
+  const chance = stunChance(target), roll = Math.random() * 100;
+  addLog(`[${uname(target)} stun roll ${roll.toFixed(1)} vs ${chance}% (buildup ${target.stunBuild}%)]`, 'dim');
+  if (roll < chance) {
     target.stunBuild = 0;
     return applyStatus(target, 'stun');
   }
@@ -102,10 +106,10 @@ export function tickStatuses(u, lethal = true) {
       const before = u.hp;
       u.hp = Math.max(
         lethal ? 0 : 1,
-        u.hp - Math.max(1, Math.round(u.maxHp * d.dot)),
+        u.hp - Math.max(1, Math.round(u.maxHp * d.dot))
       );
       const dmg = before - u.hp;
-      if (dmg > 0) out.push({ msg: `${fmt(d.dotMsg, u)} (-${dmg})`, dmg });
+      if (dmg > 0) { addLog(`[${uname(u)} ${id} -${dmg} → HP ${u.hp}/${u.maxHp}]`, 'dim'); out.push({ msg: fmt(d.dotMsg, u), dmg }); }
     }
     s.age++;
     if (--s.turns <= 0) {
@@ -128,9 +132,8 @@ export function clearBattleOnly(u) {
 
 /** HUD chips: one per active effect with turns left. */
 export const statusChips = (u) =>
-  Object.entries(u.status || {})
-    .map(
-      ([id, s]) =>
-        `<span class="chip st" style="background:${STATUS[id].color}">${STATUS[id].short} ${s.turns}</span>`,
+  Object.keys(u.status || {})
+    .map(id =>
+      `<span class="chip st" style="background:${STATUS[id].color}">${STATUS[id].short}</span>`
     )
-    .join("");
+    .join('');

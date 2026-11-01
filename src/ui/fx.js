@@ -48,3 +48,15 @@ export function showLocation(a) {
   clearTimeout(locTimer);
   locTimer = setTimeout(() => el.classList.remove('show'), 2200);
 }
+
+/** Shrinks text until it fits its box, so nothing is cut off. The box keeps its size.
+    `targets` receive the smaller font (default: the box itself). Use targets when the box's
+    height is set in its own em units, so shrinking its font doesn't also shrink the box. */
+export function fitText(box, targets) {
+  if (!box || !box.clientHeight) return;
+  const els = targets ? [...targets] : [box];
+  els.forEach(e => { e.style.fontSize = ''; });
+  const base = els.map(e => parseFloat(getComputedStyle(e).fontSize));
+  const over = () => box.scrollHeight > box.clientHeight + 1 || box.scrollWidth > box.clientWidth + 1;
+  for (let s = .95; over() && s >= .4; s -= .05) els.forEach((e, i) => { e.style.fontSize = base[i] * s + 'px'; });
+}

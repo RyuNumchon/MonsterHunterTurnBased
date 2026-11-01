@@ -9,15 +9,19 @@ import { $, sleep, Abort } from '../core/utils.js';
 import { G, UI, waits, text } from '../core/state.js';
 import { Audio8 } from '../audio/audio8.js';
 import { pimg } from '../art/index.js';
-import { addLog } from './fx.js';
+import { addLog, fitText } from './fx.js';
 import { setMode, renderPanel } from './hud.js';
 
 export async function typeText(str, cls) {
   const g = G;
   addLog(str.replace(/\n/g, ' '), cls);
   let el, arrow;
-  if (G.screen === 'battle' && !G.over) { setMode('message'); el = $('msg'); arrow = $('arrow'); }
-  else { $('fDialog').classList.remove('hidden'); el = $('fmsg'); arrow = $('farrow'); }
+ if (G.screen === 'battle' && !G.over) {
+    setMode('message'); el = $('msg'); arrow = $('arrow');
+    el.textContent = str; fitText(el.closest('.tb')); el.textContent = '';   // size the font for the full line first
+  } else {
+    $('fDialog').classList.remove('hidden'); el = $('fmsg'); arrow = $('farrow');
+  }
   arrow.classList.remove('show');
   text.typing = true; text.skip = false;
   for (let i = 1; i <= str.length; i++) {
@@ -73,9 +77,11 @@ export function renderMenu() {
   if (!s) { el.className = 'hidden'; el.innerHTML = ''; return; }
   el.className = s.yn ? 'yn' : '';
   const cur = s.opts[s.idx];
+  const md = el.querySelector('.mdesc');
+  if (md) fitText(md, md.children);
 el.innerHTML = `<div class="menu${s.desc ? ' withdesc' : ''}">${s.title ? `<div class="mh">${s.title}</div>` : ''}${s.opts.map((o, i) =>
     `<button class="mi ${i === s.idx ? 'focus' : ''}" data-act="menu" data-val="${i}" ${o.disabled ? 'disabled' : ''}>${o.icon ? pimg(o.icon) : ''}<span>${o.label}</span>${o.right !== undefined ? `<span class="q">${o.right}</span>` : ''}</button>`
-  ).join('')}${s.desc ? `<div class="mdesc">${(cur && cur.desc) || ''}</div>` : ''}</div>`;
+  ).join('')}${s.desc ? `<div class="mdesc"><span>${(cur && cur.desc) || ''}</span></div>` : ''}</div>`;
 }
 
 export function moveMenu(d) {

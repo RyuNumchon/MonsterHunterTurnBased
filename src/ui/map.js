@@ -35,7 +35,7 @@ export function renderMini() {
     const M = AREAS[m.area];
     h += `<img class="mmk mon" src="${DATA['mf_' + m.key]}" style="left:${M.mx + 5}%;top:${M.my}%" alt="">`;
   }
-  h += `<div class="mtag">${G.paint > 0 ? 'PAINT ' + G.paint : 'M = MAP'}${vis && m.sleeping ? ' · ZZZ' : ''}</div>`;
+  h += `<div class="mtag">${G.paint > 0 ? 'PAINT' : 'M = MAP'}}${vis && m.sleeping ? ' · ZZZ' : ''}</div>`;
   el.innerHTML = h;
 }
 
@@ -64,7 +64,7 @@ export function renderMapOv() {
     ${Object.keys(GATHER).map(g => `<div>${pimg(DATA['g_' + g])} ${GATHER[g].label}</div>`).join('')}
     <div class="lgs">${pimg(DATA.player)} YOU<br>${pimg(DATA.ic_bubble)} NPC<br>${pimg(DATA['mf_' + m.key])} ${m.name}
       ${showMon ? `→ AREA ${m.area}${m.sleeping ? ' (ASLEEP)' : ''}` : '(needs PAINTBALL)'}<br>
-      PAINT: ${G.paint > 0 ? G.paint + ' turns' : 'none'} · TURN ${G.turn}</div>
+      PAINT: ${G.paint > 0 ? 'ACTIVE' : 'none'} · TURN ${G.turn}</div>
     <button class="mi focus" data-act="closemap">CLOSE</button></div>`;
   $('mapOv').innerHTML = h;
 }

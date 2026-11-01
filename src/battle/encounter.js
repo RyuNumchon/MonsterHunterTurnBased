@@ -9,15 +9,14 @@ import { battleBg } from '../art/backgrounds.js';
 import { Audio8 } from '../audio/audio8.js';
 import { flow, say, pause } from '../ui/dialog.js';
 import { showScreen, renderBattle } from '../ui/hud.js';
-import { anim, pop } from '../ui/fx.js';
+import { anim, addLog } from '../ui/fx.js';
 import { captureWin } from './endings.js';
 import { applyStatus, blockedBy, clearBattleOnly, curable, cureStatuses } from './status.js';
 
-/** how: 'engage' (you walked into it) | 'ambush' (it walked into you) | 'sneak' (it was asleep) */
 export function startEncounter(e, how) {
   if (!G || G.busy || G.screen !== 'field' || G.over) return;
   G.f.mv = null; input.dirs = [];
-    e.mv = null; e.alerted = false; e.bang = 0; e.goal = null; e.leaving = null;
+  e.mv = null; e.alerted = false; e.bang = 0; e.goal = null; e.leaving = null;
   flow(async () => {
     G.foe = e; G.itemsUsed = 0;
     e.skipNext = null; e.trapped = 0; e.flash = 0;
@@ -41,7 +40,7 @@ export function startEncounter(e, how) {
     tr.className = 'fadeOut'; await pause(260); tr.className = '';
 
     const n = e.name;
-    if (how === 'sneak') await say(`You crept up on the sleeping ${n}!\nYour first hit deals x2 WAKE-UP damage!`, 'good');
+    if (how === 'sneak') await say(`You crept up on the sleeping ${n}!\nYour first hit will be a WAKE-UP BLOW!`, 'good');
     else if (how === 'ambush') await say(e.isBoss ? `The ${n} charged straight into you!` : `A wild ${n} attacked!`, 'warn');
     else await say(e.isBoss ? `You engaged the ${n}!` : `You attacked a wild ${n}!`);
 
@@ -70,7 +69,7 @@ export function useItemBattle(key) {
     else if ((key === 'nullberry' || key === 'antidote') && !curable(p, key)) why = "It won't have any effect.";
     else if (BOSS_ONLY.includes(key) && !m.isBoss) why = `That won't work on a small monster\nlike the ${m.name}.`;
     else if (key === 'shock' && m.trapped > 0) why = `The ${m.name} is already trapped!`;
-    else if (key === 'shock' && m.sleeping) why = "It's asleep... the trap won't trigger.\n(Asleep AND weak? Use TRANQ BOMBs!)";
+    else if (key === 'shock' && m.sleeping) why = "It's asleep... the trap won't trigger.\nTry TRANQ BOMBs if it's weak!";
     if (why) { await say(why, 'dim'); return lock ? 'main' : 'bag'; }
 
     G.inventory[key]--; G.itemsUsed++;
@@ -81,13 +80,14 @@ export function useItemBattle(key) {
       case 'potion': {
         const before = p.hp;
         p.hp = Math.min(p.maxHp, p.hp + 30);
-        Audio8.sfx('heal'); pop($('playerSprite'), `+${p.hp - before}`, 'heal'); renderBattle();
-        await say(`HUNTER's HP was restored by ${p.hp - before}.`, 'good');
+        addLog(`[potion +${p.hp - before} → HP ${p.hp}/${p.maxHp}]`, 'dim');
+        Audio8.sfx('heal'); renderBattle();
+        await say("HUNTER's HP was restored!", 'good');
         break;
       }
       case 'whetstone':
         p.sharp = CONFIG.SHARP_MAX; Audio8.sfx('sharpen'); renderBattle();
-        await say('The blade is razor-sharp again!\n(EDGE: GREEN)', 'good');
+        await say('The blade is razor-sharp again!', 'good');
         break;
       case 'nullberry':
       case 'antidote': {
@@ -98,21 +98,22 @@ export function useItemBattle(key) {
       }
       case 'paintball':
         G.paint = 8; renderBattle();
-        await say(`The ${m.name} was marked!\nThe MAP will track it for 8 turns.`, 'good');
+        await say(`The ${m.name} was marked!\nThe MAP will track it for a while.`, 'good');
         break;
       case 'flash':
         m.flash = 2; Audio8.sfx('flash'); anim($('flashFx'), 'flashing', 700); renderBattle();
-        await say(`The ${m.name} is blinded!\nIts accuracy fell sharply! (60% -> 30%)`, 'good');
+        await say(`The ${m.name} is blinded!\nIts attacks will often miss!`, 'good');
         break;
       case 'might':
         p.buffs.might = 3; renderBattle();
-        await say("HUNTER's ATTACK rose!\n(+25% damage for 3 turns)", 'good');
+        await say("HUNTER's ATTACK rose!", 'good');
         break;
       case 'shock': {
         const turns = m.trapCount === 0 ? CONFIG.TRAP_TURNS_FIRST : CONFIG.TRAP_TURNS_AFTER;
         m.trapCount++; m.trapped = turns;
+        addLog(`[shock trap ${turns} turns (trap #${m.trapCount})]`, 'dim');
         Audio8.sfx('trap'); anim($('flashFx'), 'flashing', 700); renderBattle();
-        await say(`The ${m.name} stepped into the SHOCK TRAP!\nIt's paralyzed for ${turns} turns! (+25 hit)`, 'good');
+        await say(`The ${m.name} stepped into the SHOCK TRAP!\nIt's paralyzed!`, 'good');
         if (m.hp / m.maxHp <= CONFIG.CAPTURE_PCT) await say('Now! Throw TRANQ BOMBs to capture it!', 'warn');
         break;
       }
@@ -120,11 +121,12 @@ export function useItemBattle(key) {
         Audio8.sfx('tranq');
         const held = m.trapped > 0 || m.sleeping, weak = m.hp / m.maxHp <= CONFIG.CAPTURE_PCT;
         if (!held) await say('The TRANQ BOMB had no effect!\nThe monster must be TRAPPED or ASLEEP.', 'bad');
-        else if (!weak) await say(`The ${m.name} shrugged off the gas!\nWeaken it below 25% HP first.`, 'bad');
+        else if (!weak) await say(`The ${m.name} shrugged off the gas!\nIt's still too strong to capture.`, 'bad');
         else {
           m.tranq++; renderBattle();
+          addLog(`[tranq ${m.tranq}/${CONFIG.TRANQ_NEEDED}]`, 'dim');
           if (m.tranq >= CONFIG.TRANQ_NEEDED) m.captured = true;
-          else await say(`The ${m.name} is getting drowsy...\n(TRANQ ${m.tranq}/${CONFIG.TRANQ_NEEDED})`, 'good');
+          else await say(`The ${m.name} is getting drowsy...`, 'good');
         }
         break;
       }

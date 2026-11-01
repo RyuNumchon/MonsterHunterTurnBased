@@ -9,7 +9,7 @@ import { SMALLS } from '../data/monsters.js';
 import { SOLID, DIRV, dirOf, CAMP_SPAWN, neighbors } from '../data/world.js';
 import { Audio8, fieldMusic } from '../audio/audio8.js';
 import { flow, pause } from '../ui/dialog.js';
-import { toast, showLocation } from '../ui/fx.js';
+import { toast, showLocation, addLog } from '../ui/fx.js';
 import { MAPS, findFree } from './mapgen.js';
 import { buildEntities } from './spawn.js';
 import { startEncounter } from '../battle/encounter.js';
@@ -23,7 +23,7 @@ export const canAct = () => !!G && G.screen === 'field' && !G.busy && !G.over &&
 /** A severed tail lying on this tile of the current area (blocks movement; face it + A to carve). */
 export const tailAt = (x, y) => {
   const t = G.tailDrop;
-  return !!t && t.placed && !t.carved && t.area === G.f.area && t.x === x && t.y === y;
+  return !!t && t.placed && t.area === G.f.area && t.x === x && t.y === y;
 };
 
 export const tileWalk = (M, x, y) => x >= 0 && y >= 0 && x < M.w && y < M.h
@@ -235,7 +235,7 @@ export function changeArea(to) {
     tr.className = 'fadeIn'; await pause(260);
     const from = G.f.area, sp = spawnFor(to, from);
     Object.assign(G.f, { area: to, x: sp.x, y: sp.y, dir: sp.dir, mv: null });
-    const msgs = worldTick(true);
+    const msgs = worldTick;
     buildEntities(true);
     G.grace = performance.now() + 1200;
     Audio8.music(fieldMusic());
@@ -245,29 +245,38 @@ export function changeArea(to) {
   });
 }
 
-/* World turn: area change (moved = true), resting or carting.
-   Statuses tick (they can't knock anyone out on the map).
-   HEALING RULE: the big monster heals ONLY while asleep. It only falls asleep after limping away,
-   once the hunter has moved through SLEEP_AFTER_AREAS areas without finding it.
-   Asleep: +REST_HEAL_PCT per world turn until it wakes (WAKE_AFTER turns) or is attacked. */
-export function worldTick(moved = true) {
+/** World turn: area change, resting or carting. Statuses can't knock anyone out on the map. */
+export function worldTick() {
   const msgs = [], p = G.player, m = G.monster;
   G.turn++;
   for (const r of tickStatuses(p, false)) msgs.push(r.msg);
   if (G.paint > 0 && --G.paint === 0) msgs.push('The paintball scent faded...');
   if (p.buffs.might > 0 && --p.buffs.might === 0) msgs.push('The MIGHT SEED wore off.');
+  if (!m.dead && !m.captured) tickStatuses(m, false);
+  return msgs.concat(bossOffscreenTurn());
+}
+
+/* Every turn the hunter spends OUTSIDE the boss's area (world turns and battle turns):
+   limping -> falls asleep after SLEEP_AFTER_TURNS unfound turns;
+   asleep -> heals REST_HEAL_PCT per turn, wakes after WAKE_AFTER turns. Finding it resets the count. */
+export function bossOffscreenTurn() {
+  const msgs = [], m = G.monster;
   if (m.dead || m.captured) return msgs;
-  tickStatuses(m, false);
-  if (m.area === G.f.area) { m.searched = 0; return msgs; }   // found it
+  if (m.area === G.f.area) { m.searched = 0; return msgs; }
   if (m.sleeping) {
+    const before = m.hp;
     m.hp = Math.min(m.maxHp, m.hp + Math.round(m.maxHp * CONFIG.REST_HEAL_PCT));
+    addLog(`[${m.name} asleep: +${m.hp - before} → HP ${m.hp}/${m.maxHp} · slept ${m.sleepTurns + 1}/${CONFIG.WAKE_AFTER}]`, 'dim');
     if (++m.sleepTurns >= CONFIG.WAKE_AFTER) {
       m.sleeping = false; m.limping = false;
-      if (G.paint > 0) msgs.push(`The ${m.name} woke up, partly healed.`);
+      if (G.paint > 0) msgs.push(`The ${m.name} woke up.`);
     }
-  } else if (m.limping && moved && ++m.searched >= CONFIG.SLEEP_AFTER_AREAS) {
-    m.sleeping = true; m.sleepTurns = 0;
-    msgs.push(G.paint > 0 ? `PAINTBALL: the ${m.name} fell ASLEEP in AREA ${m.area}!` : 'The mountain has gone quiet...');
+  } else if (m.limping) {
+    addLog(`[${m.name} limping, unfound ${++m.searched}/${CONFIG.SLEEP_AFTER_TURNS} turns]`, 'dim');
+    if (m.searched >= CONFIG.SLEEP_AFTER_TURNS) {
+      m.sleeping = true; m.sleepTurns = 0;
+      msgs.push(G.paint > 0 ? `PAINTBALL: the ${m.name} fell ASLEEP in AREA ${m.area}!` : 'The mountain has gone quiet...');
+    }
   }
   return msgs;
 }
