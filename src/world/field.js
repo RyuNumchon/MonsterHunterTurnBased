@@ -18,6 +18,7 @@ import { stepMs } from '../battle/speed.js';
 
 const DIRS4 = Object.values(DIRV);
 
+/** True when the hunter can move or interact (no dialog, menu or overlay open). */
 export const canAct = () => !!G && G.screen === 'field' && !G.busy && !G.over && !UI.menu && !waits.map && !waits.store;
 
 /** A severed tail lying on this tile of the current area (blocks movement; face it + A to carve). */
@@ -29,6 +30,7 @@ export const tailAt = (x, y) => {
 export const tileWalk = (M, x, y) => x >= 0 && y >= 0 && x < M.w && y < M.h
   && !SOLID.has(M.tiles[y][x]) && !M.blockers.has(x + ',' + y) && !tailAt(x, y);
 
+/** Entity standing on (or stepping into) a tile. */
 export function entAt(x, y, except) {
   return G.ents.find(e => e !== except && !e.dead && ((e.x === x && e.y === y) || (e.mv && e.mv.tx === x && e.mv.ty === y)));
 }
@@ -111,13 +113,15 @@ export function updateField(dt, now) {
       else if (tileWalk(MAPS[f.area], tx, ty)) { f.mv = { tx, ty, t: 0 }; f.step++; }
     }
   }
+  // --- Entities ---
   for (const e of [...G.ents]) {
-    if (G.busy) return;
+    if (G.busy) return;   // an encounter just started
     if (e.mv) { e.mv.t += dt / e.mv.dur; if (e.mv.t >= 1) { e.x = e.mv.tx; e.y = e.mv.ty; e.mv = null; } }
     else if (now >= e.next) aiStep(e, now);
   }
 }
 
+/** Returns true if the step triggered an area change. */
 function onPlayerStep() {
   const f = G.f, M = MAPS[f.area];
   if (M.tiles[f.y][f.x] === 'E') {
@@ -152,6 +156,7 @@ function aiStep(e, now) {
       Audio8.sfx(e.kind === 'boss' ? 'roar' : 'bang');
       return;
     }
+    // Step along the longer axis first, fall back to the other 
     const ddx = f.x - e.x, ddy = f.y - e.y, opts = [];
     if (Math.abs(ddx) >= Math.abs(ddy)) { if (ddx) opts.push([Math.sign(ddx), 0]); if (ddy) opts.push([0, Math.sign(ddy)]); }
     else { if (ddy) opts.push([0, Math.sign(ddy)]); if (ddx) opts.push([Math.sign(ddx), 0]); }
@@ -211,6 +216,7 @@ function bossLeaves(e) {
   toast(`The ${e.name} left for AREA ${to}!`);
 }
 
+/** Where the hunter appears when arriving in `to` from `from`. */
 function bossEnters(m, from) {
   const M = MAPS[G.f.area], ex = M.exits.find(e => e.to === from), f = G.f;
   const p = findFree(M, ex ? ex.x : 12, ex ? ex.y : 9,
@@ -235,9 +241,9 @@ export function changeArea(to) {
     tr.className = 'fadeIn'; await pause(260);
     const from = G.f.area, sp = spawnFor(to, from);
     Object.assign(G.f, { area: to, x: sp.x, y: sp.y, dir: sp.dir, mv: null });
-    const msgs = worldTick;
+    const msgs = worldTick;                  // moving between areas = 1 turn
     buildEntities(true);
-    G.grace = performance.now() + 1200;
+    G.grace = performance.now() + 1200;        // a short beat before anything charges
     Audio8.music(fieldMusic());
     tr.className = 'fadeOut'; showLocation(to);
     await pause(260); tr.className = '';
