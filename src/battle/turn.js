@@ -152,7 +152,7 @@ export function runTurn(action) {
 
     await endOfTurnTicks();
     if (ended()) return;
-    if (m.hp <= 0) { await foeDefeated(); return; }
+    if (m.hp <= 0) { await foeDefeated(); return; }   // e.g. poisoned to death
     return 'main';
   });
 }

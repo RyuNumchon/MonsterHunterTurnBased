@@ -128,5 +128,9 @@ export function clearBattleOnly(u) {
 }
 
 /** HUD chips: one per active effect with turns left. */
-export const statusChips = u => Object.keys(u.status || {}).map(id =>
-  `<span class="chip st" style="background:${STATUS[id].color}">${STATUS[id].short}</span>`).join('');
+export const statusChips = u =>
+  Object.keys(u.status || {})
+    .map(id =>
+      `<span class="chip st" style="background:${STATUS[id].color}">${STATUS[id].short}</span>`
+    )
+    .join('');
