@@ -30,6 +30,7 @@ export function moveDisabled(mv) {
   return false;
 }
 
+/** The monster can't act this turn (so the hunter effectively goes first and escape is sure). */
 const foeHeld = m => m.trapped > 0 || m.sleeping || !!m.skipNext || !!blockedBy(m, 'act');
 
 /* HUNTER HIT CHANCES (hidden; logged)
@@ -42,6 +43,7 @@ export function hitChances(move, partKey, sharpLv = getSharp(G.player.sharp)) {
   return { target, overall: Math.max(target, clamp(CONFIG.OVERALL_HIT + acc, 5, 99)) };
 }
 
+/** Monster accuracy: 60% (30% blinded) + its accuracy effects + speed mod. */
 export function monsterHitChance(m, p) {
   const base = m.flash > 0 ? CONFIG.MONSTER_HIT_FLASHED : CONFIG.MONSTER_HIT;
   return clamp(base + accMod(m) + speedHitMod(m, p), 5, 95);
@@ -49,6 +51,7 @@ export function monsterHitChance(m, p) {
 
 const escapeChance = () => clamp(CONFIG.ESCAPE_CHANCE + (speedOf(G.player) - speedOf(G.foe)) * CONFIG.SPEED_ESCAPE_FACTOR, .2, .95);
 
+/** % chance the hunter acts first with this move. */
 export function firstPct(mv) {
   if (!mv || mv.priority || foeHeld(G.foe)) return 100;
   return Math.round(firstChance(G.player, G.foe) * 100);
@@ -255,6 +258,7 @@ async function hitCalculationPhase(intent) {
   if (intent.chargeMult >= 3) await say('A full-power charge!', 'good');
   if (w.element && elementSealed(p)) await say(`Dragonblight sealed the ${STATUS[w.element].name} element!`, 'warn');
 
+  // Weapon element can inflict its status (no weapon has one yet)
   if (elem && m.hp > 0 && Math.random() < (w.elemChance || 0)) {
     const msg = applyStatus(m, elem, p);
     if (msg) { renderBattle(); await say(msg, 'good'); }
@@ -295,6 +299,7 @@ async function applyBreak(k) {
       await say(`The ${m.name}'s LEGS were broken!\nIt's about to trip!`, 'good'); break;
     case 'tail':
       m.atkMult *= CONFIG.TAIL_ATK_MULT;
+      // The tail drops where the fight happened; it's placed on the map when the battle ends
       addLog(`[${m.name} atkMult ${m.atkMult.toFixed(2)}]`, 'dim');
       G.tailDrop = { area: G.f.area, x: m.x, y: m.y, key: m.key, name: m.name, placed: false, carved: false };
       await say(`The ${m.name}'s TAIL was severed!\nIts ATTACK fell!`, 'good');

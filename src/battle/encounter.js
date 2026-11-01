@@ -44,6 +44,7 @@ export function startEncounter(e, how) {
     else if (how === 'ambush') await say(e.isBoss ? `The ${n} charged straight into you!` : `A wild ${n} attacked!`, 'warn');
     else await say(e.isBoss ? `You engaged the ${n}!` : `You attacked a wild ${n}!`);
 
+    // Opening roar: the hunter can't use items on turn 1
     if (e.isBoss && !e.roared && !e.sleeping) {
       e.roared = true;
       anim($('enemySprite'), 'a-shake', 400); Audio8.sfx('roar');
