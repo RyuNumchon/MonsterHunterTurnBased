@@ -7,7 +7,7 @@ import { CAMP_SPAWN } from '../data/world.js';
 import { Audio8, fieldMusic } from '../audio/audio8.js';
 import { say, pause } from '../ui/dialog.js';
 import { showScreen, renderBattle, setMode } from '../ui/hud.js';
-import { addLog, anim, pop, setPhase, toast, showLocation} from '../ui/fx.js';
+import { addLog, anim, pop, setPhase, toast, showLocation } from '../ui/fx.js';
 import { buildEntities, refreshEntities } from '../world/spawn.js';
 import { MAPS, findFree } from '../world/mapgen.js';
 import { worldTick } from '../world/field.js';

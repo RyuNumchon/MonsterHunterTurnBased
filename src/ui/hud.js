@@ -23,6 +23,7 @@ const PART_HINT = { head: 'WEAK SPOT', body: 'EASY TARGET', legs: 'CAN TRIP IT',
 
 export function showScreen() { $('battle').classList.toggle('hidden', !G || G.screen !== 'battle'); }
 
+/** Builds the four part bars and the sharpness zone markers once at boot. */
 export function initHud() {
   $('eParts').innerHTML = Object.keys(PARTS).map(k =>
     `<div class="pt" id="pb-${k}"><span>${PARTS[k].label}</span><div class="trk"><div class="fill"></div></div></div>`).join('');
