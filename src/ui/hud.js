@@ -96,6 +96,7 @@ export function renderBattle() {
   ps.classList.toggle('gone', p.down);
 }
 
+/** Switches the battle panel mode and lights the matching phase pill. */
 export function setMode(mode, data = {}) {
   UI.mode = mode; UI.data = data;
   if (G && G.screen === 'battle' && !G.over) {

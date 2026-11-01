@@ -95,10 +95,16 @@ export function tickStatuses(u, lethal = true) {
   const out = [];
   for (const [id, s] of Object.entries(u.status || {})) {
     const d = STATUS[id];
-    if (s.fresh) { s.fresh = false; continue; }
+    if (s.fresh) {
+      s.fresh = false;
+      continue;
+    }
     if (d.dot) {
       const before = u.hp;
-      u.hp = Math.max(lethal ? 0 : 1, u.hp - Math.max(1, Math.round(u.maxHp * d.dot)));
+      u.hp = Math.max(
+        lethal ? 0 : 1,
+        u.hp - Math.max(1, Math.round(u.maxHp * d.dot))
+      );
       const dmg = before - u.hp;
       if (dmg > 0) { addLog(`[${uname(u)} ${id} -${dmg} → HP ${u.hp}/${u.maxHp}]`, 'dim'); out.push({ msg: fmt(d.dotMsg, u), dmg }); }
     }
@@ -110,7 +116,6 @@ export function tickStatuses(u, lethal = true) {
   }
   return out;
 }
-
 
 /** Called when a battle starts or ends: drops battle-only effects and resets stun buildup. */
 export function clearBattleOnly(u) {

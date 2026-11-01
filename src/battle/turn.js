@@ -115,9 +115,9 @@ export function goBack() {
 const ended = () => G.over || G.screen !== 'battle';
 
 function hunterFirst(action) {
-  if (action.kind !== 'move') return true;
+  if (action.kind !== 'move') return true;              // RUN / WAIT resolve first
   const mv = findMove(action.moveId);
-  if (mv.priority || foeHeld(G.foe)) return true;
+  if (mv.priority || foeHeld(G.foe)) return true;       // GUARD / FORESIGHT, or the monster can't act
   return Math.random() < firstChance(G.player, G.foe);
 }
 
@@ -133,6 +133,7 @@ export function runTurn(action) {
       await monsterTurn(m);
       if (ended()) return;
     }
+
     if (action.kind === 'run') {
       setPhase(2);
       if (await tryEscape()) return;
@@ -142,11 +143,13 @@ export function runTurn(action) {
       if (ended()) return;
       if (m.hp <= 0) { await foeDefeated(); return; }
     }
+
     if (first) {
       setPhase(4);
       await monsterTurn(m);
       if (ended()) return;
     }
+
     await endOfTurnTicks();
     if (ended()) return;
     if (m.hp <= 0) { await foeDefeated(); return; }
@@ -154,6 +157,7 @@ export function runTurn(action) {
   });
 }
 
+/** The hunter's half of the turn. Re-checks locks: a faster monster may have stunned or toppled the hunter. */
 async function hunterTurn(action) {
   const p = G.player;
   setPhase(2);
@@ -170,7 +174,7 @@ async function hunterTurn(action) {
       if (intent) await hitCalculationPhase(intent);
     }
   }
-  p.acted = true;
+  p.acted = true;   // effects landing on the hunter from now on start next turn
 }
 
 async function monsterTurn(m) {
@@ -192,7 +196,7 @@ async function playerActionPhase(action) {
     return null;
   }
   if (move.type === 'guard') {
-    p.guarding = true; p.sharp = Math.max(0, p.sharp - move.sharp);
+    p.guarding = true; p.sharp = Math.max(0, p.sharp - move.sharp);   // blocking wears the edge
     Audio8.sfx('clang'); renderBattle();
     await say('HUNTER raised the blade to GUARD!');
     return null;
@@ -222,7 +226,7 @@ async function hitCalculationPhase(intent) {
     if (roll < c.target) hitPart = target;
     else if (roll < c.overall) { hitPart = pick(PARTS[target].drift); drifted = true; }
   }
-  if (!hitPart) { Audio8.sfx('miss'); await say("HUNTER's attack missed!", 'bad'); return; }
+  if (!hitPart) { Audio8.sfx('miss'); await say("HUNTER's attack missed!", 'bad'); return; }   // a miss costs no sharpness
   p.sharp = Math.max(0, p.sharp - intent.move.sharp);
   addLog(`[edge -${intent.move.sharp} → ${p.sharp}/${CONFIG.SHARP_MAX}]`, 'dim');
   if (drifted) await say(`The swing drifted off the ${PARTS[target].label}...\nand struck the ${PARTS[hitPart].label}!`, 'warn');
@@ -240,6 +244,7 @@ async function hitCalculationPhase(intent) {
 
   m.hp = Math.max(0, m.hp - dmg);
   part.hp = Math.max(0, part.hp - dmg);
+  // The tail drops where the fight happened; it's placed on the map when the battle ends
   addLog(`[${m.name} HP ${m.hp}/${m.maxHp} · ${hitPart} ${part.hp}/${part.max}]`, 'dim');
   const big = wake || intent.chargeMult >= 2 || (hitPart === 'head' && !drifted);
   Audio8.sfx(sharpLv.bounce ? 'clang' : big ? 'crit' : 'hit');
@@ -398,7 +403,7 @@ async function monsterFlee(limping) {
   await pause(650);
   Object.assign(m, {
     area: dest, posArea: null, turnsInArea: 0, sleeping: false, goal: null, leaving: null,
-    limping: limping || m.limping, searched: 0,
+    limping: limping || m.limping, searched: 0,              // limping -> sleeps after 3 unfound areas
     roamMs: rand(CONFIG.ROAM_MIN_MS, CONFIG.ROAM_MAX_MS), fleeAt: randInt(CONFIG.FLEE_MIN, CONFIG.FLEE_MAX)
   });
   await say(G.paint > 0

@@ -18,7 +18,7 @@ import { clearBattleOnly } from './status.js';
 /** Puts a freshly severed tail on a free tile near where the fight happened. */
 export function placeTail() {
   const t = G.tailDrop;
-if (!t || t.placed) return;
+  if (!t || t.placed) return;
   const here = t.area === G.f.area;
   const p = findFree(MAPS[t.area], t.x, t.y,
     (x, y) => (here && Math.abs(x - G.f.x) + Math.abs(y - G.f.y) < 2) || G.ents.some(e => e.x === x && e.y === y), true);
