@@ -25,6 +25,7 @@ export function placeTail() {
   Object.assign(t, { x: p.x, y: p.y, placed: true });
 }
 
+/** Fade back to the overworld. graceMs = how long monsters ignore you afterwards. */
 export async function returnToField(graceMs) {
   const tr = $('trans');
   tr.className = 'fadeIn'; await pause(260);
@@ -46,6 +47,7 @@ export async function returnToField(graceMs) {
   }
 }
 
+/** One shared HP bar; 3 faints = quest failed. Each cart cuts reward money by 1/3. */
 export async function checkFaint() {
   const p = G.player;
   if (p.hp > 0 || G.over) return false;
@@ -136,6 +138,7 @@ export async function foeDefeated() {
   await finishQuest('slay');
 }
 
+/** Captured: no carving, but bigger rewards. */
 export async function captureWin() {
   const m = G.foe;
   m.sleeping = true; m.trapped = 0; renderBattle();

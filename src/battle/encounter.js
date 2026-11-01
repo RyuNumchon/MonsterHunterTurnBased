@@ -19,7 +19,7 @@ export function startEncounter(e, how) {
   e.mv = null; e.alerted = false; e.bang = 0; e.goal = null; e.leaving = null;
   flow(async () => {
     G.foe = e; G.itemsUsed = 0;
-    e.skipNext = null; e.trapped = 0; e.flash = 0;
+    e.skipNext = null; e.trapped = 0; e.flash = 0;  // battle-only statuses reset per encounter
     clearBattleOnly(G.player); clearBattleOnly(e);
     Audio8.sfx('encounter');
     Audio8.music(e.isBoss ? 'boss' : 'battle');
@@ -109,6 +109,7 @@ export function useItemBattle(key) {
         await say("HUNTER's ATTACK rose!", 'good');
         break;
       case 'shock': {
+        // 3 turns the first time, 2 once the monster is trap-wary
         const turns = m.trapCount === 0 ? CONFIG.TRAP_TURNS_FIRST : CONFIG.TRAP_TURNS_AFTER;
         m.trapCount++; m.trapped = turns;
         addLog(`[shock trap ${turns} turns (trap #${m.trapCount})]`, 'dim');
@@ -118,6 +119,7 @@ export function useItemBattle(key) {
         break;
       }
       case 'tranq': {
+        // Capture rule: (trapped OR asleep) AND HP <= 25%; TRANQ_NEEDED hits
         Audio8.sfx('tranq');
         const held = m.trapped > 0 || m.sleeping, weak = m.hp / m.maxHp <= CONFIG.CAPTURE_PCT;
         if (!held) await say('The TRANQ BOMB had no effect!\nThe monster must be TRAPPED or ASLEEP.', 'bad');

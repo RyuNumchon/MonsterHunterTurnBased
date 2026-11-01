@@ -23,9 +23,9 @@ export function findMove(id) { return G ? WEAPONS[G.player.weapon].moves.find(m 
 
 export function moveDisabled(mv) {
   const p = G.player;
-  if (blockedBy(p, 'act')) return true;
-  if (isAttack(mv) && blockedBy(p, 'attack')) return true;
-  if (mv.type === 'charge' && p.charge >= 2) return true;
+  if (blockedBy(p, 'act')) return true;                                          // paralysis / tremor / stun
+  if (isAttack(mv) && blockedBy(p, 'attack')) return true;;                       // wind pressure
+  if (mv.type === 'charge' && p.charge >= 2) return true;                        // Lv2 is the max you can hold
   if ((mv.type === 'counter' || mv.type === 'finisher') && p.spirit < 1) return true;
   return false;
 }
@@ -99,6 +99,7 @@ export function confirmRun() {
     action: { kind: 'run' }, back: 'main' });
 }
 
+/** WAIT: pass the turn. Always available; the only option when you can't act. */
 export function confirmWait() {
   const why = blockedBy(G.player, 'act');
   Audio8.sfx('select');
@@ -268,6 +269,7 @@ async function hitCalculationPhase(intent) {
     const s = stunOnHit(m, hitPart === 'head' ? CONFIG.KO_BUILD_HEAD : CONFIG.KO_BUILD);
     if (s) { renderBattle(); await say(s, 'good'); }
   }
+  // Red sharpness: bounce (half damage already applied) + recoil. A killing blow can't faint you.
   if (sharpLv.bounce) {
     const recoil = Math.round(p.maxHp * CONFIG.BOUNCE_RECOIL_PCT);
     p.hp = Math.max(m.hp <= 0 ? 1 : 0, p.hp - recoil);
@@ -309,6 +311,7 @@ async function applyBreak(k) {
   renderBattle();
 }
 
+/** Weighted attack pick (weight defaults to 1). */
 function pickAttack(m) {
   const total = m.attacks.reduce((s, a) => s + (a.weight ?? 1), 0);
   let r = Math.random() * total;
@@ -316,6 +319,7 @@ function pickAttack(m) {
   return m.attacks[0];
 }
 
+/** Applies an attack's `inflict` list. missed=true: only area effects (aoe) still land. */
 async function inflictAll(atk, src, target, missed) {
   for (const f of atk.inflict || []) {
     if (missed && !f.aoe) continue;
@@ -354,7 +358,7 @@ async function monsterActionPhase() {
   }
 
   const atk = pickAttack(m);
-  if (atk.roar) {
+  if (atk.roar) {   // no damage, no accuracy roll
     Audio8.sfx('roar'); anim($('enemySprite'), 'a-shake', 400);
     await say(`The ${m.name} let out a deafening ROAR!`, 'warn');
     if (p.foresight) { await say('HUNTER read it and braced through the roar!', 'good'); return noHit(); }
@@ -372,7 +376,7 @@ async function monsterActionPhase() {
   if (roll >= hitChance) {
     Audio8.sfx('miss');
     await say(m.flash > 0 ? `The blinded ${m.name} missed wildly!` : 'HUNTER dodged! The attack missed!', 'good');
-    await inflictAll(atk, m, p, true);
+    await inflictAll(atk, m, p, true);   // shockwaves / gusts still land
     return noHit();
   }
   let dmg = atk.power * m.atkMult * atkMult(m) * defMult(p) * rand(0.9, 1.1);
@@ -433,7 +437,7 @@ async function tryEscape() {
 async function endOfTurnTicks() {
   const p = G.player, m = G.foe;
   p.guarding = false; p.foresight = false;
-  G.turn++; G.itemsUsed = 0;
+  G.turn++; G.itemsUsed = 0;                    // item allowance resets every turn
   for (const u of [p, m]) {
     for (const r of tickStatuses(u)) {
       if (r.dmg) { Audio8.sfx('hurt'); anim($(u === p ? 'playerSprite' : 'enemySprite'), 'a-hit', 500); }
