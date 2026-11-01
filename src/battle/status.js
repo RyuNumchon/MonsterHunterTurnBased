@@ -103,7 +103,10 @@ export function tickStatuses(u, lethal = true) {
       if (dmg > 0) { addLog(`[${uname(u)} ${id} -${dmg} → HP ${u.hp}/${u.maxHp}]`, 'dim'); out.push({ msg: fmt(d.dotMsg, u), dmg }); }
     }
     s.age++;
-    if (--s.turns <= 0) { delete u.status[id]; out.push({ msg: `${uname(u)}'s ${d.name} wore off.` }); }
+    if (--s.turns <= 0) {
+      delete u.status[id];
+      out.push({ msg: `${uname(u)}'s ${d.name} wore off.` });
+    }
   }
   return out;
 }
