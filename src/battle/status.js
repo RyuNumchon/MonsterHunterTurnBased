@@ -85,7 +85,10 @@ export function stunOnHit(target, build, cap = 100) {
   target.stunBuild = Math.min(cap, (target.stunBuild || 0) + build);
   const chance = stunChance(target), roll = Math.random() * 100;
   addLog(`[${uname(target)} stun roll ${roll.toFixed(1)} vs ${chance}% (buildup ${target.stunBuild}%)]`, 'dim');
-  if (roll < chance) { target.stunBuild = 0; return applyStatus(target, 'stun'); }
+  if (roll < chance) {
+    target.stunBuild = 0;
+    return applyStatus(target, 'stun');
+  }
   return null;
 }
 
@@ -128,7 +131,7 @@ export function clearBattleOnly(u) {
 }
 
 /** HUD chips: one per active effect with turns left. */
-export const statusChips = u =>
+export const statusChips = (u) =>
   Object.keys(u.status || {})
     .map(id =>
       `<span class="chip st" style="background:${STATUS[id].color}">${STATUS[id].short}</span>`
