@@ -7,7 +7,7 @@ import { CAMP_SPAWN } from '../data/world.js';
 import { Audio8, fieldMusic } from '../audio/audio8.js';
 import { say, pause } from '../ui/dialog.js';
 import { showScreen, renderBattle, setMode } from '../ui/hud.js';
-import { anim, pop, setPhase, toast, showLocation } from '../ui/fx.js';
+import { addLog, anim, pop, setPhase, toast, showLocation} from '../ui/fx.js';
 import { buildEntities, refreshEntities } from '../world/spawn.js';
 import { MAPS, findFree } from '../world/mapgen.js';
 import { worldTick } from '../world/field.js';
@@ -18,7 +18,7 @@ import { clearBattleOnly } from './status.js';
 /** Puts a freshly severed tail on a free tile near where the fight happened. */
 export function placeTail() {
   const t = G.tailDrop;
-  if (!t || t.placed || t.carved) return;
+if (!t || t.placed) return;
   const here = t.area === G.f.area;
   const p = findFree(MAPS[t.area], t.x, t.y,
     (x, y) => (here && Math.abs(x - G.f.x) + Math.abs(y - G.f.y) < 2) || G.ents.some(e => e.x === x && e.y === y), true);
@@ -59,6 +59,7 @@ export async function checkFaint() {
     await finishQuest('fail');
     return true;
   }
+  addLog(`[carts ${p.carts}/${CONFIG.MAX_CARTS}]`, 'dim');
   await say(`The Felynes carted HUNTER back to camp!\n(CARTS ${p.carts}/${CONFIG.MAX_CARTS} · reward money -1/3)`, 'warn');
 
   const tr = $('trans');

@@ -10,7 +10,7 @@ import { AREAS, DIRV, OPP } from "../data/world.js";
 import { DATA } from "../art/index.js";
 import { Audio8 } from "../audio/audio8.js";
 import { say, ask, choose, flow, pause } from "../ui/dialog.js";
-import { toast } from "../ui/fx.js";
+import { toast, addLog } from '../ui/fx.js';
 import { openMap } from "../ui/map.js";
 import { MAPS } from "./mapgen.js";
 import { entAt, worldTick, tailAt } from './field.js';
@@ -65,6 +65,7 @@ export function interact() {
 
 /** Severed tail on the map: carve once (CONFIG.TAIL_CARVES). Paid out with the quest rewards. */
 async function carveTailField() {
+  if (G.tailDrop.carved) { await say('Only bare bone is left. Nothing more to carve.', 'dim'); return; }
   const t = G.tailDrop;
   await say(`The severed ${t.name} TAIL is lying here.`);
   if (!(await ask('Carve the tail?'))) return;
@@ -100,10 +101,8 @@ async function gatherAt(gp) {
     );
   } else {
     addGathered(r.name);
-    await say(
-      `HUNTER obtained ${r.name}!\n(${CONFIG.GATHER_USES - used - 1} more gathers here)`,
-      "good",
-    );
+    addLog(`[${gp.type} spot ${used + 1}/${CONFIG.GATHER_USES} used]`, 'dim');
+    await say(`HUNTER obtained ${r.name}!`, 'good');
   }
 }
 
@@ -237,11 +236,11 @@ export function openStartMenu() {
       else if (i === 1) await openMap();
       else if (i === 2)
         await say(
-          `HUNTER · ${WEAPONS[p.weapon].name}\nHP ${p.hp}/${p.maxHp} · EDGE ${s.name} · CARTS ${p.carts}/${CONFIG.MAX_CARTS}`,
+          `HUNTER · ${WEAPONS[p.weapon].name}\nEDGE ${s.name} · CARTS ${p.carts}/${CONFIG.MAX_CARTS}`
         );
       else if (i === 3)
         await say(
-          `QUEST: Slay or capture the ${m.name}.\nTURN ${G.turn} · PAINTBALL ${G.paint > 0 ? G.paint + " turns" : "none"}`,
+          `QUEST: Slay or capture the ${m.name}.\nTURN ${G.turn} · PAINTBALL ${G.paint > 0 ? 'ACTIVE' : 'none'}`
         );
       else if (i === 4) {
         if (
@@ -294,10 +293,11 @@ export async function fieldBag() {
     if (k === "potion") {
       const b = p.hp;
       p.hp = Math.min(p.maxHp, p.hp + 30);
+      addLog(`[potion +${p.hp - b} → HP ${p.hp}/${p.maxHp}]`, "dim");
       Audio8.sfx("heal");
       await say(
-        `HUNTER used a POTION.\nHP was restored by ${p.hp - b}.`,
-        "good",
+      'HUNTER used a POTION.\nHP was restored!',
+      "good"
       );
     }
     if (k === "whetstone") {
@@ -308,7 +308,7 @@ export async function fieldBag() {
     if (k === "might") {
       p.buffs.might = 3;
       Audio8.sfx("item");
-      await say("HUNTER ate a MIGHT SEED!\nATTACK +25% for 3 turns.", "good");
+      await say("'HUNTER ate a MIGHT SEED!\nATTACK rose!'", "good");
     }
     if (k === "nullberry" || k === "antidote") {
       const c = cureStatuses(p, k);

@@ -162,7 +162,6 @@ canvas {
   padding: 1em 1.3em;
   line-height: 2;
   min-width: 0;
-  overflow:hidden;
 }
 .tb.adv {
   cursor: pointer;

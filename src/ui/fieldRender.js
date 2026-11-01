@@ -108,12 +108,12 @@ export function drawField(now) {
     CX.fillStyle = 'rgba(0,0,0,.25)'; ellipse(gp.x * 16 + 8, gp.y * 16 + 14, 6, 2);
     CX.drawImage(ART[(used >= CONFIG.GATHER_USES ? 'gx_' : 'g_') + gp.type], gp.x * 16, gp.y * 16 - 2);
   });
-  // Severed tail waiting to be carved
+  // Severed tail: grey once carved, but stays in place
   const tl = G.tailDrop;
-  if (tl && tl.placed && !tl.carved && tl.area === f.area) {
+  if (tl && tl.placed && tl.area === f.area) {
     CX.fillStyle = 'rgba(0,0,0,.25)'; ellipse(tl.x * 16 + 8, tl.y * 16 + 14, 7, 2);
-    CX.drawImage(ART.ic_tail, tl.x * 16, tl.y * 16 - 1);
-    if (glow) { CX.fillStyle = '#fff8c0'; CX.fillRect(tl.x * 16 + 12, tl.y * 16 - 2, 2, 2); }
+    CX.drawImage(ART[tl.carved ? 'icx_tail' : 'ic_tail'], tl.x * 16, tl.y * 16 - 1);
+    if (glow && !tl.carved) { CX.fillStyle = '#fff8c0'; CX.fillRect(tl.x * 16 + 12, tl.y * 16 - 2, 2, 2); }
   }
 
   // --- Entities + hunter, y-sorted so lower things draw in front ---

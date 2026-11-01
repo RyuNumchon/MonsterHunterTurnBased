@@ -12,7 +12,7 @@ import { ITEM_RAR } from '../data/items.js';
 import { matIcon, pimg } from '../art/index.js';
 import { Audio8 } from '../audio/audio8.js';
 import { pause } from '../ui/dialog.js';
-import { setPhase } from '../ui/fx.js';
+import { addLog, setPhase } from '../ui/fx.js';
 import { resetMini } from '../ui/map.js';
 
 /** Ends the hunt. State is set synchronously, so callers may fire-and-forget this. */
@@ -66,6 +66,7 @@ export function renderRewards() {
     const notes = [];
     if (o === 'capture') notes.push('capture x1.2');
     if (p.carts) notes.push(`-${p.carts}/${CONFIG.MAX_CARTS} for carts`);
+    addLog(`[reward money: base ${R.base}z${o === 'capture' ? ' (capture x1.2)' : ''} · carts -${p.carts}/${CONFIG.MAX_CARTS} → ${R.zenny}z]`, 'dim');
     body += `<div class="zen">REWARD MONEY: ${R.zenny}z <small>(base ${R.base}z${notes.length ? ' · ' + notes.join(' · ') : ''})</small></div>`;
   } else {
     body = `<p class="ftxt">${o === 'fail'

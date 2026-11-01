@@ -9,7 +9,7 @@ export const CONFIG = {
 
   // Big monster: fleeing mid-battle, limping, sleeping, healing
   FLEE_MIN: 4, FLEE_MAX: 6, FLEE_CHANCE: 0.5, LOW_HP_FLEE: 0.25, LOW_HP_FLEE_CHANCE: 0.4,
-  SLEEP_AFTER_AREAS: 3,    // a limping monster sleeps once the hunter moves 3 areas without finding it
+  SLEEP_AFTER_TURNS: 3,    // a limping monster sleeps after 3 turns (any kind) without being found
   REST_HEAL_PCT: 0.03,     // healed per world turn ONLY while asleep
   WAKE_AFTER: 6,           // world turns of sleep before it wakes on its own
 
