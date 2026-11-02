@@ -73,12 +73,10 @@ export function renderRewards() {
       ? 'HUNTER fainted 3 times.<br>The Guild pays nothing, and everything gathered was lost.'
       : 'HUNTER returned to the village empty-handed.'}</p>`;
   }
-  const otherKey = G.monsterKey === 'rathalos' ? 'tigrex' : 'rathalos';
   const btns = win && !G.boxed
     ? `<button class="rbtn big" data-act="putall">PUT ALL IN BOX</button>`
     : `${G.boxed ? `<div class="boxed">✓ Everything was stored in your ITEM BOX!<br>Wallet: ${BOX.zenny}z</div>` : ''}
-       <button class="rbtn" data-act="rematch">REMATCH: ${m.name}</button>
-       <button class="rbtn alt" data-act="hunt" data-val="${otherKey}">NEW QUEST: ${MONSTERS[otherKey].name}</button>`;
+       <button class="rbtn big" data-act="village">RETURN TO VILLAGE</button>`;
   $('rewardOv').innerHTML = `
     <div class="rhead ${win ? '' : 'fail'}"><h3>${heads[o]}</h3>
       <span>${m.name} · ${G.turn} turns · CARTS ${p.carts}/${CONFIG.MAX_CARTS}</span></div>

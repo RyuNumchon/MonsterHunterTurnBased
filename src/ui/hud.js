@@ -7,7 +7,7 @@ import { G, UI } from '../core/state.js';
 import { WEAPONS, getSharp } from '../data/weapons.js';
 import { PARTS, MONSTERS } from '../data/monsters.js';
 import { ITEMS, BOSS_ONLY } from '../data/items.js';
-import { AREAS } from '../data/world.js';
+import { areaInfo } from '../data/world.js';
 import { DATA, pimg } from '../art/index.js';
 import { addLog, setPhase, fitText } from './fx.js';
 import { findMove, moveDisabled } from '../battle/turn.js';
@@ -134,10 +134,8 @@ export function renderPanel() {
   if (!G) { P.innerHTML = ''; return; }
   if (G.over) {
     const win = G.outcome === 'slay' || G.outcome === 'capture';
-    const otherKey = G.monsterKey === 'rathalos' ? 'tigrex' : 'rathalos';
     P.innerHTML = `<div class="tb">${win ? 'Great hunting!' : 'The hunt is over.'}<br>Check the reward screen above.</div>
-      <div class="cmds"><button class="cmd k-fight" data-act="rematch">REMATCH</button>
-        <button class="cmd k-run" data-act="hunt" data-val="${otherKey}">HUNT<small>${MONSTERS[otherKey].name}</small></button></div>`;
+      <div class="cmds"><button class="cmd k-map" style="grid-column:1/-1" data-act="village">RETURN TO VILLAGE</button></div>`;
     fitPanel();
     return;
   }
@@ -211,7 +209,7 @@ export function renderFieldPanel(P) {
       <button data-dir="right">▶</button><button data-dir="down">▼</button></div>
     <div class="fmid">
       <div class="fstat">
-        <div class="srow"><b>AREA</b>${AREAS[f.area].name} · ${AREAS[f.area].sub}</div>
+        <div class="srow"><b>AREA</b>${areaInfo(f.area).name} · ${areaInfo(f.area).sub}</div>
         <div class="srow"><b>HP</b><span class="mbar"><i style="width:${hp}%;background:${hpColor(hp)}"></i></span></div>
         <div class="srow"><b>EDGE</b><span class="mbar"><i style="width:${p.sharp / CONFIG.SHARP_MAX * 100}%;background:${s.color}"></i></span>${s.name}</div>
         <div class="srow"><b>COND</b>${statusChips(p) || 'NORMAL'}</div>

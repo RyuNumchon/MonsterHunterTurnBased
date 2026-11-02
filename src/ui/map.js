@@ -12,7 +12,7 @@ export function resetMini() { miniKey = ''; }
 
 export function renderMini() {
   const el = $('mini');
-  const show = !!G && G.screen === 'field' && !G.over
+  const show = !!G && G.phase === 'quest' && G.screen === 'field' && !G.over
     && $('mapOv').classList.contains('hidden') && $('rewardOv').classList.contains('hidden');
   el.classList.toggle('hidden', !show);
   if (!show) return;

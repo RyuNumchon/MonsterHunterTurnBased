@@ -2,6 +2,7 @@
    Music is an 8th-note step sequencer. Note tokens: "C5", "_" = hold, "-" = rest.
    Drums: "x" = hi-hat, "X" = snare + kick. */
 import { G } from '../core/state.js';
+import { VILLAGE } from '../data/world.js';
 
 export const Audio8 = (() => {
   let ac = null, master, mus, sfxG, noiseBuf, pw = {}, muted = false, want = null, cur = null, timer = null;
@@ -54,7 +55,11 @@ export const Audio8 = (() => {
       { w: 'triangle', vol: .2, s: parse('C3 _ _ _ G2 _ C3 _ _ _ - - - -') }] },
     fail:  { bpm: 96, once: true, v: [
       { w: 'p25', vol: .07, s: parse('G4 F#4 F4 E4 _ _ _ - - -') },
-      { w: 'triangle', vol: .2, s: parse('C3 B2 A#2 A2 _ _ _ - - -') }] }
+      { w: 'triangle', vol: .2, s: parse('C3 B2 A#2 A2 _ _ _ - - -') }] },
+    village: { bpm: 100, v: [
+      { w: 'p25', vol: .06, s: parse('G5 _ E5 _ D5 _ C5 _ D5 _ E5 _ G5 _ _ _ A5 _ G5 _ E5 _ D5 _ C5 _ D5 _ _ _ - -') },
+      { w: 'triangle', vol: .2, s: bass(['C3', 'A2', 'F2', 'G2'], 'slow') },
+      { w: 'noise', s: parse('x - - - - - - -') }] },
   };
 
   function osc(type, f, t) {
@@ -163,4 +168,4 @@ export const Audio8 = (() => {
 })();
 
 /** Camp gets its own calm theme; every other area plays the field theme. */
-export const fieldMusic = () => (G && G.f.area === 0) ? 'camp' : 'field';
+export const fieldMusic = () => !G || G.f.area === VILLAGE ? 'village' : G.f.area === 0 ? 'camp' : 'field';

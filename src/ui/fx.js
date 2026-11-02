@@ -1,6 +1,6 @@
 /* Small visual helpers: CSS animations, floating numbers, log, phase pills, toasts. */
 import { $ } from '../core/utils.js';
-import { AREAS } from '../data/world.js';
+import { areaInfo } from '../data/world.js';
 
 /** Restart a CSS animation class on an element. */
 export function anim(el, cls, ms) {
@@ -43,7 +43,7 @@ export function toast(txt) {
 /** Pokémon-style location banner sliding in from the top. */
 export function showLocation(a) {
   const el = $('locPop');
-  el.innerHTML = `<b>${AREAS[a].name}</b><br><small>${AREAS[a].sub}</small>`;
+  el.innerHTML = `<b>${areaInfo(a).name}</b><br><small>${areaInfo(a).sub}</small>`;
   el.classList.add('show');
   clearTimeout(locTimer);
   locTimer = setTimeout(() => el.classList.remove('show'), 2200);

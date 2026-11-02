@@ -102,5 +102,10 @@ function buildCat(fur, vest) {
 
 /** SPR[dir][frame] for the player; NPCSPR = green-armoured veteran; CATSPR = Felynes. */
 export const SPR    = buildHunter(HPAL);
-export const NPCSPR = buildHunter({ ...HPAL, m: '#7a9a5a', M: '#4a6a3a', H: '#b8d8a0', a: '#6a5a3a', W: '#c8b890', e: '#40f080' });
+export const HUMANS = {
+  veteran:  buildHunter({ ...HPAL, m: '#7a9a5a', M: '#4a6a3a', H: '#b8d8a0', a: '#6a5a3a', W: '#c8b890', e: '#40f080' }),
+  chief:    buildHunter({ ...HPAL, m: '#e8e0d0', M: '#a89880', H: '#ffffff', a: '#8a3a70', A: '#5a2048', W: '#c8a850', g: '#f0d060', e: '#202020', w: '#8a5a30', h: '#5a3a20' }),
+  merchant: buildHunter({ ...HPAL, m: '#d89838', M: '#9a6420', H: '#f8d080', a: '#3a7a5a', A: '#24503a', W: '#d89838', e: '#202020', w: '#c89060', h: '#7a5030' }),
+  kid:      buildHunter({ ...HPAL, m: '#f07848', M: '#b04828', H: '#f8b090', a: '#e8c040', A: '#b08820', W: '#f07848', e: '#202020', w: '#a07040', h: '#6a4020' })
+};
 export const CATSPR = { cat: buildCat('#f8e8c8', '#4878c8'), cat2: buildCat('#a8a8b8', '#c85040') };

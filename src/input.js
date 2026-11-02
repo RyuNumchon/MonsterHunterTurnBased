@@ -11,11 +11,11 @@ import { flow, doAdvance, pickMenu, moveMenu, cancelMenu, doCarve, closeStorage 
 import { setMode, moveInfo } from './ui/hud.js';
 import { openMap, closeMap } from './ui/map.js';
 import { canAct } from './world/field.js';
-import { interact, openStartMenu, fieldBag } from './world/interact.js';
+import { fieldMap, interact, openStartMenu, fieldBag } from './world/interact.js';
 import { useItemBattle } from './battle/encounter.js';
 import { findMove, pickMove, confirmAttack, confirmRun, confirmWait, goBack, runTurn } from './battle/turn.js';
 import { putAllInBox, renderStorage } from './quest/rewards.js';
-import { restart } from './game.js';
+import { newSession, returnToVillage } from './game.js';
 import { fitText } from './ui/fx.js';
 
 const KEYDIR = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right' };
@@ -38,13 +38,13 @@ function onClick(e) {
 
   // Always available
   switch (act) {
-    case 'reset': case 'rematch': restart(G ? G.monsterKey : 'rathalos'); return;
-    case 'hunt':     restart(val); return;
+    case 'reset':    newSession(); return;
+    case 'village':  returnToVillage(); return;
     case 'mute':     toggleMute(); return;
     case 'auto':     CONFIG.AUTO = !CONFIG.AUTO; $('autoBtn').textContent = `BATTLE TEXT: ${CONFIG.AUTO ? 'AUTO' : 'CLICK'}`; return;
     case 'putall':   putAllInBox(); return;
     case 'closebox': Audio8.sfx('back'); closeStorage(); return;
-    case 'wipebox':  wipeBox(); renderStorage(); return;
+    case 'wipebox':  wipeBox(); G.inventory = BOX.bag; renderStorage(); return;
     case 'advance':  doAdvance(); return;
     case 'menu':     pickMenu(+val); return;
     case 'closemap': closeMap(); return;
@@ -64,7 +64,7 @@ function onClick(e) {
         break;
       case 'fb':     cancelMenu(); closeMap(); closeStorage(); break;
       case 'fstart': if (canAct()) openStartMenu(); break;
-      case 'fmap':   if (canAct()) flow(openMap); break;
+      case 'fmap': if (canAct()) flow(fieldMap); break;
       case 'fbag':   if (canAct()) flow(fieldBag); break;
     }
     return;
@@ -115,7 +115,10 @@ function onKeyDown(e) {
 
   if (waits.store) { if (isA || isB || isEnter) closeStorage(); return; }
   if (!$('rewardOv').classList.contains('hidden')) {
-    if ((isA || isEnter) && G.over && !G.boxed && (G.outcome === 'slay' || G.outcome === 'capture')) putAllInBox();
+    if ((isA || isEnter) && G.over) {
+      const won = G.outcome === 'slay' || G.outcome === 'capture';
+      if (won && !G.boxed) putAllInBox(); else returnToVillage();
+    }
     return;
   }
   if (waits.map) { if (isA || isB || isEnter || k === 'm') closeMap(); return; }
@@ -138,7 +141,7 @@ function onKeyDown(e) {
     if (!canAct()) return;
     if (isA) interact();
     else if (isEnter || k === 'Escape') openStartMenu();
-    else if (k === 'm') flow(openMap);
+    else if (k === 'm') flow(fieldMap);
   } else if (isB) goBack();
 }
 function onKeyUp(e) {

@@ -6,7 +6,7 @@ import { CONFIG } from '../core/config.js';
 import { $, rand, pick } from '../core/utils.js';
 import { G, UI, waits, input } from '../core/state.js';
 import { SMALLS } from '../data/monsters.js';
-import { SOLID, DIRV, dirOf, CAMP_SPAWN, neighbors } from '../data/world.js';
+import { GATE, SOLID, DIRV, dirOf, CAMP_SPAWN, neighbors } from '../data/world.js';
 import { Audio8, fieldMusic } from '../audio/audio8.js';
 import { flow, pause } from '../ui/dialog.js';
 import { toast, showLocation, addLog } from '../ui/fx.js';
@@ -15,6 +15,7 @@ import { buildEntities } from './spawn.js';
 import { startEncounter } from '../battle/encounter.js';
 import { tickStatuses } from '../battle/status.js';
 import { stepMs } from '../battle/speed.js';
+import { atGate } from '../game.js';
 
 const DIRS4 = Object.values(DIRV);
 
@@ -124,11 +125,11 @@ export function updateField(dt, now) {
 /** Returns true if the step triggered an area change. */
 function onPlayerStep() {
   const f = G.f, M = MAPS[f.area];
-  if (M.tiles[f.y][f.x] === 'E') {
-    const ex = M.exits.find(e => e.x === f.x && e.y === f.y);
-    if (ex) { changeArea(ex.to); return true; }
-  }
-  return false;
+  if (M.tiles[f.y][f.x] !== 'E') return false;
+  const ex = M.exits.find(e => e.x === f.x && e.y === f.y);
+  if (!ex) return false;
+  if (ex.to === GATE) atGate(); else changeArea(ex.to);
+  return true;
 }
 
 /* ---------- Monster & NPC AI ----------
@@ -196,7 +197,7 @@ function aiStep(e, now) {
    Sleeping or limping monsters stay put. */
 function roamClock(dt) {
   const m = G.monster;
-  if (m.dead || m.captured || m.sleeping || m.limping || m.leaving) return;
+  if (!m || m.dead || m.captured || m.sleeping || m.limping || m.leaving) return;
   if (m.area === G.f.area && m.alerted) return;
   if ((m.roamMs -= dt) > 0) return;
   m.roamMs = rand(CONFIG.ROAM_MIN_MS, CONFIG.ROAM_MAX_MS);
@@ -258,7 +259,7 @@ export function worldTick() {
   for (const r of tickStatuses(p, false)) msgs.push(r.msg);
   if (G.paint > 0 && --G.paint === 0) msgs.push('The paintball scent faded...');
   if (p.buffs.might > 0 && --p.buffs.might === 0) msgs.push('The MIGHT SEED wore off.');
-  if (!m.dead && !m.captured) tickStatuses(m, false);
+  if (m && !m.dead && !m.captured) tickStatuses(m, false);
   return msgs.concat(bossOffscreenTurn());
 }
 
@@ -267,7 +268,7 @@ export function worldTick() {
    asleep -> heals REST_HEAL_PCT per turn, wakes after WAKE_AFTER turns. Finding it resets the count. */
 export function bossOffscreenTurn() {
   const msgs = [], m = G.monster;
-  if (m.dead || m.captured) return msgs;
+  if (!m || m.dead || m.captured) return msgs;
   if (m.area === G.f.area) { m.searched = 0; return msgs; }
   if (m.sleeping) {
     const before = m.hp;
