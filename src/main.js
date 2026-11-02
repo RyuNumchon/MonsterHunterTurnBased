@@ -8,7 +8,7 @@ import { renderMini } from './ui/map.js';
 import { drawField } from './ui/fieldRender.js';
 import { updateField } from './world/field.js';
 import { initInput, updateMuteLabel } from './input.js';
-import { newGame } from './game.js';
+import { newSession } from './game.js';
 
 let lastT = performance.now();
 function loop(now) {
@@ -28,5 +28,5 @@ Audio8.setMuted(BOX.muted);
 updateMuteLabel();
 await loadSprites();   // swap in the ./resources images before anything is drawn
 document.fonts?.ready.then(() => { renderPanel(); renderBattle(); });
-newGame('rathalos');
+newSession();
 requestAnimationFrame(loop);

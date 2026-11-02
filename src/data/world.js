@@ -33,7 +33,8 @@ export const THEMES = {
   river:  { ground: '.', path: ':', border: '#', obs: '#', clusters: 4,  tall: .08, flower: .02, feature: 'riverH', map: '#68b8e0' },
   falls:  { ground: 's', path: ':', border: 'R', obs: 'R', clusters: 4,  tall: 0,   flower: 0,   feature: 'pool', map: '#d8b060' },
   cave:   { ground: 'c', path: 'c', border: 'W', obs: 'W', clusters: 6,  tall: 0,   flower: 0,   bones: .04, map: '#9a8ec8' },
-  woods:  { ground: '.', path: ':', border: '#', obs: '#', clusters: 12, tall: .20, flower: 0,   map: '#6a9a48' }
+  woods:  { ground: '.', path: ':', border: '#', obs: '#', clusters: 12, tall: .20, flower: 0,   map: '#6a9a48' },
+  village: { ground: '.', path: ':', border: '#', obs: '#', clusters: 0, tall: .04, flower: .06, map: '#d8c890' }
 };
 
 export const SOLID  = new Set(['#', 'R', 'b', 'W', '~', 'w']);
@@ -45,9 +46,17 @@ export const OPP  = { up: 'down', down: 'up', left: 'right', right: 'left' };
 export const dirOf = (sx, sy) => sx > 0 ? 'right' : sx < 0 ? 'left' : sy > 0 ? 'down' : 'up';
 export const SIDE_IN = { N: [0, 1, 'down'], S: [0, -1, 'up'], W: [1, 0, 'right'], E: [-1, 0, 'left'] };
 export const CAMP_SPAWN = { x: 16, y: 6, dir: 'down' };
+/* Village hub (not part of the Mountain Stream graph). Its GATE exit leads to the quest. */
+export const VILLAGE = 'village', GATE = 'gate';
+export const VILLAGE_INFO = { name: 'YUKUMO VILLAGE', sub: "Hunters' Guild", theme: 'village' };
+export const VILLAGE_SPAWN = { x: 12, y: 11, dir: 'down' };
+export const areaInfo = a => a === VILLAGE ? VILLAGE_INFO : AREAS[a];
 
 export const NPC_DEFS = [
-  { id: 'campcat', area: 0, at: [9, 6],   name: 'CAMP FELYNE',    look: 'cat',    wander: true },
-  { id: 'veteran', area: 2, at: [8, 12],  name: 'VETERAN HUNTER', look: 'hunter', wander: false },
-  { id: 'comrade', area: 3, at: [16, 13], name: 'FELYNE COMRADE', look: 'cat2',   wander: true }
+  { id: 'chief',    area: VILLAGE, at: [5, 7],   name: 'VILLAGE CHIEF',  look: 'chief',    wander: false },
+  { id: 'merchant', area: VILLAGE, at: [18, 7],  name: 'MERCHANT',       look: 'merchant', wander: false },
+  { id: 'veteran',  area: VILLAGE, at: [15, 11], name: 'VETERAN HUNTER', look: 'veteran',  wander: false },
+  { id: 'kid',      area: VILLAGE, at: [8, 10],  name: 'VILLAGE KID',    look: 'kid',      wander: true },
+  { id: 'campcat',  area: 0, at: [9, 6],   name: 'CAMP FELYNE',    look: 'cat',  wander: true },
+  { id: 'comrade',  area: 3, at: [16, 13], name: 'FELYNE COMRADE', look: 'cat2', wander: true }
 ];

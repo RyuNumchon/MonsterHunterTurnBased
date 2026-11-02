@@ -1,70 +1,226 @@
-/* NPC conversations. Each one demonstrates a different interaction type:
-   Camp Felyne  -> branching menu (advice + shop paid from saved zenny)
-   Veteran      -> YES/NO choice that reveals the monster on the map
-   Comrade      -> item trade (SUSHIFISH for a SHOCK TRAP)            */
+/* NPC conversations.
+   Village:   CHIEF (quest board) · MERCHANT (buy / sell) · VETERAN (tips) · KID (small talk)
+   Quest map: CAMP FELYNE (advice + mark the monster) · FELYNE COMRADE (item trade) */
 import { pick } from '../core/utils.js';
 import { G } from '../core/state.js';
 import { BOX, saveBox } from '../core/save.js';
-import { ITEMS } from '../data/items.js';
-import { DATA } from '../art/index.js';
+import { ITEMS, ITEM_RAR } from '../data/items.js';
+import { MONSTERS, LOOT } from '../data/monsters.js';
+import { QUESTS } from '../data/quests.js';
+import { DATA, matIcon } from '../art/index.js';
 import { Audio8 } from '../audio/audio8.js';
 import { say, ask, choose } from '../ui/dialog.js';
+import { addLog } from '../ui/fx.js';
 
-const TIPS = [
-  'Walk into a monster to start a battle.\nThey run faster than you, so plan ahead!',
-  'Hit the big monster with a PAINTBALL.\nThen the MAP shows where it goes, nya!',
-  'Weak monsters limp to the WYVERN NEST\n(AREA 8) to sleep. Sneak attacks deal x2!',
-  'To CAPTURE: weaken it until it limps,\nset a SHOCK TRAP, then throw TRANQ BOMBs!',
-  "Captures can't be carved, meow...\nbut the Guild pays bigger rewards!",
-  'RED sharpness makes your blade BOUNCE.\nUse a WHETSTONE before that happens!'
+/* ================= VILLAGE ================= */
+
+const CHIEF_LINES = [
+  'CHIEF: The hot springs here heal body and soul.\nHohoho!',
+  'CHIEF: Every monster has a weakness.\nA wise hunter learns them all.',
+  'CHIEF: Do not let pride drive you, young one.\nThe mountain does not forgive carelessness.'
 ];
 
-async function talkCampCat() {
-  await say('CAMP FELYNE: Meow! Welcome to the\nMOUNTAIN STREAM, hunter-nyan!');
+async function talkChief() {
+  if (!G.flags.chiefMet) {
+    G.flags.chiefMet = true;
+    await say("CHIEF: Ah, a new hunter! Welcome to YUKUMO.\nOur village relies on brave souls like you.");
+  } else await say('CHIEF: Hohoho. What brings you to me today?');
   while (true) {
-    const c = await choose('CAMP FELYNE', [{ label: 'ADVICE' }, { label: 'SHOP', right: BOX.zenny + 'z' }, { label: 'BYE' }]);
-    if (c === 0) await say(TIPS[G.flags.tip++ % TIPS.length]);
-    else if (c === 1) await shop();
-    else { await say('Good hunting, meow!'); return; }
-  }
-}
-
-async function shop() {
-  const keys = Object.keys(ITEMS);
-  while (true) {
-    const opts = keys.map(k => ({ icon: DATA['item_' + k], label: ITEMS[k].name, right: ITEMS[k].price + 'z',
-      desc: `${ITEMS[k].desc} (You have ${G.inventory[k]})` }));
-    opts.push({ label: 'DONE', desc: 'Leave the shop.' });
-    const i = await choose(`SHOP · WALLET ${BOX.zenny}z`, opts, { desc: true });
-    if (i < 0 || i === keys.length) return;
-    const k = keys[i], it = ITEMS[k];
-    if (BOX.zenny < it.price) { await say(`Meow... that costs ${it.price}z.\nYou only have ${BOX.zenny}z.`, 'bad'); continue; }
-    if (await ask(`Buy a ${it.name} for ${it.price}z?`)) {
-      BOX.zenny -= it.price; saveBox(); G.inventory[k]++;
-      Audio8.sfx('buy');
-      await say(`Thank you, nya! You got a ${it.name}.`, 'good');
+    const q = G.quest;
+    const i = await choose('VILLAGE CHIEF', [
+      { label: 'QUEST BOARD', right: q ? 'TAKEN' : QUESTS.length },
+      { label: 'CANCEL QUEST', disabled: !q },
+      { label: 'TALK' },
+      { label: 'BYE' }]);
+    if (i === 0) { if (await questBoard()) return; }
+    else if (i === 1) await cancelQuest();
+    else if (i === 2) await say(pick(CHIEF_LINES));
+    else {
+      await say(q ? `CHIEF: The ${MONSTERS[q.target].name} awaits.\nThe GATE is to the north. Return safely!`
+                  : 'CHIEF: Come back whenever you are ready.');
+      return;
     }
   }
 }
 
-async function talkVeteran() {
-  const m = G.monster;
-  if (m.dead || m.captured) { await say('VETERAN: Ha! You actually did it.\nNot bad, rookie.'); return; }
-  if (!G.flags.vetHint) {
-    await say(`VETERAN: Hunting the ${m.name}, eh?\nI've been tracking it all morning.`);
-    if (await ask('Want to know where I last saw it?')) {
-      G.flags.vetHint = true;
-      G.paint = Math.max(G.paint, 4);   // acts like a short paintball
-      Audio8.sfx('item');
-      await say(`It was heading for AREA ${m.area}.\nI marked it on your MAP for a while.`, 'good');
-    } else await say('Suit yourself. The MOUNTAIN STREAM\nis a big place, rookie.');
-  } else {
-    await say(pick([
-      'Break the TAIL to weaken its attacks.\nBreak the LEGS and it trips over.',
-      'Aim for the HEAD: big damage...\nbut it is hard to hit. Misses DRIFT.',
-      'A FLASH BOMB halves its accuracy.\nGreat for setting up a full charge.'
-    ]));
+/** Returns true when a quest was just accepted (ends the conversation). */
+async function questBoard() {
+  while (true) {
+    const opts = QUESTS.map(q => ({
+      icon: DATA['mf_' + q.target], label: q.title,
+      right: G.quest && G.quest.id === q.id ? 'ACCEPTED' : '★' + q.stars,
+      desc: `${'★'.repeat(q.stars)} · HUNT: ${MONSTERS[q.target].name}<br>MAP: ${q.map}<br>REWARD ${LOOT[q.target].zenny}z · FEE ${q.fee}z<br>${q.desc}`
+    }));
+    opts.push({ label: 'BACK', desc: 'Return to the Chief.' });
+    const i = await choose('QUEST BOARD', opts, { desc: true });
+    if (i < 0 || i === QUESTS.length) return false;
+    const q = QUESTS[i];
+    if (G.quest && G.quest.id === q.id) { await say('CHIEF: You have already taken this quest.', 'dim'); continue; }
+    if (G.quest) { await say('CHIEF: One quest at a time, young one.\nCancel your current quest first.', 'dim'); continue; }
+    if (BOX.zenny < q.fee) { await say(`CHIEF: The contract fee is ${q.fee}z...\nYou only have ${BOX.zenny}z.`, 'bad'); continue; }
+    if (!(await ask(`Accept "${q.title}"?\nContract fee: ${q.fee}z`))) continue;
+    BOX.zenny -= q.fee; saveBox();
+    G.quest = q;
+    Audio8.sfx('buy');
+    await say(`QUEST ACCEPTED!\n"${q.title}"`, 'good');
+    await say('CHIEF: When you are ready, head through\nthe GATE to the north. Good luck!');
+    return true;
   }
+}
+
+async function cancelQuest() {
+  const q = G.quest;
+  if (!(await ask(`Cancel "${q.title}"?\nThe ${q.fee}z fee will be refunded.`))) return;
+  BOX.zenny += q.fee; saveBox();
+  G.quest = null;
+  Audio8.sfx('back');
+  await say('CHIEF: Very well. The quest has been cancelled.');
+}
+
+/* ---------- Merchant: buy consumables, sell bag items and materials ---------- */
+const MAT_PRICE = { 1: 15, 2: 40, 3: 90, 4: 180, 5: 360, 6: 720 };
+const bagPrice = k => Math.floor(ITEMS[k].price / 2);
+const matPrice = n => MAT_PRICE[ITEM_RAR[n] || 1];
+
+async function talkMerchant() {
+  await say('MERCHANT: Welcome, welcome!\nBuying or selling today?');
+  while (true) {
+    const i = await choose(`MERCHANT · WALLET ${BOX.zenny}z`, ['BUY', 'SELL ITEMS', 'SELL MATERIALS', 'BYE']);
+    if (i === 0) await buy();
+    else if (i === 1) await sellBag();
+    else if (i === 2) await sellMaterials();
+    else { await say('MERCHANT: Come again, hunter!'); return; }
+  }
+}
+
+async function buy() {
+  const keys = Object.keys(ITEMS);
+  while (true) {
+    const opts = keys.map(k => ({ icon: DATA['item_' + k], label: ITEMS[k].name, right: ITEMS[k].price + 'z',
+      desc: `${ITEMS[k].desc} (You have ${G.inventory[k]})` }));
+    opts.push({ label: 'DONE', desc: 'Stop buying.' });
+    const i = await choose(`BUY · WALLET ${BOX.zenny}z`, opts, { desc: true });
+    if (i < 0 || i === keys.length) return;
+    const k = keys[i], it = ITEMS[k];
+    if (BOX.zenny < it.price) { await say(`MERCHANT: That's ${it.price}z, friend.\nYou only have ${BOX.zenny}z.`, 'bad'); continue; }
+    if (!(await ask(`Buy a ${it.name} for ${it.price}z?`))) continue;
+    BOX.zenny -= it.price; G.inventory[k]++; saveBox();
+    Audio8.sfx('buy');
+    await say(`MERCHANT: Thank you! One ${it.name}.`, 'good');
+  }
+}
+
+async function howMany(name, have, unit) {
+  if (have <= 1) return (await ask(`Sell 1 ${name} for ${unit}z?`)) ? 1 : 0;
+  const i = await choose(`SELL ${name}`, [
+    { label: 'SELL 1', right: unit + 'z' }, { label: `SELL ALL (${have})`, right: unit * have + 'z' }, { label: 'CANCEL' }]);
+  return i === 0 ? 1 : i === 1 ? have : 0;
+}
+
+async function sellBag() {
+  while (true) {
+    const keys = Object.keys(ITEMS).filter(k => G.inventory[k] > 0);
+    if (!keys.length) { await say("MERCHANT: Your bag's empty, friend.", 'dim'); return; }
+    const opts = keys.map(k => ({ icon: DATA['item_' + k], label: ITEMS[k].name,
+      right: `x${G.inventory[k]} · ${bagPrice(k)}z`, desc: ITEMS[k].desc }));
+    opts.push({ label: 'DONE', desc: 'Stop selling.' });
+    const i = await choose(`SELL ITEMS · WALLET ${BOX.zenny}z`, opts, { desc: true });
+    if (i < 0 || i === keys.length) return;
+    const k = keys[i], unit = bagPrice(k), n = await howMany(ITEMS[k].name, G.inventory[k], unit);
+    if (!n) continue;
+    G.inventory[k] -= n; BOX.zenny += n * unit; saveBox();
+    Audio8.sfx('buy');
+    await say(`Sold ${ITEMS[k].name} x${n} for ${n * unit}z!`, 'good');
+  }
+}
+
+async function sellMaterials() {
+  while (true) {
+    const names = Object.keys(BOX.items).filter(n => BOX.items[n] > 0)
+      .sort((a, b) => (ITEM_RAR[b] || 1) - (ITEM_RAR[a] || 1) || a.localeCompare(b));
+    if (!names.length) { await say('MERCHANT: Your Item Box has no materials.\nGo hunt something!', 'dim'); return; }
+    const opts = names.map(n => ({ icon: matIcon(n, ITEM_RAR[n] || 1), label: n, right: `x${BOX.items[n]} · ${matPrice(n)}z`,
+      desc: `Rarity ${ITEM_RAR[n] || 1}. Stored in your ITEM BOX.` }));
+    opts.push({ label: 'DONE', desc: 'Stop selling.' });
+    const i = await choose(`SELL MATERIALS · WALLET ${BOX.zenny}z`, opts, { desc: true });
+    if (i < 0 || i === names.length) return;
+    const name = names[i], unit = matPrice(name), n = await howMany(name, BOX.items[name], unit);
+    if (!n) continue;
+    BOX.items[name] -= n; if (BOX.items[name] <= 0) delete BOX.items[name];
+    BOX.zenny += n * unit; saveBox();
+    Audio8.sfx('buy');
+    await say(`Sold ${name} x${n} for ${n * unit}z!`, 'good');
+  }
+}
+
+/* ---------- Veteran: tips (quest-specific when a quest is accepted) ---------- */
+const VET_QUEST = {
+  rathalos: ['It breathes FIRE. Carry NULL-BERRIES.\nIts talons are POISONOUS: bring ANTIDOTES!',
+             'Its WING GUST pins you in place.\nYou can still GUARD while you recover.'],
+  tigrex:   ["Its ROAR stops you from using items.\nHeal BEFORE it gets angry.",
+             'When it slams the ground, you lose your footing.\nIt is FAST: expect it to strike first.']
+};
+const VET_GENERAL = [
+  'Break the TAIL to weaken its attacks.\nBreak the LEGS and it trips over.',
+  'Aim for the HEAD: big damage...\nbut it is hard to hit. Misses DRIFT.',
+  'A FLASH BOMB ruins its aim.\nGreat for setting up a full charge.',
+  'The CAMP FELYNE has scouts.\nAsk it to mark the monster on your map.',
+  'Taking hit after hit leaves you dizzy.\nGUARD or back off before you get STUNNED.'
+];
+
+async function talkVeteran() {
+  const q = G.quest;
+  if (q) {
+    await say(`VETERAN: So you're after the ${MONSTERS[q.target].name}, rookie.`);
+    await say(VET_QUEST[q.target][G.flags.vetTip++ % VET_QUEST[q.target].length]);
+  } else {
+    await say('VETERAN: No quest yet? The CHIEF has work.');
+    await say(VET_GENERAL[G.flags.vetTip++ % VET_GENERAL.length]);
+  }
+}
+
+async function talkKid() {
+  await say(pick([
+    "KID: Whoa, a real HUNTER! Is that sword heavy?\nCan I hold it? Pleeease?",
+    "KID: When I grow up I'm gonna hunt a TIGREX!\nWith my bare hands!",
+    "KID: The MERCHANT pays good money for scales.\nShiny ones are worth the most!",
+    "KID: Mom says never go past the GATE alone.\nYou're not alone, you have a sword!"
+  ]));
+}
+
+/* ================= QUEST MAP ================= */
+
+const CAT_TIPS = [
+  'Walk into a monster to start a battle.\nThey run faster than you, so plan ahead!',
+  'Hit the big monster with a PAINTBALL.\nThen the MAP shows where it goes, nya!',
+  'Weak monsters limp to the WYVERN NEST\n(AREA 8) to sleep. Sneak attacks hit hard!',
+  'To CAPTURE: weaken it until it limps,\nset a SHOCK TRAP, then throw TRANQ BOMBs!',
+  "Captures can't be carved, meow...\nbut the Guild pays bigger rewards!",
+  'A dull blade BOUNCES off.\nUse a WHETSTONE before that happens!'
+];
+
+async function talkCampCat() {
+  await say('CAMP FELYNE: Meow! Good hunting weather,\nhunter-nyan!');
+  while (true) {
+    const c = await choose('CAMP FELYNE', [
+      { label: 'ADVICE' }, { label: 'MARK MONSTER', right: G.flags.campMark ? 'USED' : '' }, { label: 'BYE' }]);
+    if (c === 0) await say(CAT_TIPS[G.flags.tip++ % CAT_TIPS.length]);
+    else if (c === 1) await markMonster();
+    else { await say('Good luck out there, meow!'); return; }
+  }
+}
+
+/** Once per quest: the Felyne's scouts mark the big monster (like a short paintball). */
+async function markMonster() {
+  const m = G.monster;
+  if (!m || m.dead || m.captured) { await say('Nya? The hunt is already over!', 'dim'); return; }
+  if (G.flags.campMark) { await say("My scouts are worn out, nya...\nUse a PAINTBALL from here on!", 'dim'); return; }
+  G.flags.campMark = true;
+  G.paint = Math.max(G.paint, 4);
+  addLog(`[camp mark: paint ${G.paint} turns]`, 'dim');
+  Audio8.sfx('item');
+  await say(`My scouts spotted the ${m.name}\nin AREA ${m.area}, nya!`, 'good');
+  await say('I marked it on your MAP for a while.', 'good');
 }
 
 async function talkComrade() {
@@ -82,4 +238,7 @@ async function talkComrade() {
 }
 
 /** NPC id -> conversation. Each returns a promise (run inside flow()). */
-export const NPC_TALK = { campcat: talkCampCat, veteran: talkVeteran, comrade: talkComrade };
+export const NPC_TALK = {
+  chief: talkChief, merchant: talkMerchant, veteran: talkVeteran, kid: talkKid,
+  campcat: talkCampCat, comrade: talkComrade
+};

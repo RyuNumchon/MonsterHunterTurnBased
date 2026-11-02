@@ -67,7 +67,7 @@ export function buildEntities(reset) {
     s.next = now + 800 + Math.random() * 800; list.push(s);
   });
   const m = G.monster;
-  if (!m.dead && !m.captured && m.area === a) {
+  if (m && !m.dead && !m.captured && m.area === a) {
     if (reset || m.posArea !== a) {
       const p = findFree(M, 11, 8, (x, y) => list.some(e => Math.abs(e.x - x) + Math.abs(e.y - y) < 2), true);
       Object.assign(m, { x: p.x, y: p.y, hx: p.x, hy: p.y, mv: null, posArea: a, alerted: false, turnsInArea: 0, goal: null, leaving: null});

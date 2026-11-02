@@ -6,7 +6,7 @@ import { G } from "../core/state.js";
 import { BOX, saveBox } from "../core/save.js";
 import { WEAPONS, getSharp } from "../data/weapons.js";
 import { ITEMS, GATHER } from "../data/items.js";
-import { AREAS, DIRV, OPP } from "../data/world.js";
+import { AREAS, DIRV, OPP, VILLAGE } from "../data/world.js";
 import { DATA } from "../art/index.js";
 import { Audio8 } from "../audio/audio8.js";
 import { say, ask, choose, flow, pause } from "../ui/dialog.js";
@@ -131,7 +131,7 @@ async function useObject(o) {
         nullberry: 2,
         antidote: 2,
       };
-      for (const k in sup) G.inventory[k] += sup[k];
+      for (const k in sup) { G.inventory[k] += sup[k]; G.supplyGiven[k] = (G.supplyGiven[k] || 0) + sup[k]; }
       Audio8.sfx("item");
       await say("HUNTER opened the blue SUPPLY BOX!");
       await say(
@@ -162,9 +162,14 @@ async function useObject(o) {
     case "tent":
       await say("The Guild's tent. Your BED is right beside it.");
       return;
-    case "sign":
-      await say(signText(G.f.area));
-      return;
+    case 'sign': await say(G.f.area === VILLAGE ? 'YUKUMO VILLAGE\nNORTH: GATE TO THE HUNTING GROUNDS' : signText(G.f.area)); return;
+    case 'house': await say(o.label); return;
+    case 'gate': await say(
+      G.quest
+      ? 'The GATE to the hunting grounds.\nWalk through it to depart!'
+      : 'The GATE to the hunting grounds.\nAccept a quest from the CHIEF first.'
+    );
+    return;
   }
 }
 
@@ -215,41 +220,37 @@ async function itemBoxMenu() {
   }
 }
 
+export async function fieldMap() {
+  if (G.phase !== 'quest') {
+    await say('You know YUKUMO VILLAGE by heart.\nThe MAP is for the hunting grounds.', 'dim');
+    return;
+  }
+  await openMap();
+}
+
 /** START menu (Enter / Esc / START button). */
 export function openStartMenu() {
-  Audio8.sfx("select");
+  Audio8.sfx('select');
   flow(async () => {
     while (true) {
-      $("fDialog").classList.add("hidden");
-      const i = await choose("MENU", [
-        "BAG",
-        "MAP",
-        "HUNTER",
-        "QUEST",
-        "ABANDON QUEST",
-        "EXIT",
-      ]);
-      const p = G.player,
-        m = G.monster,
-        s = getSharp(p.sharp);
-      if (i === 0) await fieldBag();
-      else if (i === 1) await openMap();
-      else if (i === 2)
-        await say(
-          `HUNTER · ${WEAPONS[p.weapon].name}\nEDGE ${s.name} · CARTS ${p.carts}/${CONFIG.MAX_CARTS}`
-        );
-      else if (i === 3)
-        await say(
-          `QUEST: Slay or capture the ${m.name}.\nTURN ${G.turn} · PAINTBALL ${G.paint > 0 ? 'ACTIVE' : 'none'}`
-        );
-      else if (i === 4) {
-        if (
-          await ask("Abandon the quest?\nAll monster rewards will be lost.")
-        ) {
-          finishQuest("abandon");
-          return;
-        }
-      } else return;
+      $('fDialog').classList.add('hidden');
+      const inQuest = G.phase === 'quest';
+      const opts = ['BAG', 'MAP', 'HUNTER', 'QUEST', ...(inQuest ? ['ABANDON QUEST'] : []), 'EXIT'];
+      const i = await choose('MENU', opts), p = G.player, s = getSharp(p.sharp), q = G.quest;
+      switch (opts[i]) {
+        case 'BAG': await fieldBag(); break;
+        case 'MAP': await fieldMap(); break;
+        case 'HUNTER': await say(`HUNTER · ${WEAPONS[p.weapon].name}\nEDGE ${s.name} · CARTS ${p.carts}/${CONFIG.MAX_CARTS}`); break;
+        case 'QUEST':
+          if (inQuest) await say(`QUEST: ${q.title}\nSlay or capture the ${G.monster.name}. TURN ${G.turn}`);
+          else if (q) await say(`ACCEPTED: ${q.title}\nDepart through the GATE to the north.`);
+          else await say('No quest accepted.\nVisit the VILLAGE CHIEF.', 'dim');
+          break;
+        case 'ABANDON QUEST':
+          if (await ask('Abandon the quest?\nAll monster rewards will be lost.')) { finishQuest('abandon'); return; }
+          break;
+        default: return;
+      }
     }
   });
 }

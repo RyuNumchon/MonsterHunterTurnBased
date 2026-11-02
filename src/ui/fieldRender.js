@@ -3,10 +3,11 @@
 import { CONFIG } from '../core/config.js';
 import { $, clamp } from '../core/utils.js';
 import { G } from '../core/state.js';
-import { THEMES } from '../data/world.js';
-import { TILES, OVER, SPR, NPCSPR, CATSPR } from '../art/tiles.js';
+import { THEMES, GATE } from '../data/world.js'
+import { TILES, OVER, SPR, HUMANS, CATSPR } from '../art/tiles.js';
 import { ART, pxText } from '../art/index.js';
 import { MAPS } from '../world/mapgen.js';
+import { lighten, darken } from '../art/raster.js';
 
 const CV = $('fieldCv'), CX = CV.getContext('2d');
 
@@ -17,6 +18,7 @@ export function entPos(e) {
 }
 function ellipse(x, y, rx, ry) { CX.beginPath(); CX.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); CX.fill(); }
 function tri(a, b, c, d, e, f) { CX.beginPath(); CX.moveTo(a, b); CX.lineTo(c, d); CX.lineTo(e, f); CX.closePath(); CX.fill(); }
+function quad(a, b, c, d, e, f, g, h) { CX.beginPath(); CX.moveTo(a, b); CX.lineTo(c, d); CX.lineTo(e, f); CX.lineTo(g, h); CX.closePath(); CX.fill(); }
 function blit(img, x, y, flip) {
   x = Math.round(x); y = Math.round(y);
   if (!flip) { CX.drawImage(img, x, y); return; }
@@ -65,6 +67,26 @@ function drawObject(o) {
       CX.fillStyle = '#c8945a'; CX.fillRect(X + 3, Y + 3, 10, 6);
       CX.fillStyle = '#6a4428'; CX.fillRect(X + 5, Y + 5, 6, 1); CX.fillRect(X + 5, Y + 7, 4, 1);
       break;
+    case 'house': {
+      const W = o.w * 16, H = o.h * 16, dx = X + W / 2;
+      CX.fillStyle = 'rgba(0,0,0,.22)'; CX.fillRect(X + 4, Y + H - 2, W - 2, 4);
+      CX.fillStyle = '#5a3a22'; CX.fillRect(X + 2, Y + 14, W - 4, H - 14);
+      CX.fillStyle = '#ecdcb4'; CX.fillRect(X + 4, Y + 16, W - 8, H - 18);
+      CX.fillStyle = '#5a3a22'; CX.fillRect(X + 4, Y + 26, W - 8, 2);
+      CX.fillStyle = '#3a2414'; CX.fillRect(dx - 6, Y + H - 15, 12, 15);
+      CX.fillStyle = '#f8d870'; CX.fillRect(X + 10, Y + 31, 7, 6); CX.fillRect(X + W - 17, Y + 31, 7, 6);
+      CX.fillStyle = darken(o.roof, .45); quad(X - 3, Y + 18, X + 7, Y - 2, X + W - 7, Y - 2, X + W + 3, Y + 18);
+      CX.fillStyle = o.roof; quad(X - 1, Y + 16, X + 8, Y, X + W - 8, Y, X + W + 1, Y + 16);
+      CX.fillStyle = lighten(o.roof, .3); CX.fillRect(X + 8, Y, W - 16, 2);
+      break;
+    }
+    case 'gate': {   // wooden arch over the village exit
+      const W = o.w * 16;
+      CX.fillStyle = '#7a2a20'; CX.fillRect(X + 2, Y, 5, 16); CX.fillRect(X + W - 7, Y, 5, 16);
+      CX.fillStyle = '#a83a2a'; CX.fillRect(X - 2, Y + 1, W + 4, 4);
+      CX.fillStyle = '#5a1e18'; CX.fillRect(X, Y + 7, W, 2);
+      break;
+    }
   }
 }
 
@@ -91,10 +113,12 @@ export function drawField(now) {
     if (OVER[c]) CX.drawImage(v(OVER[c], x, y), x * 16, y * 16);
   }
 
+  M.objects.forEach(drawObject);
+
   // --- Exit markers with the destination area number ---
   const glow = Math.sin(now / 250) > 0;
   M.exits.forEach(e => {
-    const X = e.x * 16, Y = e.y * 16, label = e.to === 0 ? 'C' : String(e.to);
+    const X = e.x * 16, Y = e.y * 16, label = e.to === 0 ? 'C' : e.to === GATE ? 'Q' : String(e.to);
     CX.fillStyle = glow ? '#f8d850' : '#e0b830'; CX.fillRect(X + 3, Y + 3, 10, 10);
     CX.fillStyle = '#1c2818'; CX.fillRect(X + 3, Y + 3, 10, 1); CX.fillRect(X + 3, Y + 12, 10, 1);
     CX.fillRect(X + 3, Y + 3, 1, 10); CX.fillRect(X + 12, Y + 3, 1, 10);
@@ -102,7 +126,6 @@ export function drawField(now) {
   });
 
   // --- Props & gathering points (used-up spots turn grey but stay opaque) ---
-  M.objects.forEach(drawObject);
   M.gathers.forEach(gp => {
     const used = G.gatherUses[`${f.area},${gp.x},${gp.y}`] || 0;
     CX.fillStyle = 'rgba(0,0,0,.25)'; ellipse(gp.x * 16 + 8, gp.y * 16 + 14, 6, 2);
@@ -123,11 +146,12 @@ export function drawField(now) {
   for (const { e, p } of list) {
     if (!e) { blit(SPR[f.dir][f.mv ? (f.step % 2 ? 'A' : 'B') : 'S'], p.x, p.y - 2); continue; }
     if (e.kind === 'npc') {
-  // Bottom-centred so sprites of any size stand on their tile; Palicos face the way they walk
-    const img = e.look === 'hunter' ? NPCSPR[e.dir][e.mv ? 'A' : 'S'] : CATSPR[e.look];
-    blit(img, p.x + 8 - img.width / 2, p.y + 14 - img.height, e.look !== 'hunter' && e.dir === 'right');
-    continue;
-  }
+      // Bottom-centred so sprites of any size stand on their tile; Palicos face the way they walk
+      const human = HUMANS[e.look];
+      const img = human ? human[e.dir][e.mv ? 'A' : 'S'] : CATSPR[e.look];
+      blit(img, p.x + 8 - img.width / 2, p.y + 14 - img.height, !human && e.dir === 'right');
+      continue;
+    }
 
     const img = ART['mf_' + e.key], hop = e.mv ? -2 * Math.sin(Math.PI * p.t) : 0;
     const top = p.y + 16 - img.height;
