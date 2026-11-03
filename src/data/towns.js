@@ -25,7 +25,7 @@ export const TOWN_MAPS = {
       { type: 'house', x: 16, y: 2,  w: 5, h: 3, roof: '#3868b0', label: "The MERCHANT's shop. It smells of herbs and oil." },
       { type: 'house', x: 3,  y: 12, w: 5, h: 3, roof: '#5a8a40', label: 'Your house. Home sweet home.' },
       { type: 'itembox', x: 9, y: 13, w: 1, h: 1 },
-      { type: 'sign', x: 14, y: 10, w: 1, h: 1, text: 'YUKUMO VILLAGE\nW: FARM · N: GATHERING HUB · E: QUEST GATE' },
+      { type: 'sign', x: 14, y: 10, w: 1, h: 1, text: 'THEPARAK VILLAGE\nW: FARM · N: GATHERING HUB · E: QUEST GATE' },
       { type: 'gate', x: 23, y: 8, w: 1, h: 2, deco: true }
     ]
   },
@@ -56,7 +56,7 @@ export const TOWN_MAPS = {
       ['mining', 21, 13], ['whetstone', 21, 15]                                          // rocks
     ],
     objects: [
-      { type: 'sign', x: 20, y: 7, w: 1, h: 1, text: 'YUKUMO FARM\nEvery spot regrows after each quest.' }
+      { type: 'sign', x: 20, y: 7, w: 1, h: 1, text: 'THEPARAK FARM\nEvery spot regrows after each quest.' }
     ]
   },
 

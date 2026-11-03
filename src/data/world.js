@@ -1,11 +1,11 @@
-/* Mountain Stream (MHP3rd). mx/my = minimap position (0–100), also used
+/* Sacred Forest (MHP3rd). mx/my = minimap position (0–100), also used
    to decide which edge of an area each exit sits on. */
 export const AREAS = {
   0: { name: 'BASE CAMP', sub: 'Supply Tent',     theme: 'camp',   mx: 90, my: 88 },
   1: { name: 'AREA 1',    sub: 'Spring Hollow',   theme: 'stream', mx: 84, my: 64, gather: ['bugs', 'whetstone', 'plants', 'berries'] },
   2: { name: 'AREA 2',    sub: 'Rocky Pass',      theme: 'rocky',  mx: 62, my: 80, gather: ['mining', 'mushrooms', 'misc'] },
   3: { name: 'AREA 3',    sub: 'Bamboo Grove',    theme: 'bamboo', mx: 43, my: 72, gather: ['mining', 'misc', 'plants'] },
-  4: { name: 'AREA 4',    sub: 'Yukumo Meadow',   theme: 'meadow', mx: 76, my: 26, gather: ['misc', 'mining', 'plants', 'berries'] },
+  4: { name: 'AREA 4',    sub: 'Theparak Meadow',   theme: 'meadow', mx: 76, my: 26, gather: ['misc', 'mining', 'plants', 'berries'] },
   5: { name: 'AREA 5',    sub: 'Old Forest',      theme: 'forest', mx: 48, my: 34, gather: ['misc', 'mushrooms', 'honey', 'plants'] },
   6: { name: 'AREA 6',    sub: 'Mountain River',  theme: 'river',  mx: 36, my: 52, gather: ['plants', 'berries', 'mining', 'fish'] },
   7: { name: 'AREA 7',    sub: 'Waterfall Basin', theme: 'falls',  mx: 30, my: 13, gather: ['berries', 'bugs', 'mushrooms', 'fish'] },
@@ -48,14 +48,14 @@ export const OPP  = { up: 'down', down: 'up', left: 'right', right: 'left' };
 export const dirOf = (sx, sy) => sx > 0 ? 'right' : sx < 0 ? 'left' : sy > 0 ? 'down' : 'up';
 export const SIDE_IN = { N: [0, 1, 'down'], S: [0, -1, 'up'], W: [1, 0, 'right'], E: [-1, 0, 'left'] };
 export const CAMP_SPAWN = { x: 16, y: 6, dir: 'down' };
-/* Village hub (not part of the Mountain Stream graph). Its GATE exit leads to the quest. */
-/* Town areas (not part of the Mountain Stream graph). GATE exits depart for the quest. */
+/* Village hub (not part of the Sacred Forest graph). Its GATE exit leads to the quest. */
+/* Town areas (not part of the Sacred Forest graph). GATE exits depart for the quest. */
 export const VILLAGE = 'village', FARM = 'farm', HUB = 'hub', GATE = 'gate';
 export const TOWNS = [VILLAGE, FARM, HUB];
 export const isTown = a => TOWNS.includes(a);
 export const TOWN_INFO = {
-  [VILLAGE]: { name: 'YUKUMO VILLAGE', sub: 'Village Square',   theme: 'village' },
-  [FARM]:    { name: 'YUKUMO FARM',    sub: 'Fields & Groves',  theme: 'farm' },
+  [VILLAGE]: { name: 'THEPARAK VILLAGE', sub: 'Village Square',   theme: 'village' },
+  [FARM]:    { name: 'THEPARAK FARM',    sub: 'Fields & Groves',  theme: 'farm' },
   [HUB]:     { name: 'GATHERING HUB',  sub: "Hunters' Guild",   theme: 'hub' }
 };
 /** Where you appear when returning from a quest. */

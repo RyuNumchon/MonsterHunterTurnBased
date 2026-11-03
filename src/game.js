@@ -67,7 +67,7 @@ export function newSession() {
   showLocation(VILLAGE);
   Audio8.music('village');
   flow(async () => {
-    await say('Welcome to YUKUMO VILLAGE, hunter!');
+    await say('Welcome to THEPARAK VILLAGE, hunter!');
     await say('Take a quest from the VILLAGE CHIEF,\nthen depart through the GATE to the east.', 'dim');
   });
 }

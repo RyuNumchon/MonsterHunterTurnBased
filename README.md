@@ -1,4 +1,4 @@
-# Monster Hunt: Mountain Stream
+# Monster Hunt: Sacred Forest
 
 Turn-based Monster Hunter fan prototype with a Pokémon Gen-3 look.
 Plain HTML/CSS/JS (ES modules). No dependencies, no build step.

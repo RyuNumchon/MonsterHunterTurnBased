@@ -185,7 +185,7 @@ export const GATHER = {
   honey: { label: "HONEY", verb: "HUNTER scooped some honey...", loot: [["HONEY", 75, 1], ["@potion", 25]] },
   berries: { label: "BERRIES", verb: "HUNTER picked some berries...", loot: [["@paintball", 45], ["HUSKBERRY", 40, 1], ["NEEDLEBERRY", 15, 1]] },
   fish: { label: "FISH", verb: "HUNTER cast a line...", loot: [["SUSHIFISH", 55, 1], ["SLEEPYFISH", 30, 1], ["BURST ARROWANA", 15, 2]] },
-  misc: { label: "MISC", verb: "HUNTER searched the area...", loot: [["YUKUMO WOOD", 45, 2], ["BAMBOO SHOOT", 30, 1], ["@potion", 25]] }
+  misc: { label: "MISC", verb: "HUNTER searched the area...", loot: [["THEPARAK WOOD", 45, 2], ["BAMBOO SHOOT", 30, 1], ["@potion", 25]] }
 };
 
 export const LOOT = {
@@ -228,7 +228,7 @@ export const AREAS = {
   1: { name: "AREA 1", sub: "Spring Hollow", theme: "stream", mx: 84, my: 64, gather: ["bugs", "whetstone", "plants", "berries"] },
   2: { name: "AREA 2", sub: "Rocky Pass", theme: "rocky", mx: 62, my: 80, gather: ["mining", "mushrooms", "misc"] },
   3: { name: "AREA 3", sub: "Bamboo Grove", theme: "bamboo", mx: 43, my: 72, gather: ["mining", "misc", "plants"] },
-  4: { name: "AREA 4", sub: "Yukumo Meadow", theme: "meadow", mx: 76, my: 26, gather: ["misc", "mining", "plants", "berries"] },
+  4: { name: "AREA 4", sub: "Theparak Meadow", theme: "meadow", mx: 76, my: 26, gather: ["misc", "mining", "plants", "berries"] },
   5: { name: "AREA 5", sub: "Old Forest", theme: "forest", mx: 48, my: 34, gather: ["misc", "mushrooms", "honey", "plants"] },
   6: { name: "AREA 6", sub: "Mountain River", theme: "river", mx: 36, my: 52, gather: ["plants", "berries", "mining", "fish"] },
   7: { name: "AREA 7", sub: "Waterfall Basin", theme: "falls", mx: 30, my: 13, gather: ["berries", "bugs", "mushrooms", "fish"] },

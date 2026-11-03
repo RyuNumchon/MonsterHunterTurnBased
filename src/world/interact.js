@@ -117,7 +117,7 @@ function signText(a) {
   const ex = MAPS[a].exits
     .map((e) => `${e.side}: ${e.to === 0 ? "CAMP" : "AREA " + e.to}`)
     .join(" · ");
-  return `MOUNTAIN STREAM · ${AREAS[a].name}\nEXITS  ${ex}`;
+  return `SACRED FOREST · ${AREAS[a].name}\nEXITS  ${ex}`;
 }
 
 async function useObject(o) {
@@ -240,7 +240,7 @@ async function itemBoxMenu() {
 
 export async function fieldMap() {
   if (G.phase !== 'quest') {
-    await say('You know YUKUMO VILLAGE by heart.\nThe MAP is for the hunting grounds.', 'dim');
+    await say('You know THEPARAK VILLAGE by heart.\nThe MAP is for the hunting grounds.', 'dim');
     return;
   }
   await openMap();

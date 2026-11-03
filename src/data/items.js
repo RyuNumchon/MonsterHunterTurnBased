@@ -14,7 +14,7 @@ export const ITEMS = {
 };
 export const BOSS_ONLY = ['paintball', 'shock', 'tranq'];
 
-// Gathering points (Mountain Stream legend). "@key" = consumable that goes into the BAG.
+// Gathering points (Sacred Forest legend). "@key" = consumable that goes into the BAG.
 export const GATHER = {
   mining:    { label: 'MINING',    verb: 'HUNTER mined the outcrop...',    loot: [['IRON ORE', 50, 1], ['EARTH CRYSTAL', 30, 2], ['MACHALITE ORE', 15, 3], ['DRAGONITE ORE', 5, 4]] },
   bugs:      { label: 'BUGS',      verb: 'HUNTER swung the bug net...',     loot: [['INSECT HUSK', 40, 1], ['BITTERBUG', 35, 1], ['@flash', 25]] },
@@ -25,7 +25,7 @@ export const GATHER = {
   honey:     { label: 'HONEY',     verb: 'HUNTER scooped some honey...',    loot: [['HONEY', 75, 1], ['@potion', 25]] },
   berries:   { label: 'BERRIES',   verb: 'HUNTER picked some berries...',   loot: [['@paintball', 35], ['@nullberry', 20], ['HUSKBERRY', 32, 1], ['NEEDLEBERRY', 13, 1]] },
   fish:      { label: 'FISH',      verb: 'HUNTER cast a line...',           loot: [['SUSHIFISH', 55, 1], ['SLEEPYFISH', 30, 1], ['BURST ARROWANA', 15, 2]] },
-  misc:      { label: 'MISC',      verb: 'HUNTER searched the area...',     loot: [['YUKUMO WOOD', 45, 2], ['BAMBOO SHOOT', 30, 1], ['@potion', 25]] }
+  misc:      { label: 'MISC',      verb: 'HUNTER searched the area...',     loot: [['THEPARAK WOOD', 45, 2], ['BAMBOO SHOOT', 30, 1], ['@potion', 25]] }
 };
 
 /** Material name -> rarity (1–6), built from every loot table. */

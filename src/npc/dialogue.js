@@ -89,7 +89,7 @@ async function cancelQuest(board) {
 async function talkChief() {
   if (!G.flags.chiefMet) {
     G.flags.chiefMet = true;
-    await say("CHIEF: Ah, a new hunter! Welcome to YUKUMO.\nOur village relies on brave souls like you.");
+    await say("CHIEF: Ah, a new hunter! Welcome to THEPARAK.\nOur village relies on brave souls like you.");
   } else await say('CHIEF: Hohoho. What brings you to me today?');
   await questMenu(VILLAGE, CHIEF_LINES);
 }

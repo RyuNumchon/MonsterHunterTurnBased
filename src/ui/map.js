@@ -1,4 +1,4 @@
-/* Always-on minimap (top-right, field only) and the full Mountain Stream map. */
+/* Always-on minimap (top-right, field only) and the full Sacred Forest map. */
 import { $, Abort } from '../core/utils.js';
 import { G, waits } from '../core/state.js';
 import { AREAS, LINKS, THEMES } from '../data/world.js';
@@ -46,7 +46,7 @@ export function renderMapOv() {
     const A = AREAS[a], B = AREAS[b], c = `x1="${A.mx}" y1="${A.my}" x2="${B.mx}" y2="${B.my}" stroke-linecap="round"`;
     return `<line ${c} stroke="#3e4436" stroke-width="2.6"/><line ${c} stroke="#a8a890" stroke-width="1" stroke-dasharray="1.5 2"/>`;
   }).join('');
-  let h = `<div class="mapL"><svg viewBox="0 0 100 100" preserveAspectRatio="none">${lines}</svg><div class="mapTitle">Mountain Stream</div>`;
+  let h = `<div class="mapL"><svg viewBox="0 0 100 100" preserveAspectRatio="none">${lines}</svg><div class="mapTitle">Sacred Forest</div>`;
   for (const k in AREAS) {
     const a = +k, A = AREAS[a];
     h += `<div class="blob ${a === 0 ? 'camp' : ''}" style="left:${A.mx}%;top:${A.my}%;background:${THEMES[A.theme].map}"></div>
