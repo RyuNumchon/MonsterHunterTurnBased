@@ -3,7 +3,7 @@ import { CONFIG } from '../core/config.js';
 import { pick, randInt, rand } from '../core/utils.js';
 import { G } from '../core/state.js';
 import { SMALLS, SMALL_SPAWNS } from '../data/monsters.js';
-import { NPC_DEFS, CXT, CYT } from '../data/world.js';
+import { isTown, NPC_DEFS, CXT, CYT } from '../data/world.js';
 import { MAPS, findFree } from './mapgen.js';
 
 /** Shared shape for every combatant (boss or small). It is also its own overworld entity. */
@@ -24,7 +24,7 @@ export function makeFoe(key, d, isBoss) {
 
 export function makeNpcs() {
   return NPC_DEFS.map(d => {
-    const p = findFree(MAPS[d.area], d.at[0], d.at[1]);
+    const p = isTown(d.area) ? { x: d.at[0], y: d.at[1] } : findFree(MAPS[d.area], d.at[0], d.at[1]);
     return { ...d, kind: 'npc', x: p.x, y: p.y, hx: p.x, hy: p.y, mv: null, next: 0, dir: 'down' };
   });
 }

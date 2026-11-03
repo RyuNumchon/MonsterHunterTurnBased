@@ -212,7 +212,7 @@ export function renderFieldPanel(P) {
         <div class="srow"><b>AREA</b>${areaInfo(f.area).name} · ${areaInfo(f.area).sub}</div>
         <div class="srow"><b>HP</b><span class="mbar"><i style="width:${hp}%;background:${hpColor(hp)}"></i></span></div>
         <div class="srow"><b>EDGE</b><span class="mbar"><i style="width:${p.sharp / CONFIG.SHARP_MAX * 100}%;background:${s.color}"></i></span>${s.name}</div>
-        <div class="srow"><b>COND</b>${statusChips(p) || 'NORMAL'}</div>
+        <div class="srow"><b>COND</b>${G.feast ? chip('FEAST', 'c-mgt') : ''}${statusChips(p) || (G.feast ? '' : 'NORMAL')}</div>
         <div class="srow"><b>GEAR</b>${pimg(DATA['wpn_' + p.weapon])}${WEAPONS[p.weapon].name} · CARTS <span class="balls">${balls(p.carts)}</span></div>
       </div>
       <div class="ss"><button data-act="fstart">START</button><button data-act="fmap">MAP</button><button data-act="fbag">BAG</button></div>

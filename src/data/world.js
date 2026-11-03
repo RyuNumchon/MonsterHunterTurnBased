@@ -1,11 +1,11 @@
-/* Mountain Stream (MHP3rd). mx/my = minimap position (0–100), also used
+/* Sacred Forest (MHP3rd). mx/my = minimap position (0–100), also used
    to decide which edge of an area each exit sits on. */
 export const AREAS = {
   0: { name: 'BASE CAMP', sub: 'Supply Tent',     theme: 'camp',   mx: 90, my: 88 },
   1: { name: 'AREA 1',    sub: 'Spring Hollow',   theme: 'stream', mx: 84, my: 64, gather: ['bugs', 'whetstone', 'plants', 'berries'] },
   2: { name: 'AREA 2',    sub: 'Rocky Pass',      theme: 'rocky',  mx: 62, my: 80, gather: ['mining', 'mushrooms', 'misc'] },
   3: { name: 'AREA 3',    sub: 'Bamboo Grove',    theme: 'bamboo', mx: 43, my: 72, gather: ['mining', 'misc', 'plants'] },
-  4: { name: 'AREA 4',    sub: 'Yukumo Meadow',   theme: 'meadow', mx: 76, my: 26, gather: ['misc', 'mining', 'plants', 'berries'] },
+  4: { name: 'AREA 4',    sub: 'Theparak Meadow',   theme: 'meadow', mx: 76, my: 26, gather: ['misc', 'mining', 'plants', 'berries'] },
   5: { name: 'AREA 5',    sub: 'Old Forest',      theme: 'forest', mx: 48, my: 34, gather: ['misc', 'mushrooms', 'honey', 'plants'] },
   6: { name: 'AREA 6',    sub: 'Mountain River',  theme: 'river',  mx: 36, my: 52, gather: ['plants', 'berries', 'mining', 'fish'] },
   7: { name: 'AREA 7',    sub: 'Waterfall Basin', theme: 'falls',  mx: 30, my: 13, gather: ['berries', 'bugs', 'mushrooms', 'fish'] },
@@ -34,10 +34,12 @@ export const THEMES = {
   falls:  { ground: 's', path: ':', border: 'R', obs: 'R', clusters: 4,  tall: 0,   flower: 0,   feature: 'pool', map: '#d8b060' },
   cave:   { ground: 'c', path: 'c', border: 'W', obs: 'W', clusters: 6,  tall: 0,   flower: 0,   bones: .04, map: '#9a8ec8' },
   woods:  { ground: '.', path: ':', border: '#', obs: '#', clusters: 12, tall: .20, flower: 0,   map: '#6a9a48' },
-  village: { ground: '.', path: ':', border: '#', obs: '#', clusters: 0, tall: .04, flower: .06, map: '#d8c890' }
+  village: { ground: '.', path: ':', border: '#', obs: '#', clusters: 0, tall: .04, flower: .06, map: '#d8c890' },
+  farm:    { ground: '.', path: ':', border: '#', obs: '#', clusters: 0, tall: 0, flower: 0, map: '#c8b070' },
+  hub:     { ground: 'h', path: 'h', border: 'H', obs: 'H', clusters: 0, tall: 0, flower: 0, map: '#b89060' }
 };
 
-export const SOLID  = new Set(['#', 'R', 'b', 'W', '~', 'w']);
+export const SOLID  = new Set(['n', 'H', 'b', 'W', '~', 'w']);
 export const WATERS = new Set(['~', '-', 'w']);
 export const MW = 24, MH = 18;     // area size in tiles (viewport 15×10, camera scrolls)
 export const CXT = 12, CYT = 9;    // area centre: every path converges here
@@ -46,17 +48,26 @@ export const OPP  = { up: 'down', down: 'up', left: 'right', right: 'left' };
 export const dirOf = (sx, sy) => sx > 0 ? 'right' : sx < 0 ? 'left' : sy > 0 ? 'down' : 'up';
 export const SIDE_IN = { N: [0, 1, 'down'], S: [0, -1, 'up'], W: [1, 0, 'right'], E: [-1, 0, 'left'] };
 export const CAMP_SPAWN = { x: 16, y: 6, dir: 'down' };
-/* Village hub (not part of the Mountain Stream graph). Its GATE exit leads to the quest. */
-export const VILLAGE = 'village', GATE = 'gate';
-export const VILLAGE_INFO = { name: 'YUKUMO VILLAGE', sub: "Hunters' Guild", theme: 'village' };
-export const VILLAGE_SPAWN = { x: 12, y: 11, dir: 'down' };
-export const areaInfo = a => a === VILLAGE ? VILLAGE_INFO : AREAS[a];
+/* Village hub (not part of the Sacred Forest graph). Its GATE exit leads to the quest. */
+/* Town areas (not part of the Sacred Forest graph). GATE exits depart for the quest. */
+export const VILLAGE = 'village', FARM = 'farm', HUB = 'hub', GATE = 'gate';
+export const TOWNS = [VILLAGE, FARM, HUB];
+export const isTown = a => TOWNS.includes(a);
+export const TOWN_INFO = {
+  [VILLAGE]: { name: 'THEPARAK VILLAGE', sub: 'Village Square',   theme: 'village' },
+  [FARM]:    { name: 'THEPARAK FARM',    sub: 'Fields & Groves',  theme: 'farm' },
+  [HUB]:     { name: 'GATHERING HUB',  sub: "Hunters' Guild",   theme: 'hub' }
+};
+/** Where you appear when returning from a quest. */
+export const TOWN_SPAWN = { [VILLAGE]: { x: 12, y: 11, dir: 'down' }, [HUB]: { x: 11, y: 15, dir: 'up' } };
+export const VILLAGE_SPAWN = TOWN_SPAWN[VILLAGE];
+export const areaInfo = a => TOWN_INFO[a] || AREAS[a];
 
 export const NPC_DEFS = [
-  { id: 'chief',    area: VILLAGE, at: [5, 7],   name: 'VILLAGE CHIEF',  look: 'chief',    wander: false },
-  { id: 'merchant', area: VILLAGE, at: [18, 7],  name: 'MERCHANT',       look: 'merchant', wander: false },
-  { id: 'veteran',  area: VILLAGE, at: [15, 11], name: 'VETERAN HUNTER', look: 'veteran',  wander: false },
+  { id: 'chief',    area: VILLAGE, at: [7, 6],   name: 'VILLAGE CHIEF',  look: 'chief',    wander: false },
+  { id: 'merchant', area: VILLAGE, at: [16, 6],  name: 'MERCHANT',       look: 'merchant', wander: false },
+  { id: 'veteran',  area: VILLAGE, at: [14, 11], name: 'VETERAN HUNTER', look: 'veteran',  wander: false },
   { id: 'kid',      area: VILLAGE, at: [8, 10],  name: 'VILLAGE KID',    look: 'kid',      wander: true },
-  { id: 'campcat',  area: 0, at: [9, 6],   name: 'CAMP FELYNE',    look: 'cat',  wander: true },
-  { id: 'comrade',  area: 3, at: [16, 13], name: 'FELYNE COMRADE', look: 'cat2', wander: true }
+  { id: 'chef',  area: HUB, at: [5, 3],   name: 'FELYNE CHEF',    look: 'chef',  wander: false },
+  { id: 'receptionist', area: HUB, at: [18, 3], name: 'QUEST HANDLER', look: 'receptionist', wander: false }
 ];

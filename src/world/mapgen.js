@@ -4,7 +4,8 @@
    connectivity; water becomes a ford) -> arena clearing -> camp props -> gathering
    points on reachable, off-path tiles. */
 import { rng32 } from '../core/utils.js';
-import { AREAS, THEMES, SOLID, WATERS, VILLAGE, VILLAGE_SPAWN, GATE, MW, MH, CXT, CYT, SIDE_IN, neighbors, sideTo } from '../data/world.js';
+import { AREAS, THEMES, SOLID, WATERS, MW, MH, CXT, CYT, SIDE_IN, neighbors, sideTo } from '../data/world.js';
+import { TOWN_MAPS } from '../data/towns.js';
 
 function genArea(id) {
   const A = AREAS[id], th = THEMES[A.theme], r = rng32(9000 + id * 101);
@@ -106,33 +107,25 @@ function genArea(id) {
 export const MAPS = {};
 for (const a in AREAS) MAPS[a] = genArea(+a);
 
-/* Yukumo Village: hand-placed hub (no monsters, no gathering). The GATE at the top departs for the quest. */
-function genVillage() {
-  const r = rng32(4242), g = [];
-  for (let y = 0; y < MH; y++) {
-    const row = [];
-    for (let x = 0; x < MW; x++) row.push(x === 0 || y === 0 || x === MW - 1 || y === MH - 1 ? '#' : r() < .06 ? 'f' : r() < .04 ? ',' : '.');
-    g.push(row);
-  }
-  [[1,1],[2,1],[1,2],[21,1],[22,1],[22,2],[1,15],[1,16],[2,16],[21,16],[22,16],[22,15]].forEach(([x, y]) => g[y][x] = '#');
-  for (let y = 1; y <= 15; y++) g[y][11] = g[y][12] = ':';               // main street
-  for (let x = 3; x <= 20; x++) g[8][x] = ':';                           // cross street
-  g[6][5] = g[7][5] = g[6][18] = g[7][18] = ':';                         // doorsteps
-  for (let y = 12; y <= 14; y++) for (let x = 17; x <= 20; x++) g[y][x] = '~';   // pond
-  g[0][11] = g[0][12] = 'E';
-  const exits = [11, 12].map(x => ({ x, y: 0, to: GATE, ix: 0, iy: 1, idir: 'down', side: 'N' }));
-  const objects = [
-    { type: 'house', x: 3,  y: 3,  w: 5, h: 3, roof: '#c84030', label: "The CHIEF's hall. Lanterns glow by the door." },
-    { type: 'house', x: 16, y: 3,  w: 5, h: 3, roof: '#3868b0', label: "The MERCHANT's shop. It smells of herbs and oil." },
-    { type: 'house', x: 3,  y: 12, w: 5, h: 3, roof: '#5a8a40', label: 'Your house. Home sweet home.' },
-    { type: 'itembox', x: 9, y: 13, w: 1, h: 1 },
-    { type: 'sign', x: 13, y: 2, w: 1, h: 1 },
-    { type: 'gate', x: 10, y: 0, w: 4, h: 1, deco: true }       // decoration only, doesn't block
-  ];
-  const blockers = new Set();
-  objects.filter(o => !o.deco).forEach(o => { for (let dy = 0; dy < o.h; dy++) for (let dx = 0; dx < o.w; dx++) blockers.add(`${o.x + dx},${o.y + dy}`); });
+/* Town maps are hand-made (data/towns.js): fixed layout, fixed gathering points, no monsters. */
+function buildTown(id, def) {
+  const g = def.rows.map((r, i) => {
+    if (r.length !== MW) console.warn(`[towns] ${id} row ${i} is ${r.length} wide, expected ${MW}`);
+    return [...r];
+  });
+  const exits = def.exits.map(([x, y, to]) => {
+    const side = x === 0 ? 'W' : x === MW - 1 ? 'E' : y === 0 ? 'N' : 'S';
+    const [ix, iy, idir] = SIDE_IN[side];
+    return { x, y, to, ix, iy, idir, side };
+  });
+  const objects = def.objects || [], blockers = new Set();
+  objects.filter(o => !o.deco).forEach(o => {
+    for (let dy = 0; dy < o.h; dy++) for (let dx = 0; dx < o.w; dx++) blockers.add(`${o.x + dx},${o.y + dy}`);
+  });
+  const gathers = (def.gathers || []).map(([type, x, y]) => ({ type, x, y }));
+  gathers.forEach(gp => blockers.add(gp.x + ',' + gp.y));
   const ok = (x, y) => x >= 0 && y >= 0 && x < MW && y < MH && !SOLID.has(g[y][x]) && !blockers.has(x + ',' + y);
-  const s = [VILLAGE_SPAWN.x, VILLAGE_SPAWN.y], reach = new Set([s.join(',')]), q = [s];
+  const reach = new Set([def.spawn.join(',')]), q = [def.spawn];
   while (q.length) {
     const [x, y] = q.shift();
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
@@ -140,9 +133,9 @@ function genVillage() {
       if (!reach.has(k) && ok(nx, ny)) { reach.add(k); q.push([nx, ny]); }
     }
   }
-  return { id: VILLAGE, theme: 'village', w: MW, h: MH, tiles: g, exits, objects, gathers: [], blockers, carved: new Set(), reach };
+  return { id, theme: def.theme, w: MW, h: MH, tiles: g, exits, objects, gathers, blockers, carved: new Set(), reach, town: true };
 }
-MAPS[VILLAGE] = genVillage();
+for (const [id, def] of Object.entries(TOWN_MAPS)) MAPS[id] = buildTown(id, def);
 
 /** Nearest free, reachable tile to (x0, y0), away from exits. Used to place NPCs and the boss. */
 export function findFree(M, x0, y0, avoid, allowPath) {

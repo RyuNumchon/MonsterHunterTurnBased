@@ -116,6 +116,7 @@ export async function loadSprites() {
     const cat = fit(base, ...SIZE.palico);
     CATSPR.cat = cat;                         // Camp Felyne
     CATSPR.cat2 = tint(cat, '#6a7a9a', .4);   // Felyne Comrade: grey-blue coat
+    CATSPR.chef = cat;
   })());
   await Promise.all(jobs);
 }
