@@ -64,7 +64,7 @@ export const VILLAGE_SPAWN = TOWN_SPAWN[VILLAGE];
 export const areaInfo = a => TOWN_INFO[a] || AREAS[a];
 
 export const NPC_DEFS = [
-    { id: 'chief',    area: VILLAGE, at: [7, 6],   name: 'VILLAGE CHIEF',  look: 'chief',    wander: false },
+  { id: 'chief',    area: VILLAGE, at: [7, 6],   name: 'VILLAGE CHIEF',  look: 'chief',    wander: false },
   { id: 'merchant', area: VILLAGE, at: [16, 6],  name: 'MERCHANT',       look: 'merchant', wander: false },
   { id: 'veteran',  area: VILLAGE, at: [14, 11], name: 'VETERAN HUNTER', look: 'veteran',  wander: false },
   { id: 'kid',      area: VILLAGE, at: [8, 10],  name: 'VILLAGE KID',    look: 'kid',      wander: true },
