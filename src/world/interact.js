@@ -6,7 +6,7 @@ import { G } from "../core/state.js";
 import { BOX, saveBox } from "../core/save.js";
 import { WEAPONS, getSharp } from "../data/weapons.js";
 import { ITEMS, GATHER } from "../data/items.js";
-import { AREAS, DIRV, OPP, VILLAGE } from "../data/world.js";
+import { AREAS, DIRV, OPP, isTown } from "../data/world.js";
 import { DATA } from "../art/index.js";
 import { Audio8 } from "../audio/audio8.js";
 import { say, ask, choose, flow, pause } from "../ui/dialog.js";
@@ -79,29 +79,36 @@ async function carveTailField() {
   t.carved = true;
 }
 
+/** True when a gathering spot is used up (farm: FARM_USES, regrows after a quest; quest map: GATHER_USES). */
+export function gatherSpent(area, gp) {
+  const town = isTown(area);
+  return ((town ? G.townUses : G.gatherUses)[`${area},${gp.x},${gp.y}`] || 0) >= (town ? CONFIG.FARM_USES : CONFIG.GATHER_USES);
+}
+
 async function gatherAt(gp) {
-  const key = `${G.f.area},${gp.x},${gp.y}`,
-    used = G.gatherUses[key] || 0,
-    def = GATHER[gp.type];
-  if (used >= CONFIG.GATHER_USES) {
-    await say(`This ${def.label} spot is exhausted.`, "dim");
+  const area = G.f.area, town = isTown(area), uses = town ? G.townUses : G.gatherUses;
+  const max = town ? CONFIG.FARM_USES : CONFIG.GATHER_USES;
+  const key = `${area},${gp.x},${gp.y}`, used = uses[key] || 0, def = GATHER[gp.type];
+  if (used >= max) {
+    await say(town ? `This ${def.label} spot is bare.\nIt will regrow after your next quest.` : `This ${def.label} spot is exhausted.`, 'dim');
     return;
   }
-  G.gatherUses[key] = used + 1;
-  Audio8.sfx("carve");
+  uses[key] = used + 1;
+  addLog(`[${gp.type} spot ${used + 1}/${max} used]`, 'dim');
+  Audio8.sfx('carve');
   await say(def.verb);
   const r = weighted(def.loot);
-  Audio8.sfx("gather");
-  if (r.name.startsWith("@")) {
+  Audio8.sfx('gather');
+  if (r.name.startsWith('@')) {
     const k = r.name.slice(1);
     G.inventory[k] = (G.inventory[k] || 0) + 1;
-    await say(
-      `HUNTER found a ${ITEMS[k].name}!\nIt was put in the BAG. (x${G.inventory[k]})`,
-      "good",
-    );
+    if (town) saveBox();
+    await say(`HUNTER found a ${ITEMS[k].name}!\nIt was put in the BAG. (x${G.inventory[k]})`, 'good');
+  } else if (town) {   // farm materials go straight to the Item Box
+    BOX.items[r.name] = (BOX.items[r.name] || 0) + 1; saveBox();
+    await say(`HUNTER obtained ${r.name}!\nIt was sent to the ITEM BOX.`, 'good');
   } else {
     addGathered(r.name);
-    addLog(`[${gp.type} spot ${used + 1}/${CONFIG.GATHER_USES} used]`, 'dim');
     await say(`HUNTER obtained ${r.name}!`, 'good');
   }
 }
@@ -114,6 +121,7 @@ function signText(a) {
 }
 
 async function useObject(o) {
+  const M = MAPS[G.f.area];
   const p = G.player;
   switch (o.type) {
     case "box": {
@@ -162,7 +170,17 @@ async function useObject(o) {
     case "tent":
       await say("The Guild's tent. Your BED is right beside it.");
       return;
-    case 'sign': await say(G.f.area === VILLAGE ? 'YUKUMO VILLAGE\nNORTH: GATE TO THE HUNTING GROUNDS' : signText(G.f.area)); return;
+    case 'sign': await say(o.text || signText(G.f.area)); return;
+    case 'counter': {
+      const f = G.f;
+      if (o.needSeat && !M.objects.some(c => c.type === 'chair' && c.x === f.x && c.y === f.y)) { await say(o.seatMsg); return; }
+      const npc = G.ents.find(e => e.id === o.npc);
+      if (npc) npc.dir = 'down';
+      await NPC_TALK[o.npc](npc);
+      return;
+    }
+    case 'chair': await say('A wooden stool. Sit on it and face\nthe counter to order a meal.'); return;
+    case 'table': await say('A long dining table. It smells of\ngrilled meat and spices.'); return;
     case 'house': await say(o.label); return;
     case 'gate': await say(
       G.quest

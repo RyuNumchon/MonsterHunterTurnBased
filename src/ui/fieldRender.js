@@ -8,6 +8,7 @@ import { TILES, OVER, SPR, HUMANS, CATSPR } from '../art/tiles.js';
 import { ART, pxText } from '../art/index.js';
 import { MAPS } from '../world/mapgen.js';
 import { lighten, darken } from '../art/raster.js';
+import { gatherSpent } from '../world/interact.js';
 
 const CV = $('fieldCv'), CX = CV.getContext('2d');
 
@@ -81,12 +82,38 @@ function drawObject(o) {
       break;
     }
     case 'gate': {   // wooden arch over the village exit
+      if (o.h > o.w) {   // east gate: posts above and below the opening
+        const H = o.h * 16;
+        CX.fillStyle = '#7a2a20'; CX.fillRect(X + 3, Y - 6, 10, 6); CX.fillRect(X + 3, Y + H, 10, 6);
+        CX.fillStyle = '#a83a2a'; CX.fillRect(X + 1, Y - 3, 4, H + 6);
+        CX.fillStyle = '#5a1e18'; CX.fillRect(X + 7, Y, 2, H);
+        break;
+      }
       const W = o.w * 16;
       CX.fillStyle = '#7a2a20'; CX.fillRect(X + 2, Y, 5, 16); CX.fillRect(X + W - 7, Y, 5, 16);
       CX.fillStyle = '#a83a2a'; CX.fillRect(X - 2, Y + 1, W + 4, 4);
       CX.fillStyle = '#5a1e18'; CX.fillRect(X, Y + 7, W, 2);
       break;
     }
+    case 'counter': case 'table': {
+      const W = o.w * 16;
+      CX.fillStyle = 'rgba(0,0,0,.22)'; CX.fillRect(X + 2, Y + 14, W, 3);
+      CX.fillStyle = '#5a3418'; CX.fillRect(X, Y + 6, W, 10);
+      CX.fillStyle = o.type === 'counter' ? '#c88a50' : '#b07a48'; CX.fillRect(X, Y + 2, W, 5);
+      CX.fillStyle = '#f0c088'; CX.fillRect(X, Y + 2, W, 1);
+      CX.fillStyle = '#3a2010'; for (let i = 16; i < W; i += 16) CX.fillRect(X + i, Y + 8, 1, 8);
+      if (o.type === 'table' || o.npc === 'chef') for (let i = 6; i < W - 4; i += 16) {   // plates
+        CX.fillStyle = '#f8f8f0'; ellipse(X + i + 2, Y + 4, 3, 1.5);
+        CX.fillStyle = '#d86830'; CX.fillRect(X + i + 1, Y + 3, 2, 1);
+      }
+      break;
+    }
+    case 'chair':
+      CX.fillStyle = 'rgba(0,0,0,.2)'; ellipse(X + 8, Y + 14, 5, 2);
+      CX.fillStyle = '#5a3418'; CX.fillRect(X + 4, Y + 9, 2, 6); CX.fillRect(X + 10, Y + 9, 2, 6);
+      CX.fillStyle = '#c84030'; CX.fillRect(X + 3, Y + 6, 10, 4);
+      CX.fillStyle = '#e86850'; CX.fillRect(X + 3, Y + 6, 10, 1);
+      break;
   }
 }
 
@@ -127,9 +154,8 @@ export function drawField(now) {
 
   // --- Props & gathering points (used-up spots turn grey but stay opaque) ---
   M.gathers.forEach(gp => {
-    const used = G.gatherUses[`${f.area},${gp.x},${gp.y}`] || 0;
     CX.fillStyle = 'rgba(0,0,0,.25)'; ellipse(gp.x * 16 + 8, gp.y * 16 + 14, 6, 2);
-    CX.drawImage(ART[(used >= CONFIG.GATHER_USES ? 'gx_' : 'g_') + gp.type], gp.x * 16, gp.y * 16 - 2);
+    CX.drawImage(ART[(gatherSpent(f.area, gp) ? 'gx_' : 'g_') + gp.type], gp.x * 16, gp.y * 16 - 2);
   });
   // Severed tail: grey once carved, but stays in place
   const tl = G.tailDrop;
@@ -144,12 +170,24 @@ export function drawField(now) {
   list.push({ e: null, p: pp });
   list.sort((a, b) => a.p.y - b.p.y);
   for (const { e, p } of list) {
-    if (!e) { blit(SPR[f.dir][f.mv ? (f.step % 2 ? 'A' : 'B') : 'S'], p.x, p.y - 2); continue; }
+    if (!e) {
+      const seated = !f.mv && M.objects.some(o => o.type === 'chair' && o.x === f.x && o.y === f.y);
+      blit(SPR[f.dir][f.mv ? (f.step % 2 ? 'A' : 'B') : 'S'], p.x, p.y - 2 + (seated ? 2 : 0));
+      if (G.phase === 'village' && G.quest)   // accepted-quest scroll above the head
+        CX.drawImage(ART.ic_quest, Math.round(p.x), Math.round(p.y) - 19 - (Math.floor(now / 300) % 2));
+      continue;
+    }
     if (e.kind === 'npc') {
       // Bottom-centred so sprites of any size stand on their tile; Palicos face the way they walk
       const human = HUMANS[e.look];
       const img = human ? human[e.dir][e.mv ? 'A' : 'S'] : CATSPR[e.look];
       blit(img, p.x + 8 - img.width / 2, p.y + 14 - img.height, !human && e.dir === 'right');
+      if (e.look === 'chef') {   // chef's toque
+        const cx = Math.round(p.x + 8), top = Math.round(p.y + 14 - img.height);
+        CX.fillStyle = '#283038'; CX.fillRect(cx - 5, top - 7, 10, 8);
+        CX.fillStyle = '#ffffff'; CX.fillRect(cx - 4, top - 6, 8, 6);
+        CX.fillStyle = '#d8dce4'; CX.fillRect(cx - 4, top - 1, 8, 1);
+      }
       continue;
     }
 

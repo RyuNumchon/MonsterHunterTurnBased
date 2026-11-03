@@ -2,7 +2,7 @@
    Music is an 8th-note step sequencer. Note tokens: "C5", "_" = hold, "-" = rest.
    Drums: "x" = hi-hat, "X" = snare + kick. */
 import { G } from '../core/state.js';
-import { VILLAGE } from '../data/world.js';
+import { isTown } from '../data/world.js';
 
 export const Audio8 = (() => {
   let ac = null, master, mus, sfxG, noiseBuf, pw = {}, muted = false, want = null, cur = null, timer = null;
@@ -168,4 +168,4 @@ export const Audio8 = (() => {
 })();
 
 /** Camp gets its own calm theme; every other area plays the field theme. */
-export const fieldMusic = () => !G || G.f.area === VILLAGE ? 'village' : G.f.area === 0 ? 'camp' : 'field';
+export const fieldMusic = () => !G || isTown(G.f.area) ? 'village' : G.f.area === 0 ? 'camp' : 'field';

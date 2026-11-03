@@ -33,7 +33,7 @@ export const CONFIG = {
 
   // Field movement: ms per tile at speed 100 (scaled by speed). Chasing monsters stay faster than the hunter.
   MOVE_MS: 140, BOSS_CHASE_MS: 105, SMALL_CHASE_MS: 115, WANDER_MS: 300,
-  ESCAPE_CHANCE: 0.75, GRACE_MS: 2500, BOSS_AGGRO: 5, GATHER_USES: 2, START_ZENNY: 1500,
+  ESCAPE_CHANCE: 0.75, GRACE_MS: 2500, BOSS_AGGRO: 5, GATHER_USES: 2, FARM_USES: 1, START_ZENNY: 1500,
 
   // Text
   TEXT_SPEED: 14, AUTO_ADVANCE: 900, AUTO: true

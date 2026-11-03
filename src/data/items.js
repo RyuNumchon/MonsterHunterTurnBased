@@ -36,3 +36,10 @@ for (const k in LOOT) {
 }
 for (const k in SMALLS) SMALLS[k].carve.forEach(e => ITEM_RAR[e[0]] = e[2]);
 for (const k in GATHER) GATHER[k].loot.forEach(e => { if (!e[0].startsWith('@')) ITEM_RAR[e[0]] = e[2]; });
+
+/* Felyne Chef feasts (Gathering Hub). One per quest; +max HP for the next quest only. hp is hidden. */
+export const FEASTS = [
+  { id: 'stew',  name: 'MOUNTAIN STEW',     price: 120, hp: 25, desc: 'A warm, hearty stew.<br>HEALTH up for your next quest.' },
+  { id: 'fish',  name: 'SUSHIFISH PLATTER', price: 180, hp: 35, desc: 'Fresh from the river.<br>HEALTH up for your next quest.' },
+  { id: 'steak', name: 'WYVERN STEAK',      price: 240, hp: 50, desc: 'Sizzling and enormous.<br>HEALTH up (large) for your next quest.' }
+];

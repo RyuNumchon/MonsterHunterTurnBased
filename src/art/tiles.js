@@ -57,6 +57,24 @@ OVER['b'] = [paint(drawBamboo)];
 OVER[','] = variants(2, 71, (x, r) => { for (let i = 0; i < 5; i++) { const bx = Math.floor(r() * 12) + 1, by = Math.floor(r() * 9) + 6; x.fillStyle = '#3e9058'; x.fillRect(bx, by, 1, 2); x.fillRect(bx + 1, by - 1, 1, 3); x.fillRect(bx + 2, by, 1, 2); } });
 OVER['f'] = variants(2, 81, (x, r) => { for (let i = 0; i < 2; i++) { const fx = Math.floor(r() * 11) + 2, fy = Math.floor(r() * 11) + 2; x.fillStyle = i ? '#f8f8f8' : '#f06070'; x.fillRect(fx - 1, fy, 3, 1); x.fillRect(fx, fy - 1, 1, 3); x.fillStyle = '#f8d030'; x.fillRect(fx, fy, 1, 1); } });
 OVER['x'] = [paint(x => { x.fillStyle = '#f0ece0'; x.fillRect(3, 8, 10, 2); x.fillRect(2, 7, 2, 4); x.fillRect(12, 7, 2, 4); x.fillStyle = '#b8b0a0'; x.fillRect(3, 10, 10, 1); })];
+// Town tiles: tilled soil, wood floor, wood wall, fence overlay
+TILES['p'] = variants(3, 91, (x, r) => { speck(x, r, '#a87448', [['#8a5a34', 12], ['#c48c5a', 6]]); x.fillStyle = '#7a4e2c'; x.fillRect(0, 5, 16, 1); x.fillRect(0, 12, 16, 1); });
+TILES['h'] = [paint(x => {
+  x.fillStyle = '#c8945a'; x.fillRect(0, 0, 16, 16);
+  x.fillStyle = '#a87440'; [0, 4, 8, 12].forEach(y => x.fillRect(0, y, 16, 1));
+  x.fillStyle = '#8a5c30'; x.fillRect(6, 1, 1, 3); x.fillRect(12, 5, 1, 3); x.fillRect(3, 9, 1, 3); x.fillRect(10, 13, 1, 3);
+})];
+TILES['H'] = [paint(x => {
+  x.fillStyle = '#5a3820'; x.fillRect(0, 0, 16, 16);
+  x.fillStyle = '#704828'; for (let i = 0; i < 16; i += 4) x.fillRect(i, 0, 3, 16);
+  x.fillStyle = '#3a2210'; x.fillRect(0, 14, 16, 2);
+  x.fillStyle = '#8a6038'; x.fillRect(0, 0, 16, 1);
+})];
+OVER['n'] = [paint(x => {
+  x.fillStyle = '#6a4424'; x.fillRect(2, 3, 3, 12); x.fillRect(11, 3, 3, 12);
+  x.fillStyle = '#9a6a3a'; x.fillRect(0, 5, 16, 2); x.fillRect(0, 10, 16, 2);
+  x.fillStyle = '#c89058'; x.fillRect(2, 3, 3, 1); x.fillRect(11, 3, 3, 1);
+})];
 
 /* Overworld hunter: steel helmet, bone horns, pauldrons, sword on back.
    k outline, W horn, m/M/H steel, s skin, e visor glow, a/A leather, g gold, l legs, b boots, w blade, h hilt */
@@ -106,6 +124,12 @@ export const HUMANS = {
   veteran:  buildHunter({ ...HPAL, m: '#7a9a5a', M: '#4a6a3a', H: '#b8d8a0', a: '#6a5a3a', W: '#c8b890', e: '#40f080' }),
   chief:    buildHunter({ ...HPAL, m: '#e8e0d0', M: '#a89880', H: '#ffffff', a: '#8a3a70', A: '#5a2048', W: '#c8a850', g: '#f0d060', e: '#202020', w: '#8a5a30', h: '#5a3a20' }),
   merchant: buildHunter({ ...HPAL, m: '#d89838', M: '#9a6420', H: '#f8d080', a: '#3a7a5a', A: '#24503a', W: '#d89838', e: '#202020', w: '#c89060', h: '#7a5030' }),
-  kid:      buildHunter({ ...HPAL, m: '#f07848', M: '#b04828', H: '#f8b090', a: '#e8c040', A: '#b08820', W: '#f07848', e: '#202020', w: '#a07040', h: '#6a4020' })
+  kid:      buildHunter({ ...HPAL, m: '#f07848', M: '#b04828', H: '#f8b090', a: '#e8c040', A: '#b08820', W: '#f07848', e: '#202020', w: '#a07040', h: '#6a4020' }),
+  receptionist: buildHunter({ ...HPAL, m: '#f0f0f8', M: '#b8b8d0', H: '#ffffff', a: '#d84870', A: '#902848', W: '#f0c040', e: '#202020', w: '#c89060', h: '#7a5030' })
+
 };
-export const CATSPR = { cat: buildCat('#f8e8c8', '#4878c8'), cat2: buildCat('#a8a8b8', '#c85040') };
+export const CATSPR = {
+  cat: buildCat('#f8e8c8', '#4878c8'),
+  cat2: buildCat('#a8a8b8', '#c85040'),
+  chef: buildCat('#f8e8c8', '#f8f8f8')
+};

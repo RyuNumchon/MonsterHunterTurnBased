@@ -6,7 +6,7 @@ import { CONFIG } from '../core/config.js';
 import { $, rand, pick } from '../core/utils.js';
 import { G, UI, waits, input } from '../core/state.js';
 import { SMALLS } from '../data/monsters.js';
-import { GATE, SOLID, DIRV, dirOf, CAMP_SPAWN, neighbors } from '../data/world.js';
+import { isTown, GATE, SOLID, DIRV, dirOf, CAMP_SPAWN, neighbors } from '../data/world.js';
 import { Audio8, fieldMusic } from '../audio/audio8.js';
 import { flow, pause } from '../ui/dialog.js';
 import { toast, showLocation, addLog } from '../ui/fx.js';
@@ -15,7 +15,7 @@ import { buildEntities } from './spawn.js';
 import { startEncounter } from '../battle/encounter.js';
 import { tickStatuses } from '../battle/status.js';
 import { stepMs } from '../battle/speed.js';
-import { atGate } from '../game.js';
+import { atGate, lockedOut } from '../game.js';
 
 const DIRS4 = Object.values(DIRV);
 
@@ -128,7 +128,9 @@ function onPlayerStep() {
   if (M.tiles[f.y][f.x] !== 'E') return false;
   const ex = M.exits.find(e => e.x === f.x && e.y === f.y);
   if (!ex) return false;
-  if (ex.to === GATE) atGate(); else changeArea(ex.to);
+  if (ex.to === GATE) atGate();
+  else if (G.phase === 'village' && G.quest && isTown(ex.to)) lockedOut();   // quest accepted: stay put
+  else changeArea(ex.to);
   return true;
 }
 
