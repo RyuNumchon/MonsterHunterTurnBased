@@ -19,7 +19,7 @@ export const hpColor = pct => pct > 50 ? '#58d080' : pct > 20 ? '#f8d030' : '#f0
 export const chip = (t, c) => `<span class="chip ${c}">${t}</span>`;
 export function setBar(el, pct, color) { el.style.width = clamp(pct, 0, 100) + '%'; el.style.backgroundColor = color; }
 export const pips = (n, max) => Array.from({ length: max }, (_, i) => `<span class="pip ${i < n ? 'on' : ''}"></span>`).join('');
-export const balls = n => Array.from({ length: CONFIG.MAX_CARTS }, (_, i) => `<span class="ball ${i < n ? 'used' : ''}"></span>`).join('');
+export const cartsUsed = used => `${used}/${CONFIG.MAX_CARTS}`;
 const PART_HINT = { head: 'WEAK SPOT', body: 'EASY TARGET', legs: 'CAN TRIP IT', tail: 'CAN BE CUT' };
 
 export function showScreen() { $('battle').classList.toggle('hidden', !G || G.screen !== 'battle'); }
@@ -71,7 +71,7 @@ export function renderBattle() {
 
   // --- Player box ---
   $('pWpn').textContent = WEAPONS[p.weapon].short;
-  $('pBalls').innerHTML = balls(p.carts);
+  $('pBalls').textContent = 'CARTS ' + cartsUsed(p.carts);
   const pP = p.hp / p.maxHp * 100;
   setBar($('pHp'), pP, hpColor(pP));
   const s = getSharp(p.sharp);
@@ -217,7 +217,7 @@ export function renderFieldPanel(P) {
         <div class="srow"><b>HP</b><span class="mbar"><i style="width:${hp}%;background:${hpColor(hp)}"></i></span></div>
         <div class="srow"><b>EDGE</b><span class="mbar"><i style="width:${p.sharp / CONFIG.SHARP_MAX * 100}%;background:${s.color}"></i></span>${s.name}</div>
         <div class="srow"><b>COND</b>${G.feast ? chip('FEAST', 'c-mgt') : ''}${statusChips(p) || (G.feast ? '' : 'NORMAL')}</div>
-        <div class="srow"><b>GEAR</b>${pimg(DATA['wpn_' + p.weapon])}${WEAPONS[p.weapon].name} · CARTS <span class="balls">${balls(p.carts)}</span></div>
+        <div class="srow"><b>GEAR</b>${pimg(DATA['wpn_' + p.weapon])}${WEAPONS[p.weapon].name} · CARTS ${cartsUsed(p.carts)}</div>
       </div>
       <div class="ss"><button data-act="fstart">START</button><button data-act="fmap">MAP</button><button data-act="fpouch">POUCH</button></div>
       <div class="keys">ARROWS/WASD move · Z talk/A · X back · ENTER menu · M map · N music</div>

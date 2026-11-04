@@ -1,5 +1,5 @@
-/* Item management UI: POUCH (paged), ITEM BOX (weapon, store, take, combine, storage view), COMBINE.
-   Combining from the pouch may fail (ingredients lost); from the box it never fails. */
+/* Item management UI: POUCH (paged with ◀▶ / A D), ITEM BOX (weapon, store, take, combine, storage),
+   COMBINE, and obtain() for gathering/carving with the full-pouch DISCARD / SWAP choice. */
 import { CONFIG } from '../core/config.js';
 import { G } from '../core/state.js';
 import { BOX, saveBox } from '../core/save.js';
@@ -9,7 +9,7 @@ import { ITEMS, itemName, itemRar, isConsumable, stackOf } from '../data/items.j
 import { RECIPES, needOf } from '../data/recipes.js';
 import { DATA, itemIcon } from '../art/index.js';
 import { Audio8 } from '../audio/audio8.js';
-import { say, choose } from '../ui/dialog.js';
+import { say, ask, choose, askCount, MENU_PREV, MENU_NEXT } from '../ui/dialog.js';
 import { addLog } from '../ui/fx.js';
 import { showStorage } from '../quest/rewards.js';
 import { curable, cureStatuses } from '../battle/status.js';
@@ -21,14 +21,8 @@ const descOf = id => ITEMS[id] ? ITEMS[id].desc : 'MATERIAL. COMBINE it, or stor
 const boxList = () => Object.keys(BOX.items).filter(id => BOX.items[id] > 0)
   .sort((a, b) => isConsumable(b) - isConsumable(a) || itemRar(b) - itemRar(a) || itemName(a).localeCompare(itemName(b)));
 
-async function pickQty(title, max, verb) {
-  if (max <= 1) return max;
-  const i = await choose(title, [{ label: `${verb} 1` }, { label: `${verb} ALL`, right: 'x' + max }, { label: 'CANCEL' }]);
-  return i === 0 ? 1 : i === 1 ? max : 0;
-}
-
-/** Paged pouch picker. Returns { id, page }, { extra: true, page }, or null when closed. */
-async function pickFromPouch(title, page = 0, extra = null) {
+/** Paged pouch picker (◀▶ / A D change page). Returns { id, page }, { extra: true, page }, or null when closed. */
+export async function pickFromPouch(title, page = 0, extra = null) {
   const size = CONFIG.POUCH_PAGE_SIZE, pages = CONFIG.POUCH_PAGES;
   while (true) {
     const slots = BOX.pouch.slice(page * size, page * size + size), opts = [];
@@ -37,14 +31,37 @@ async function pickFromPouch(title, page = 0, extra = null) {
       opts.push(s ? { icon: itemIcon(s.id), label: itemName(s.id), right: `x${s.n}`, desc: `${descOf(s.id)}<br>STACK ${s.n}/${stackOf(s.id)}` }
                   : { label: '- empty -', disabled: true, desc: '' });
     }
-    opts.push({ label: `PAGE ${page + 1}/${pages} ▶`, desc: 'Show the next pouch page.' });
     if (extra) opts.push(extra);
     opts.push({ label: 'CLOSE', desc: '' });
-    const i = await choose(`${title} · ${slotsLabel()}`, opts, { desc: true });
+    const i = await choose(`${title} ${page + 1}/${pages} · ${slotsLabel()}`, opts, { desc: true, paged: true });
+    if (i === MENU_PREV || i === MENU_NEXT) { page = (page + (i === MENU_NEXT ? 1 : -1) + pages) % pages; continue; }
     if (i < 0 || i === opts.length - 1) return null;
-    if (i === size) { page = (page + 1) % pages; continue; }
-    if (extra && i === size + 1) return { extra: true, page };
+    if (extra && i === size) return { extra: true, page };
     return { id: slots[i].id, page };
+  }
+}
+
+/* ---------- Gathering / carving into the pouch ---------- */
+/** Puts one `id` in the pouch. `got` is the found message. Full pouch -> DISCARD or SWAP (discards a whole stack).
+    Returns true if the item was kept. */
+export async function obtain(id, got, prefix = '') {
+  const name = itemName(id);
+  if (pouchAdd(id)) { persist(); await say(`${prefix}${got}\n(POUCH x${pouchCount(id)})`, 'good'); return true; }
+  if (pouchCount(id)) { await say(`${prefix}${got}\n...but the ${name} stack is full! It was left behind.`, 'bad'); return false; }
+  await say(`${prefix}${got}\n...but the POUCH is full!`, 'warn');
+  while (true) {
+    const i = await choose(`POUCH FULL · ${name}`, [
+      { label: `DISCARD ${name}`, desc: 'Leave the new item behind.' },
+      { label: 'SWAP', desc: 'Throw away a whole stack from the POUCH to make room.' }], { desc: true, cancel: false });
+    if (i === 0) { await say(`HUNTER left the ${name} behind.`, 'dim'); return false; }
+    const pick = await pickFromPouch(`DISCARD FOR ${name}`);
+    if (!pick) continue;
+    const old = pick.id, n = pouchCount(old);
+    if (!(await ask(`Discard ALL ${itemName(old)} x${n}\nto make room for the ${name}?`))) continue;
+    pouchRemove(old, n); pouchAdd(id); persist();
+    Audio8.sfx('item');
+    await say(`Discarded ${itemName(old)} x${n}.\nHUNTER kept the ${name}!`, 'good');
+    return true;
   }
 }
 
@@ -130,7 +147,7 @@ async function storeMenu() {
       await say('All materials were stored in the ITEM BOX.', 'good');
       continue;
     }
-    const id = pick.id, n = await pickQty(`STORE ${itemName(id)}`, pouchCount(id), 'STORE');
+    const id = pick.id, n = await askCount(pouchCount(id));                 // storeMenu
     if (!n) continue;
     pouchRemove(id, n); boxAdd(id, n); saveBox(); Audio8.sfx('item');
     await say(`Stored ${itemName(id)} x${n} in the ITEM BOX.`, 'good');
@@ -148,7 +165,7 @@ async function takeMenu() {
     if (i < 0 || i === ids.length) return;
     const id = ids[i], room = pouchRoom(id);
     if (room <= 0) { await say(pouchCount(id) ? `The POUCH can't hold more ${itemName(id)}!` : 'The POUCH is full!', 'bad'); continue; }
-    const n = await pickQty(`TAKE ${itemName(id)}`, Math.min(room, boxCount(id)), 'TAKE');
+    const n = await askCount(Math.min(room, boxCount(id)));                 // takeMenu
     if (!n) continue;
     boxRemove(id, n); pouchAdd(id, n); saveBox(); Audio8.sfx('item');
     await say(`Took ${itemName(id)} x${n} into the POUCH.`, 'good');
@@ -171,7 +188,7 @@ export async function craftMenu(source) {
     const opts = RECIPES.map(r => {
       const need = needOf(r), ok = Object.entries(need).every(([id, n]) => has(id) >= n);
       return { icon: itemIcon(r.out), label: itemName(r.out), right: ok ? '' : 'NEED',
-        desc: `${Object.entries(need).map(([id, n]) => `${itemName(id)}${n > 1 ? ' x' + n : ''} (have ${has(id)})`).join(' + ')}<br>`
+        desc: `${Object.entries(need).map(([id, n]) => `${itemName(id)}${n > 1 ? ' x' + n : ''} (${has(id)})`).join(' + ')}<br>`
             + (fromBox ? 'Combining at the ITEM BOX never fails.' : 'Field combining may FAIL. The ingredients are lost if it does!') };
     });
     opts.push({ label: 'DONE', desc: '' });

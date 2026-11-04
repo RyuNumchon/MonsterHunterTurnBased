@@ -20,7 +20,7 @@ import { atGate, lockedOut } from '../game.js';
 const DIRS4 = Object.values(DIRV);
 
 /** True when the hunter can move or interact (no dialog, menu or overlay open). */
-export const canAct = () => !!G && G.screen === 'field' && !G.busy && !G.over && !UI.menu && !waits.map && !waits.store;
+export const canAct = () => !!G && G.screen === 'field' && !G.busy && !G.over && !UI.menu && !waits.map && !waits.store && !UI.count;
 
 /** A severed tail lying on this tile of the current area (blocks movement; face it + A to carve). */
 export const tailAt = (x, y) => {
@@ -103,7 +103,12 @@ export function updateField(dt, now) {
   roamClock(dt);
   if (f.mv) {
     f.mv.t += dt / stepMs(G.player, CONFIG.MOVE_MS);
-    if (f.mv.t >= 1) { f.x = f.mv.tx; f.y = f.mv.ty; f.mv = null; if (onPlayerStep()) return; }
+    if (f.mv.t >= 1) { f.x = f.mv.tx; f.y = f.mv.ty; f.mv = null;
+      const tile = MAPS[f.area].tiles[f.y][f.x];
+      if (SOLID.has(tile))
+        console.warn(`[collision] HUNTER stepped onto solid '${tile}' in area ${f.area} at (${f.x},${f.y})`);
+      if (onPlayerStep()) return;
+    }
   }
   if (!f.mv) {
     const d = input.dirs[input.dirs.length - 1];

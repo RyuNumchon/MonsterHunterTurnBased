@@ -19,7 +19,7 @@ import { startEncounter } from "../battle/encounter.js";
 import { finishQuest, showStorage } from "../quest/rewards.js";
 import { LOOT } from '../data/monsters.js';
 import { pouchAdd, pouchCount } from '../core/pouch.js';
-import { itemBoxMenu, pouchMenu, craftMenu } from './inventory.js';
+import { itemBoxMenu, pouchMenu, craftMenu, obtain } from './inventory.js';
 
 /** A button: act on whatever the hunter is facing. */
 export function interact() {
@@ -67,10 +67,8 @@ async function carveTailField() {
   if (!(await ask('Carve the tail?'))) return;
   for (let i = 0; i < CONFIG.TAIL_CARVES; i++) {
     Audio8.sfx('carve');
-    const r = weighted(LOOT[t.key].breaks.tail);
-    if (pouchAdd(r.name)) {
-      Audio8.sfx('gather'); await say(`HUNTER carved ${r.name}!`, 'good');
-    } else await say(`The POUCH can't hold more ${r.name}!\nIt was left behind.`, 'bad');
+    const name = weighted(LOOT[t.key].breaks.tail).name;
+    await obtain(name, `HUNTER carved ${name}!`);
   }
   t.carved = true;
 }
@@ -95,10 +93,7 @@ async function gatherAt(gp) {
   await say(def.verb);
   const r = weighted(def.loot), id = r.name.startsWith('@') ? r.name.slice(1) : r.name;
   Audio8.sfx('gather');
-  if (pouchAdd(id)) {
-    if (town) saveBox();
-    await say(`HUNTER obtained ${itemName(id)}!\n(POUCH x${pouchCount(id)})`, 'good');
-  } else await say(`HUNTER found ${itemName(id)}...\nbut the POUCH can't hold any more!`, 'bad');
+  await obtain(id, `HUNTER obtained ${itemName(id)}!`);
 }
 
 function signText(a) {

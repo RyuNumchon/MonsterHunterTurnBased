@@ -9,7 +9,7 @@ import { MONSTERS, LOOT } from '../data/monsters.js';
 import { QUEST_BOARDS } from '../data/quests.js';
 import { DATA, itemIcon } from '../art/index.js';
 import { Audio8 } from '../audio/audio8.js';
-import { say, ask, choose } from '../ui/dialog.js';
+import { say, ask, choose, askCount } from '../ui/dialog.js';
 import { addLog } from '../ui/fx.js';
 import { VILLAGE, HUB } from '../data/world.js';
 import { pouchCount, pouchAdd, pouchRemove, boxCount, boxAdd, boxRemove } from '../core/pouch.js';
@@ -145,11 +145,13 @@ async function buy() {
     const i = await choose(`BUY · WALLET ${BOX.zenny}z`, opts, { desc: true });
     if (i < 0 || i === keys.length) return;
     const k = keys[i], it = ITEMS[k];
-    if (BOX.zenny < it.price) { await say(`MERCHANT: That's ${it.price}z, friend.\nYou only have ${BOX.zenny}z.`, 'bad'); continue; }
-    if (!(await ask(`Buy a ${it.name} for ${it.price}z?\nIt will be sent to your ITEM BOX.`))) continue;
-    BOX.zenny -= it.price; boxAdd(k, 1); saveBox();
+        const max = Math.floor(BOX.zenny / it.price);
+    if (max < 1) { await say(`MERCHANT: That's ${it.price}z, friend.\nYou only have ${BOX.zenny}z.`, 'bad'); continue; }
+    const n = await askCount(max);                                          // buy()
+    if (!n) continue;
+    BOX.zenny -= n * it.price; boxAdd(k, n); saveBox();
     Audio8.sfx('buy');
-    await say(`MERCHANT: Thank you! One ${it.name},\nsent to your ITEM BOX.`, 'good');
+    await say(`MERCHANT: Thank you! ${it.name} x${n},\nsent to your ITEM BOX.`, 'good');
   }
 }
 
@@ -170,7 +172,7 @@ async function sell() {
     opts.push({ label: 'DONE', desc: 'Stop selling.' });
     const i = await choose(`SELL FROM BOX · WALLET ${BOX.zenny}z`, opts, { desc: true });
     if (i < 0 || i === ids.length) return;
-    const id = ids[i], unit = sellPrice(id), n = await howMany(itemName(id), boxCount(id), unit);
+    const id = ids[i], unit = sellPrice(id), n = await askCount(boxCount(id));   // sell()
     if (!n) continue;
     boxRemove(id, n); BOX.zenny += n * unit; saveBox();
     Audio8.sfx('buy');

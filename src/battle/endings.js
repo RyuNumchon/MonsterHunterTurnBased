@@ -11,7 +11,7 @@ import { addLog, anim, pop, setPhase, toast, showLocation } from '../ui/fx.js';
 import { buildEntities, refreshEntities } from '../world/spawn.js';
 import { MAPS, findFree } from '../world/mapgen.js';
 import { worldTick } from '../world/field.js';
-import { pouchAdd } from '../core/pouch.js';
+import { obtain } from '../world/inventory.js';
 import { finishQuest } from '../quest/rewards.js';
 import { clearBattleOnly } from './status.js';
 
@@ -104,11 +104,10 @@ async function carveTail(es) {
   t.carved = true;
 }
 
-/** Carved item -> pouch. Says so if the pouch can't hold it. */
+/** Carved item -> pouch (with the full-pouch DISCARD / SWAP choice). */
 async function stow(name, es, prefix = '') {
   Audio8.sfx('carve');
-  if (pouchAdd(name)) { pop(es, `+${name}`, 'loot'); await say(`${prefix}HUNTER carved ${name}!`, 'good'); return; }
-  await say(`${prefix}The POUCH can't hold more ${name}!\nIt was left behind.`, 'bad');
+  if (await obtain(name, `HUNTER carved ${name}!`, prefix)) pop(es, `+${name}`, 'loot');
 }
 
 export async function foeDefeated() {

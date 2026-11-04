@@ -169,7 +169,7 @@ export const ITEMS = {
   potion: { name: "POTION", field: true, price: 60, desc: "Restores 30 HP." },
   whetstone: { name: "WHETSTONE", field: true, price: 40, desc: "Restores sharpness to MAX." },
   might: { name: "MIGHT SEED", field: true, price: 150, desc: "ATTACK +1 stage (+25% DMG) for 3 turns." },
-  paintball: { name: "PAINTBALL", price: 80, desc: "Mark the big monster: the MAP tracks it for 8 turns." },
+  paintball: { name: "PAINTBALL", price: 80, desc: "Mark the big monster: the MAP tracks it for a while" },
   flash: { name: "FLASH BOMB", price: 120, desc: "Monster hit chance 60% -> 30% for 2 turns." },
   shock: { name: "SHOCK TRAP", price: 400, desc: "Paralyzes the big monster 3 turns." },
   tranq: { name: "TRANQ BOMB", price: 150, desc: "2 hits on a TRAPPED monster under 25% HP = CAPTURE." }

@@ -64,6 +64,9 @@
     transform 0.6s,
     filter 0.6s;
 }
+#pBalls {
+  font-size:.75em
+}
 .zzz {
   position: absolute;
   right: 5%;
@@ -203,11 +206,6 @@
 }
 .pip.on {
   background: #f8a020;
-}
-.balls {
-  display: inline-flex;
-  gap: 0.25em;
-  align-items: center;
 }
 .ball {
   display: inline-block;

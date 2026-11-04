@@ -3,7 +3,8 @@
 export const RECIPES = [
   { in: ['herb', 'BLUE MUSHROOM'], out: 'potion', n: 1 },
   { in: ['potion', 'HONEY'],       out: 'mega',   n: 1 },
-  { in: ['FLASHBUG'],              out: 'flash',  n: 1 }
+  { in: ['FLASHBUG'],              out: 'flash',  n: 1 },
+  { in: ['PARASHROOM', 'IVY'],     out: 'shock',  n: 1 }
 ];
 
 /** { id: amount needed } */

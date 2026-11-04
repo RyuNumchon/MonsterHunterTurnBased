@@ -7,7 +7,20 @@ import { BOX, saveBox, wipeBox } from './core/save.js';
 import { ITEMS } from './data/items.js';
 import { DATA, pimg } from './art/index.js';
 import { Audio8 } from './audio/audio8.js';
-import { flow, doAdvance, pickMenu, moveMenu, cancelMenu, doCarve, closeStorage } from './ui/dialog.js';
+import {
+  flow,
+  doAdvance,
+  pickMenu,
+  moveMenu,
+  cancelMenu,
+  doCarve,
+  closeStorage,
+  pageMenu,
+  stepCount,
+  confirmCount,
+  cancelCount,
+  countAct
+} from './ui/dialog.js';
 import { setMode, moveInfo } from './ui/hud.js';
 import { openMap, closeMap } from './ui/map.js';
 import { canAct } from './world/field.js';
@@ -45,12 +58,15 @@ function onClick(e) {
     case 'auto':     CONFIG.AUTO = !CONFIG.AUTO; $('autoBtn').textContent = `BATTLE TEXT: ${CONFIG.AUTO ? 'AUTO' : 'CLICK'}`; return;
     case 'putall':   putAllInBox(); return;
     case 'closebox': Audio8.sfx('back'); closeStorage(); return;
-    case 'wipebox': wipeBox(); renderStorage(); return;
+    case 'wipebox':  wipeBox(); renderStorage(); return;
     case 'advance':  doAdvance(); return;
     case 'menu':     pickMenu(+val); return;
     case 'closemap': closeMap(); return;
     case 'carve':    doCarve(); return;
-    case 'wait':  confirmWait(); break;
+    case 'wait':     confirmWait(); break;
+    case 'cnt':      countAct(val); return;
+    case 'mpage':    pageMenu(+val); return;
+
   }
   if (!G || G.over) return;
 
@@ -58,12 +74,13 @@ function onClick(e) {
   if (G.screen === 'field') {
     switch (act) {
       case 'fa':
-        if (UI.menu) pickMenu(UI.menu.idx);
+        if (UI.count) confirmCount();
+        else if (UI.menu) pickMenu(UI.menu.idx);
         else if (waits.map) closeMap();
         else if (waits.store) closeStorage();
         else if (canAct()) interact();
         break;
-      case 'fb':     cancelMenu(); closeMap(); closeStorage(); break;
+      case 'fb': cancelCount(); cancelMenu(); closeMap(); closeStorage(); break;
       case 'fstart': if (canAct()) openStartMenu(); break;
       case 'fmap': if (canAct()) flow(fieldMap); break;
       case 'fpouch': if (canAct()) flow(pouchMenu); break;
@@ -123,8 +140,18 @@ function onKeyDown(e) {
     return;
   }
   if (waits.map) { if (isA || isB || isEnter || k === 'm') closeMap(); return; }
+  if (UI.count) {
+    if (dir === 'up') stepCount(1);
+    else if (dir === 'down') stepCount(-1);
+    else if (dir === 'right') stepCount(10);
+    else if (dir === 'left') stepCount(-10);
+    else if (isA || isEnter) confirmCount();
+    else if (isB) cancelCount();
+    return;
+  }
   if (UI.menu) {
-    if (dir === 'up' || dir === 'left') moveMenu(-1);
+    if (UI.menu.paged && (dir === 'left' || dir === 'right')) pageMenu(dir === 'left' ? -1 : 1);
+    else if (dir === 'up' || dir === 'left') moveMenu(-1);
     else if (dir === 'down' || dir === 'right') moveMenu(1);
     else if (isA || isEnter) pickMenu(UI.menu.idx);
     else if (isB) cancelMenu();
@@ -156,7 +183,13 @@ function onPointerDown(e) {
   if (!b) return;
   e.preventDefault();
   input.held = b.dataset.dir; b.classList.add('on');
-  if (UI.menu) { moveMenu(input.held === 'up' || input.held === 'left' ? -1 : 1); return; }
+  const hd = input.held;
+  if (UI.count) { stepCount({ up: 1, down: -1, right: 10, left: -10 }[hd]); return; }
+  if (UI.menu) {
+    if (UI.menu.paged && (hd === 'left' || hd === 'right')) pageMenu(hd === 'left' ? -1 : 1);
+    else moveMenu(hd === 'up' || hd === 'left' ? -1 : 1);
+    return;
+  }
   input.dirs = input.dirs.filter(x => x !== input.held); input.dirs.push(input.held);
 }
 function releaseDir() {
