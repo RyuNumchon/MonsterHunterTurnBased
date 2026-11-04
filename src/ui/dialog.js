@@ -128,11 +128,11 @@ export function pageMenu(d) {
 
 /* ---------- Count box: resolves to 0 (cancel) … max. ▲▼ ±1, ◀▶ ±10, A confirm, B cancel ----------
    Drawn to the left of the last item list, which stays visible but can't be clicked. */
-export function askCount(max) {
+export function askCount(max, unit = 0) {
   const g = G;
   if (max < 1) return Promise.resolve(0);
   return new Promise(res => {
-    UI.count = { max, n: 1, resolve: res };
+    UI.count = { max, unit, n: 1, resolve: res };
     renderCount();
   }).then(v => { if (G !== g) throw new Abort(); return v; });
 }
@@ -146,6 +146,7 @@ export function renderCount() {
         <button class="cb" data-act="cnt" data-val="1">▲</button>
         <span class="cnum">${c.n}</span>
         <button class="cb" data-act="cnt" data-val="-1">▼</button>
+        ${c.unit ? `<div class="ctot">Total: ${c.n * c.unit}z</div>` : ''}
       </div>
       ${last ? `<div class="frozen" inert>${last.html}</div>` : ''}
     </div>`;

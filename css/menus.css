@@ -223,40 +223,49 @@
   margin-bottom: 0.3em;
   line-height: 1.7;
 }
-/* Count box: compact, to the left of the item list */
+/* Count box: compact, aligned at the top-left of the item list */
 #fMenu.counting .cntwrap {
   display: flex;
-  align-items: center;
-  gap: 0.35em;
+  align-items: flex-start;
+  gap: 0.3em;
 }
 .cnt {
   display: flex;
   flex-direction: column;
   align-items: center;
   background: #f8f8f8;
-  border: 0.18em solid #383838;
-  border-radius: 0.35em;
-  padding: 0.1em 0.25em;
-  box-shadow: 0.12em 0.12em 0 #0005;
+  border: 0.15em solid #383838;
+  border-radius: 0.3em;
+  padding: 0.1em 0.2em;
+  box-shadow: 0.1em 0.1em 0 #0004;
+  margin-top: 2.5em;
 }
 .cb {
   background: none;
   border: none;
   color: #5870c0;
-  font-size: 0.75em;
+  font-size: 0.65em;
   line-height: 1;
-  padding: 0.15em 0.45em;
+  padding: 0.1em 0.3em;
   cursor: pointer;
 }
 .cb:active {
   color: #e05050;
 }
 .cnum {
-  min-width: 1.8em;
+  min-width: 1.6em;
   text-align: center;
-  font-size: 1.1em;
-  line-height: 1.2;
+  font-size: 1em;
+  line-height: 1.1;
   color: #e05050;
+}
+.ctot {
+  font-size: 0.52em;
+  color: #505868;
+  white-space: nowrap;
+  margin-top: 0.15em;
+  border-top: 0.08em solid #d0d8e8;
+  padding-top: 0.1em;
 }
 .frozen {
   pointer-events: none;

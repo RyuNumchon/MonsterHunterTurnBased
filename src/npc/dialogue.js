@@ -147,7 +147,7 @@ async function buy() {
     const k = keys[i], it = ITEMS[k];
         const max = Math.floor(BOX.zenny / it.price);
     if (max < 1) { await say(`MERCHANT: That's ${it.price}z, friend.\nYou only have ${BOX.zenny}z.`, 'bad'); continue; }
-    const n = await askCount(max);                                          // buy()
+    const n = await askCount(max, it.price);                                          // buy()
     if (!n) continue;
     BOX.zenny -= n * it.price; boxAdd(k, n); saveBox();
     Audio8.sfx('buy');
@@ -172,7 +172,7 @@ async function sell() {
     opts.push({ label: 'DONE', desc: 'Stop selling.' });
     const i = await choose(`SELL FROM BOX · WALLET ${BOX.zenny}z`, opts, { desc: true });
     if (i < 0 || i === ids.length) return;
-    const id = ids[i], unit = sellPrice(id), n = await askCount(boxCount(id));   // sell()
+    const id = ids[i], unit = sellPrice(id), n = await askCount(boxCount(id), unit);   // sell()
     if (!n) continue;
     boxRemove(id, n); BOX.zenny += n * unit; saveBox();
     Audio8.sfx('buy');
