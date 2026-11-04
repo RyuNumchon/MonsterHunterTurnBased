@@ -12,6 +12,7 @@ import { showScreen, renderBattle } from '../ui/hud.js';
 import { anim, addLog } from '../ui/fx.js';
 import { captureWin } from './endings.js';
 import { applyStatus, blockedBy, clearBattleOnly, curable, cureStatuses } from './status.js';
+import { pouchCount, pouchRemove } from '../core/pouch.js';
 
 export function startEncounter(e, how) {
   if (!G || G.busy || G.screen !== 'field' || G.over) return;
@@ -58,29 +59,29 @@ export function startEncounter(e, how) {
 
 /* PHASE 1: ITEMS. "No effect" uses are refused and NOT consumed or counted. */
 export function useItemBattle(key) {
-  if (!G || G.itemsUsed >= CONFIG.MAX_ITEMS_PER_TURN || G.inventory[key] <= 0) return;
+  if (!G || G.itemsUsed >= CONFIG.MAX_ITEMS_PER_TURN || pouchCount(key) <= 0) return;
   flow(async () => {
     const p = G.player, m = G.foe, it = ITEMS[key];
     const lock = blockedBy(p, 'item');
     let why = null;
     if (lock) why = `HUNTER can't use items right now!\n(${lock.name})`;
-    else if (key === 'potion' && p.hp >= p.maxHp) why = "It won't have any effect.";
+    else if (ITEMS[key].heal && p.hp >= p.maxHp) why = "It won't have any effect.";
     else if (key === 'whetstone' && p.sharp >= CONFIG.SHARP_MAX) why = 'Your blade is already sharp.';
     else if ((key === 'nullberry' || key === 'antidote') && !curable(p, key)) why = "It won't have any effect.";
     else if (BOSS_ONLY.includes(key) && !m.isBoss) why = `That won't work on a small monster\nlike the ${m.name}.`;
     else if (key === 'shock' && m.trapped > 0) why = `The ${m.name} is already trapped!`;
     else if (key === 'shock' && m.sleeping) why = "It's asleep... the trap won't trigger.\nTry TRANQ BOMBs if it's weak!";
-    if (why) { await say(why, 'dim'); return lock ? 'main' : 'bag'; }
+    if (why) { await say(why, 'dim'); return lock ? 'main' : 'pouch'; }
 
-    G.inventory[key]--; G.itemsUsed++;
+    pouchRemove(key); G.itemsUsed++;
     Audio8.sfx('item');
     await say(`HUNTER used a ${it.name}!`);
 
     switch (key) {
-      case 'potion': {
+      case 'herb': case 'potion': case 'mega': {
         const before = p.hp;
-        p.hp = Math.min(p.maxHp, p.hp + 30);
-        addLog(`[potion +${p.hp - before} → HP ${p.hp}/${p.maxHp}]`, 'dim');
+        p.hp = Math.min(p.maxHp, p.hp + it.heal);
+        addLog(`[${key} +${p.hp - before} → HP ${p.hp}/${p.maxHp}]`, 'dim');
         Audio8.sfx('heal'); renderBattle();
         await say("HUNTER's HP was restored!", 'good');
         break;
@@ -134,6 +135,6 @@ export function useItemBattle(key) {
       }
     }
     if (m.captured) { await captureWin(); return; }
-    return G.itemsUsed < CONFIG.MAX_ITEMS_PER_TURN ? 'bag' : 'main';
+    return G.itemsUsed < CONFIG.MAX_ITEMS_PER_TURN ? 'pouch' : 'main';
   });
 }

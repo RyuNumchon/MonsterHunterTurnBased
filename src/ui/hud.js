@@ -8,11 +8,12 @@ import { WEAPONS, getSharp } from '../data/weapons.js';
 import { PARTS, MONSTERS } from '../data/monsters.js';
 import { ITEMS, BOSS_ONLY } from '../data/items.js';
 import { areaInfo } from '../data/world.js';
-import { DATA, pimg } from '../art/index.js';
+import { DATA, pimg, itemIcon } from '../art/index.js';
 import { addLog, setPhase, fitText } from './fx.js';
 import { findMove, moveDisabled } from '../battle/turn.js';
 import { blockedBy, statusChips, stunChance } from '../battle/status.js';
 import { speedOf } from '../battle/speed.js';
+import { BOX } from '../core/save.js';
 
 export const hpColor = pct => pct > 50 ? '#58d080' : pct > 20 ? '#f8d030' : '#f05038';
 export const chip = (t, c) => `<span class="chip ${c}">${t}</span>`;
@@ -101,7 +102,7 @@ export function renderBattle() {
 export function setMode(mode, data = {}) {
   UI.mode = mode; UI.data = data;
   if (G && G.screen === 'battle' && !G.over) {
-    if (mode === 'main' || mode === 'bag') setPhase(1);
+    if (mode === 'main' || mode === 'pouch') setPhase(1);
     else if (['fight', 'target', 'confirm'].includes(mode)) setPhase(2);
     if (mode === 'main' && G.loggedTurn !== G.turn) { G.loggedTurn = G.turn; addLog(`━━ TURN ${G.turn} ━━`, 'turn'); logSnapshot(); }
   }
@@ -126,7 +127,7 @@ export function moveInfo(mv) {
 
 /** Shrinks any panel text that would overflow its box. */
 export function fitPanel() {
-  $('panel').querySelectorAll('.tb, #mInfo, .baglist, .cmds, .movebox, .fstat').forEach(el => fitText(el));
+  $('panel').querySelectorAll('.tb, #mInfo, .pouchlist, .cmds, .movebox, .fstat').forEach(el => fitText(el));
 }
 
 export function renderPanel() {
@@ -168,14 +169,17 @@ export function renderPanel() {
       h = `<div class="tb">${d.q}<div class="sub">${d.sub || ''}</div></div>
         <div class="yn"><button data-act="yes">YES</button><button data-act="no">NO</button></div>`;
       break;
-    case 'bag': {
+    case 'pouch': {
       const left = CONFIG.MAX_ITEMS_PER_TURN - G.itemsUsed, itemLock = blockedBy(p, 'item');
-      h = `<div class="tb" id="bagInfo">${itemLock ? `Can't use items! (${itemLock.name})` : left > 0 ? 'Choose an item.<br>It takes effect immediately.' : 'No more items this turn!'}
+      const usable = BOX.pouch.filter(s => ITEMS[s.id]);
+      h = `<div class="tb" id="pouchInfo">${itemLock ? `Can't use items! (${itemLock.name})`
+            : !usable.length ? 'No usable items in the POUCH!'
+            : left > 0 ? 'Choose an item.<br>It takes effect immediately.' : 'No more items this turn!'}
           <div class="sub">ITEMS USED ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN} THIS TURN · no turn cost</div></div>
-        <div class="baglist">${Object.keys(ITEMS).map(k => {
-          const dis = !!itemLock || left <= 0 || G.inventory[k] <= 0 || (BOSS_ONLY.includes(k) && !m.isBoss);
-          return `<button class="it" data-act="item" data-val="${k}" data-info="${k}" ${dis ? 'disabled' : ''}>
-            ${pimg(DATA['item_' + k])}${ITEMS[k].name}<span class="q">x${G.inventory[k]}</span></button>`;
+        <div class="pouchlist">${usable.map(s => {
+          const dis = !!itemLock || left <= 0 || (BOSS_ONLY.includes(s.id) && !m.isBoss);
+          return `<button class="it" data-act="item" data-val="${s.id}" data-info="${s.id}" ${dis ? 'disabled' : ''}>
+            ${pimg(itemIcon(s.id))}${ITEMS[s.id].name}<span class="q">x${s.n}</span></button>`;
         }).join('')}<button class="cmd back" data-act="back">BACK</button></div>`;
       break;
     }
@@ -192,7 +196,7 @@ export function renderPanel() {
         <div class="cmds">
           ${act ? `<button class="cmd k-fight" data-act="wait">WAIT<small>${act.name}</small></button>`
                 : `<button class="cmd k-fight" data-act="fight">FIGHT</button>`}
-          <button class="cmd k-bag" data-act="bag" ${itemLock ? 'disabled' : ''}>BAG<small>${itemLock ? itemLock.name : left + ' LEFT'}</small></button>
+          <button class="cmd k-pouch" data-act="pouch" ${itemLock ? 'disabled' : ''}>POUCH<small>${itemLock ? itemLock.name : left + ' LEFT'}</small></button>
           <button class="cmd k-map" data-act="map">MAP</button>
           <button class="cmd k-run" data-act="run" ${act ? 'disabled' : ''}>RUN</button>
         </div>`;
@@ -215,7 +219,7 @@ export function renderFieldPanel(P) {
         <div class="srow"><b>COND</b>${G.feast ? chip('FEAST', 'c-mgt') : ''}${statusChips(p) || (G.feast ? '' : 'NORMAL')}</div>
         <div class="srow"><b>GEAR</b>${pimg(DATA['wpn_' + p.weapon])}${WEAPONS[p.weapon].name} · CARTS <span class="balls">${balls(p.carts)}</span></div>
       </div>
-      <div class="ss"><button data-act="fstart">START</button><button data-act="fmap">MAP</button><button data-act="fbag">BAG</button></div>
+      <div class="ss"><button data-act="fstart">START</button><button data-act="fmap">MAP</button><button data-act="fpouch">POUCH</button></div>
       <div class="keys">ARROWS/WASD move · Z talk/A · X back · ENTER menu · M map · N music</div>
     </div>
     <div class="abtns"><button class="ab b" data-act="fb">B</button><button class="ab" data-act="fa">A</button></div>

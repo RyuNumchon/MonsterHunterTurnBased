@@ -237,7 +237,7 @@
 #mInfo {
   min-height: 0;
 }
-.baglist {
+.pouchlist {
   align-content: start;
 }
 .chip {
@@ -321,7 +321,7 @@
   animation: flashfx 0.7s;
 }
 
-/* Command buttons (FIGHT / BAG / MAP / RUN, body parts) */
+/* Command buttons (FIGHT / POUCH / MAP / RUN, body parts) */
 .cmds {
   width: 48%;
   display: grid;
@@ -363,7 +363,7 @@
   background: #e85868;
   border-color: #f8b8c0;
 }
-.k-bag {
+.k-pouch {
   background: #e8a030;
   border-color: #f8d898;
 }
@@ -496,8 +496,8 @@
   color: #e05050;
 }
 
-/* Battle BAG */
-.baglist {
+/* Battle POUCH */
+.pouchlist {
   width: 54%;
   display: grid;
   grid-template-columns: 1fr 1fr;

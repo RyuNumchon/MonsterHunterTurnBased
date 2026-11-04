@@ -8,7 +8,7 @@
      slow       attackers get +hit, escape chance halves, field walking is slower
      noElement  the unit's weapon element is ignored
      stunRamp   minimum stun chance (%) when hit, by turn of the effect (turn 1, 2, 3)
-     blocks     'act' (no FIGHT/RUN), 'attack' (no attack moves), 'item' (no BAG)
+     blocks     'act' (no FIGHT/RUN), 'attack' (no attack moves), 'item' (no POUCH)
      cure       item key that removes it
      battleOnly removed when the battle ends
      instant    no lasting status; resolved once when applied

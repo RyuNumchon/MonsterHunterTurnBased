@@ -11,7 +11,7 @@ import { addLog, anim, pop, setPhase, toast, showLocation } from '../ui/fx.js';
 import { buildEntities, refreshEntities } from '../world/spawn.js';
 import { MAPS, findFree } from '../world/mapgen.js';
 import { worldTick } from '../world/field.js';
-import { addGathered } from '../world/interact.js';
+import { pouchAdd } from '../core/pouch.js';
 import { finishQuest } from '../quest/rewards.js';
 import { clearBattleOnly } from './status.js';
 
@@ -99,12 +99,16 @@ async function carveTail(es) {
   await say(`Don't forget the severed ${t.name} TAIL!`, 'good');
   for (let i = 0; i < CONFIG.TAIL_CARVES; i++) {
     await waitCarve(i, CONFIG.TAIL_CARVES, 'TAIL');
-    const r = weighted(LOOT[t.key].breaks.tail);
-    G.carves.push(r);
-    Audio8.sfx('carve'); pop(es, `+${r.name}`, 'loot');
-    await say(`TAIL CARVE\nHUNTER carved ${r.name}!`, 'good');
+    await stow(weighted(LOOT[t.key].breaks.tail).name, es, 'TAIL CARVE\n');
   }
   t.carved = true;
+}
+
+/** Carved item -> pouch. Says so if the pouch can't hold it. */
+async function stow(name, es, prefix = '') {
+  Audio8.sfx('carve');
+  if (pouchAdd(name)) { pop(es, `+${name}`, 'loot'); await say(`${prefix}HUNTER carved ${name}!`, 'good'); return; }
+  await say(`${prefix}The POUCH can't hold more ${name}!\nIt was left behind.`, 'bad');
 }
 
 export async function foeDefeated() {
@@ -116,9 +120,7 @@ export async function foeDefeated() {
     await say(`The wild ${m.name} was defeated!`, 'good');
     for (let i = 0; i < CONFIG.SMALL_CARVES; i++) {
       await waitCarve(i, CONFIG.SMALL_CARVES);
-      const r = weighted(SMALLS[m.key].carve);
-      addGathered(r.name); Audio8.sfx('carve'); pop(es, `+${r.name}`, 'loot');
-      await say(`HUNTER carved ${r.name}!`, 'good');
+      await stow(weighted(SMALLS[m.key].carve).name, es);
     }
     await returnToField(1500);
     return;
@@ -128,10 +130,8 @@ export async function foeDefeated() {
   await say(`The ${m.name} collapsed...\nThe ${m.name} was SLAIN!`, 'good');
   for (let i = 0; i < CONFIG.CARVES; i++) {
     await waitCarve(i, CONFIG.CARVES);
-    const r = weighted(LOOT[m.key].carve);
-    G.carves.push(r);   // keeps any tail carves from earlier
-    Audio8.sfx('carve'); anim(es, 'a-shake', 300); pop(es, `+${r.name}`, 'loot');
-    await say(`CARVE ${i + 1}/${CONFIG.CARVES}\nHUNTER carved ${r.name}!`, 'good');
+    anim(es, 'a-shake', 300);
+    await stow(weighted(LOOT[m.key].carve).name, es, `CARVE ${i + 1}/${CONFIG.CARVES}\n`);
   }
   await carveTail(es);
   await say('QUEST COMPLETE!\nReturning to the village...', 'good');

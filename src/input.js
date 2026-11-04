@@ -11,12 +11,13 @@ import { flow, doAdvance, pickMenu, moveMenu, cancelMenu, doCarve, closeStorage 
 import { setMode, moveInfo } from './ui/hud.js';
 import { openMap, closeMap } from './ui/map.js';
 import { canAct } from './world/field.js';
-import { fieldMap, interact, openStartMenu, fieldBag } from './world/interact.js';
+import { fieldMap, interact, openStartMenu } from './world/interact.js';
 import { useItemBattle } from './battle/encounter.js';
 import { findMove, pickMove, confirmAttack, confirmRun, confirmWait, goBack, runTurn } from './battle/turn.js';
 import { putAllInBox, renderStorage } from './quest/rewards.js';
 import { newSession, returnToVillage } from './game.js';
 import { fitText } from './ui/fx.js';
+import { pouchMenu } from './world/inventory.js';
 
 const KEYDIR = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right' };
 
@@ -44,7 +45,7 @@ function onClick(e) {
     case 'auto':     CONFIG.AUTO = !CONFIG.AUTO; $('autoBtn').textContent = `BATTLE TEXT: ${CONFIG.AUTO ? 'AUTO' : 'CLICK'}`; return;
     case 'putall':   putAllInBox(); return;
     case 'closebox': Audio8.sfx('back'); closeStorage(); return;
-    case 'wipebox':  wipeBox(); G.inventory = BOX.bag; renderStorage(); return;
+    case 'wipebox': wipeBox(); renderStorage(); return;
     case 'advance':  doAdvance(); return;
     case 'menu':     pickMenu(+val); return;
     case 'closemap': closeMap(); return;
@@ -65,7 +66,7 @@ function onClick(e) {
       case 'fb':     cancelMenu(); closeMap(); closeStorage(); break;
       case 'fstart': if (canAct()) openStartMenu(); break;
       case 'fmap': if (canAct()) flow(fieldMap); break;
-      case 'fbag':   if (canAct()) flow(fieldBag); break;
+      case 'fpouch': if (canAct()) flow(pouchMenu); break;
     }
     return;
   }
@@ -74,7 +75,7 @@ function onClick(e) {
   if (G.busy) return;
   switch (act) {
     case 'fight': Audio8.sfx('select'); setMode('fight'); break;
-    case 'bag':   Audio8.sfx('select'); setMode('bag'); break;
+    case 'pouch':   Audio8.sfx('select'); setMode('pouch'); break;
     case 'map':   flow(async () => { await openMap(); return 'main'; }); break;
     case 'run':   confirmRun(); break;
     case 'back':  goBack(); break;
@@ -86,7 +87,7 @@ function onClick(e) {
   }
 }
 
-/* ---------- Hover info (FIGHT move details, BAG descriptions) ---------- */
+/* ---------- Hover info (FIGHT move details, POUCH descriptions) ---------- */
 function onHover(e) {
   const t = e.target.closest('[data-info]');
   if (!t || !G || !G.foe) return;
@@ -97,10 +98,10 @@ function onHover(e) {
       fitText($('mInfo'));
     }
   }
-  if (UI.mode === 'bag' && $('bagInfo')) {
+  if (UI.mode === 'pouch' && $('pouchInfo')) {
     const k = t.dataset.info, it = ITEMS[k];
-    $('bagInfo').innerHTML = `${pimg(DATA['item_' + k])} ${it.name}<br>${it.desc}<div class="sub">ITEMS USED ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN} THIS TURN</div>`;
-    fitText($('bagInfo'));
+    $('pouchInfo').innerHTML = `${pimg(DATA['item_' + k])} ${it.name}<br>${it.desc}<div class="sub">ITEMS USED ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN} THIS TURN</div>`;
+    fitText($('pouchInfo'));
   }
 }
 

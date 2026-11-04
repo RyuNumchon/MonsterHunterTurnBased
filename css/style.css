@@ -1026,7 +1026,7 @@ canvas {
   background: #b52a2a;
   border-color: #e88080;
 }
-.k-bag {
+.k-pouch {
   background: #b87333;
   border-color: #f0c080;
 }
@@ -1156,7 +1156,7 @@ canvas {
   content: "▶ ";
   color: #e05040;
 }
-.baglist {
+.pouchlist {
   width: 54%;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1553,7 +1553,7 @@ canvas {
     flex-direction: column;
   }
   .cmds,
-  .baglist,
+  .pouchlist,
   .yn {
     width: 100%;
   }

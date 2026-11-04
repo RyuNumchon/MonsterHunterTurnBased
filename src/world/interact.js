@@ -1,11 +1,11 @@
 /* Field interactions: A-button on the faced tile, gathering, camp objects,
-   the Item Box (weapon swap + storage), START menu and field BAG. */
+   the Item Box (weapon swap + storage), START menu and field POUCH. */
 import { CONFIG } from "../core/config.js";
 import { $, weighted } from "../core/utils.js";
 import { G } from "../core/state.js";
 import { BOX, saveBox } from "../core/save.js";
 import { WEAPONS, getSharp } from "../data/weapons.js";
-import { ITEMS, GATHER } from "../data/items.js";
+import { ITEMS, GATHER, itemName } from '../data/items.js';
 import { AREAS, DIRV, OPP, isTown } from "../data/world.js";
 import { DATA } from "../art/index.js";
 import { Audio8 } from "../audio/audio8.js";
@@ -17,13 +17,9 @@ import { entAt, worldTick, tailAt } from './field.js';
 import { NPC_TALK } from "../npc/dialogue.js";
 import { startEncounter } from "../battle/encounter.js";
 import { finishQuest, showStorage } from "../quest/rewards.js";
-import { curable, cureStatuses } from "../battle/status.js";
 import { LOOT } from '../data/monsters.js';
-
-/** Items gathered or carved during the hunt (paid out only on success). */
-export const addGathered = (name) => {
-  G.gathered[name] = (G.gathered[name] || 0) + 1;
-};
+import { pouchAdd, pouchCount } from '../core/pouch.js';
+import { itemBoxMenu, pouchMenu, craftMenu } from './inventory.js';
 
 /** A button: act on whatever the hunter is facing. */
 export function interact() {
@@ -72,9 +68,9 @@ async function carveTailField() {
   for (let i = 0; i < CONFIG.TAIL_CARVES; i++) {
     Audio8.sfx('carve');
     const r = weighted(LOOT[t.key].breaks.tail);
-    G.carves.push(r);
-    Audio8.sfx('gather');
-    await say(`HUNTER carved ${r.name}!`, 'good');
+    if (pouchAdd(r.name)) {
+      Audio8.sfx('gather'); await say(`HUNTER carved ${r.name}!`, 'good');
+    } else await say(`The POUCH can't hold more ${r.name}!\nIt was left behind.`, 'bad');
   }
   t.carved = true;
 }
@@ -97,20 +93,12 @@ async function gatherAt(gp) {
   addLog(`[${gp.type} spot ${used + 1}/${max} used]`, 'dim');
   Audio8.sfx('carve');
   await say(def.verb);
-  const r = weighted(def.loot);
+  const r = weighted(def.loot), id = r.name.startsWith('@') ? r.name.slice(1) : r.name;
   Audio8.sfx('gather');
-  if (r.name.startsWith('@')) {
-    const k = r.name.slice(1);
-    G.inventory[k] = (G.inventory[k] || 0) + 1;
+  if (pouchAdd(id)) {
     if (town) saveBox();
-    await say(`HUNTER found a ${ITEMS[k].name}!\nIt was put in the BAG. (x${G.inventory[k]})`, 'good');
-  } else if (town) {   // farm materials go straight to the Item Box
-    BOX.items[r.name] = (BOX.items[r.name] || 0) + 1; saveBox();
-    await say(`HUNTER obtained ${r.name}!\nIt was sent to the ITEM BOX.`, 'good');
-  } else {
-    addGathered(r.name);
-    await say(`HUNTER obtained ${r.name}!`, 'good');
-  }
+    await say(`HUNTER obtained ${itemName(id)}!\n(POUCH x${pouchCount(id)})`, 'good');
+  } else await say(`HUNTER found ${itemName(id)}...\nbut the POUCH can't hold any more!`, 'bad');
 }
 
 function signText(a) {
@@ -139,13 +127,19 @@ async function useObject(o) {
         nullberry: 2,
         antidote: 2,
       };
-      for (const k in sup) { G.inventory[k] += sup[k]; G.supplyGiven[k] = (G.supplyGiven[k] || 0) + sup[k]; }
+      let left = false;
+      for (const k in sup) {
+        const got = pouchAdd(k, sup[k]);
+        if (got) G.supplyGiven[k] = (G.supplyGiven[k] || 0) + got;
+        if (got < sup[k]) left = true;
+      }
       Audio8.sfx("item");
       await say("HUNTER opened the blue SUPPLY BOX!");
       await say(
         "Got POTION x3, PAINTBALL x2, FLASH BOMB x1, SHOCK TRAP x1,\nTRANQ BOMB x2, NULL-BERRY x2 and ANTIDOTE x2!",
         "good",
       );
+      if (left) await say("Some supplies didn't fit in the POUCH\nand were left behind.", 'dim');
       return;
     }
     case "itembox":
@@ -191,53 +185,6 @@ async function useObject(o) {
   }
 }
 
-/** Red ITEM BOX: change weapon (saved) or view stored loot. */
-async function itemBoxMenu() {
-  Audio8.sfx("item");
-  await say("HUNTER opened the ITEM BOX.");
-  while (true) {
-    const p = G.player;
-    const i = await choose("ITEM BOX", [
-      {
-        icon: DATA["wpn_" + p.weapon],
-        label: "CHANGE WEAPON",
-        right: WEAPONS[p.weapon].short,
-      },
-      {
-        icon: DATA.item_potion,
-        label: "VIEW STORAGE",
-        right: Object.keys(BOX.items).length,
-      },
-      { label: "CLOSE" },
-    ]);
-    if (i === 0) {
-      const keys = Object.keys(WEAPONS);
-      const j = await choose(
-        "EQUIP WEAPON",
-        keys.map((k) => ({
-          icon: DATA["wpn_" + k],
-          label: WEAPONS[k].name,
-          right: k === p.weapon ? "E" : "",
-          desc: WEAPONS[k].blurb,
-        })),
-        { desc: true },
-      );
-      if (j < 0) continue;
-      const k = keys[j];
-      if (k === p.weapon) {
-        await say("That weapon is already equipped.", "dim");
-        continue;
-      }
-      Object.assign(p, { weapon: k, charge: 0, spirit: 0 });
-      BOX.weapon = k;
-      saveBox();
-      Audio8.sfx("sharpen");
-      await say(`HUNTER equipped the ${WEAPONS[k].name}!`, "good");
-    } else if (i === 1) await showStorage();
-    else return;
-  }
-}
-
 export async function fieldMap() {
   if (G.phase !== 'quest') {
     await say('You know THEPARAK VILLAGE by heart.\nThe MAP is for the hunting grounds.', 'dim');
@@ -253,10 +200,11 @@ export function openStartMenu() {
     while (true) {
       $('fDialog').classList.add('hidden');
       const inQuest = G.phase === 'quest';
-      const opts = ['BAG', 'MAP', 'HUNTER', 'QUEST', ...(inQuest ? ['ABANDON QUEST'] : []), 'EXIT'];
+      const opts = ['POUCH', 'COMBINE', 'MAP', 'HUNTER', 'QUEST', ...(inQuest ? ['ABANDON QUEST'] : []), 'EXIT'];
       const i = await choose('MENU', opts), p = G.player, s = getSharp(p.sharp), q = G.quest;
       switch (opts[i]) {
-        case 'BAG': await fieldBag(); break;
+        case 'POUCH': await pouchMenu(); break;
+        case 'COMBINE': await craftMenu('pouch'); break;
         case 'MAP': await fieldMap(); break;
         case 'HUNTER': await say(`HUNTER · ${WEAPONS[p.weapon].name}\nEDGE ${s.name} · CARTS ${p.carts}/${CONFIG.MAX_CARTS}`); break;
         case 'QUEST':
@@ -271,68 +219,4 @@ export function openStartMenu() {
       }
     }
   });
-}
-
-/** Field BAG: only potion / whetstone / might seed have a use outside battle. */
-export async function fieldBag() {
-  const keys = Object.keys(ITEMS);
-  while (true) {
-    const opts = keys.map((k) => ({
-      icon: DATA["item_" + k],
-      label: ITEMS[k].name,
-      right: "x" + G.inventory[k],
-      disabled: G.inventory[k] <= 0,
-      desc: ITEMS[k].desc,
-    }));
-    opts.push({ label: "CLOSE", desc: "" });
-    const i = await choose("BAG", opts, { desc: true });
-    if (i < 0 || i === keys.length) return;
-    const k = keys[i],
-      p = G.player;
-    if (!ITEMS[k].field) {
-      await say(
-        `There's no target here.\nUse the ${ITEMS[k].name} in battle!`,
-        "dim",
-      );
-      continue;
-    }
-    if (k === "potion" && p.hp >= p.maxHp) {
-      await say("It won't have any effect.", "dim");
-      continue;
-    }
-    if (k === "whetstone" && p.sharp >= CONFIG.SHARP_MAX) {
-      await say("Your blade is already sharp.", "dim");
-      continue;
-    }
-    if ((k === "nullberry" || k === "antidote") && !curable(p, k)) {
-      await say("It won't have any effect.", "dim");
-      continue;
-    }
-    G.inventory[k]--;
-    if (k === "potion") {
-      const b = p.hp;
-      p.hp = Math.min(p.maxHp, p.hp + 30);
-      addLog(`[potion +${p.hp - b} → HP ${p.hp}/${p.maxHp}]`, "dim");
-      Audio8.sfx("heal");
-      await say(
-      'HUNTER used a POTION.\nHP was restored!',
-      "good"
-      );
-    }
-    if (k === "whetstone") {
-      p.sharp = CONFIG.SHARP_MAX;
-      Audio8.sfx("sharpen");
-      await say("HUNTER sharpened the blade.\nEDGE is back to GREEN!", "good");
-    }
-    if (k === "might") {
-      p.buffs.might = 3;
-      Audio8.sfx("item");
-      await say("'HUNTER ate a MIGHT SEED!\nATTACK rose!'", "good");
-    }
-    if (k === "nullberry" || k === "antidote") {
-      const c = cureStatuses(p, k);
-      Audio8.sfx("heal");
-      await say(`HUNTER was cured of ${c.join(" & ")}!`, "good");
-    }
-  }
 }

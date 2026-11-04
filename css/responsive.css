@@ -6,7 +6,7 @@
     min-height: clamp(150px, 25cqw, 230px);
   }
   .cmds,
-  .baglist,
+  .pouchlist,
   .yn {
     width: 100%;
   }

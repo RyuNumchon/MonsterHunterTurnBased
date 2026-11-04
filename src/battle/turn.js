@@ -110,7 +110,7 @@ export function confirmWait() {
 
 export function goBack() {
   if (!G || G.busy || G.screen !== 'battle') return;
-  const backs = { fight: 'main', target: 'fight', bag: 'main' };
+  const backs = { fight: 'main', target: 'fight', pouch: 'main' };
   if (UI.mode === 'confirm') { Audio8.sfx('back'); setMode(UI.data.back, UI.data.backData || {}); }
   else if (backs[UI.mode]) { Audio8.sfx('back'); setMode(backs[UI.mode]); }
 }
