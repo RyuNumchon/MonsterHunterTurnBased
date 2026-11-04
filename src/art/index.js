@@ -4,6 +4,7 @@
 import { renderArt } from './raster.js';
 import { ITEM_ART, WEAPON_ART, GATHER_ART, ICON_ART, hunterBackDef, RAR_COL, MAT_DEF, matType } from './defs.js';
 import { SPR } from './tiles.js';
+import { ITEMS, itemRar } from '../data/items.js';
 
 export const ART = {}, DATA = {};
 
@@ -22,6 +23,9 @@ DATA.player = SPR.down.S.toDataURL();
 
 /** <img> tag for a baked sprite. */
 export const pimg = (src, cls = 'pi') => `<img class="${cls}" src="${src}" alt="">`;
+
+/** Icon for any item id (consumable or material). */
+export const itemIcon = id => ITEMS[id] ? DATA['item_' + id] : matIcon(id, itemRar(id));
 
 /** Icon data-URL for any reward material (cached). */
 const matCache = {};

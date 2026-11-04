@@ -8,12 +8,13 @@ import { $, weighted, Abort } from '../core/utils.js';
 import { G, waits } from '../core/state.js';
 import { BOX, saveBox } from '../core/save.js';
 import { LOOT, MONSTERS } from '../data/monsters.js';
-import { ITEM_RAR } from '../data/items.js';
-import { matIcon, pimg } from '../art/index.js';
+import { itemName, itemRar, isConsumable } from '../data/items.js';
+import { itemIcon, pimg } from '../art/index.js';
 import { Audio8 } from '../audio/audio8.js';
 import { pause } from '../ui/dialog.js';
 import { addLog, setPhase } from '../ui/fx.js';
 import { resetMini } from '../ui/map.js';
+import { boxAdd } from '../core/pouch.js';
 
 /** Ends the hunt. State is set synchronously, so callers may fire-and-forget this. */
 export async function finishQuest(outcome) {
@@ -27,9 +28,6 @@ export async function finishQuest(outcome) {
     if (cap) sections.push({ title: 'CAPTURE BONUS', bonus: true, items: roll(L.capture, CONFIG.CAPTURE_BONUS) });
     const broken = Object.keys(m.parts).filter(k => m.parts[k].broken);
     if (broken.length) sections.push({ title: 'BREAK REWARDS', items: broken.map(k => weighted(L.breaks[k])) });
-    if (G.carves.length) sections.push({ title: 'CARVES', items: G.carves });
-    const gath = Object.entries(G.gathered).flatMap(([n, c]) => Array.from({ length: c }, () => ({ name: n, rar: ITEM_RAR[n] || 1 })));
-    if (gath.length) sections.push({ title: 'GATHERED & SMALL MONSTER CARVES', items: gath });
     base = Math.round(L.zenny * (cap ? CONFIG.CAPTURE_ZENNY_MULT : 1));
     zenny = Math.round(base * (1 - p.carts / CONFIG.MAX_CARTS));
   } else Audio8.music('fail');
@@ -47,9 +45,9 @@ export async function finishQuest(outcome) {
   tr.className = '';
 }
 
-export function slotHtml(name, rar, n, delay) {
-  return `<div class="slot r${rar}" style="animation-delay:${delay.toFixed(2)}s">${pimg(matIcon(name, rar), 'pi big')}
-    <span class="iname">${name}</span><small>x${n}</small></div>`;
+export function slotHtml(id, n, delay) {
+  return `<div class="slot r${itemRar(id)}" style="animation-delay:${delay.toFixed(2)}s">${pimg(itemIcon(id), 'pi big')}
+    <span class="iname">${itemName(id)}</span><small>x${n}</small></div>`;
 }
 
 export function renderRewards() {
@@ -61,7 +59,7 @@ export function renderRewards() {
       const agg = {};
       s.items.forEach(it => { (agg[it.name] = agg[it.name] || { rar: it.rar, n: 0 }).n++; });
       body += `<div class="rsec ${s.bonus ? 'bonus' : ''}"><h4>${s.bonus ? '★ ' : ''}${s.title}</h4><div class="rgrid">${
-        Object.entries(agg).map(([n, v]) => slotHtml(n, v.rar, v.n, delay += .07)).join('')}</div></div>`;
+        Object.entries(agg).map(([n, v]) => slotHtml(n, v.n, delay += .07)).join('')}</div></div>`;
     });
     const notes = [];
     if (o === 'capture') notes.push('capture x1.2');
@@ -70,7 +68,7 @@ export function renderRewards() {
     body += `<div class="zen">REWARD MONEY: ${R.zenny}z <small>(base ${R.base}z${notes.length ? ' · ' + notes.join(' · ') : ''})</small></div>`;
   } else {
     body = `<p class="ftxt">${o === 'fail'
-      ? 'HUNTER fainted 3 times.<br>The Guild pays nothing, and everything gathered was lost.'
+      ? 'HUNTER fainted 3 times.<br>Reward reduced to 0z.'
       : 'HUNTER returned to the village empty-handed.'}</p>`;
   }
   const btns = win && !G.boxed
@@ -86,7 +84,7 @@ export function renderRewards() {
 
 export function putAllInBox() {
   if (!G || !G.rewards || G.boxed) return;
-  G.rewards.sections.forEach(s => s.items.forEach(it => { BOX.items[it.name] = (BOX.items[it.name] || 0) + 1; }));
+  G.rewards.sections.forEach(s => s.items.forEach(it => boxAdd(it.name, 1)));
   BOX.zenny += G.rewards.zenny; BOX.hunts++;
   saveBox();
   G.boxed = true;
@@ -97,11 +95,11 @@ export function putAllInBox() {
 /* ---------- Item Box storage (opened from the red box at camp) ---------- */
 export function renderStorage() {
   const items = Object.entries(BOX.items)
-    .sort((a, b) => (ITEM_RAR[b[0]] || 1) - (ITEM_RAR[a[0]] || 1) || a[0].localeCompare(b[0]));
+    .sort((a, b) => isConsumable(b[0]) - isConsumable(a[0]) || itemRar(b[0]) - itemRar(a[0]) || itemName(a[0]).localeCompare(itemName(b[0])));
   $('rewardOv').innerHTML = `
     <div class="rhead"><h3>ITEM BOX</h3><span>WALLET ${BOX.zenny}z · HUNTS CLEARED ${BOX.hunts}</span></div>
     <div class="rbody">${items.length
-      ? `<div class="rgrid">${items.map(([n, c], i) => slotHtml(n, ITEM_RAR[n] || 1, c, i * .03)).join('')}</div>`
+      ? `<div class="rgrid">${items.map(([id, c], i) => slotHtml(id, c, i * .03))}</div>`
       : '<p class="ftxt">The box is empty. Go hunt something!</p>'}</div>
     <div class="rbtns"><button class="rbtn" data-act="closebox">CLOSE</button><button class="rbtn alt" data-act="wipebox">RESET SAVE</button></div>`;
 }

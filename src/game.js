@@ -15,6 +15,7 @@ import { setPhase, showLocation, addLog } from './ui/fx.js';
 import { resetMini } from './ui/map.js';
 import { makeFoe, makeNpcs, makeSmalls, buildEntities } from './world/spawn.js';
 import { putAllInBox } from './quest/rewards.js';
+import { pouchRemove } from './core/pouch.js';
 
 function restorePlayer(p) {
   Object.assign(p, { hp: p.maxHp, sharp: CONFIG.SHARP_MAX, carts: 0, charge: 0, spirit: 0,
@@ -44,11 +45,10 @@ const deskName = () => G.f.area === HUB ? 'QUEST COUNTER' : 'VILLAGE CHIEF';
 /** Boot / RESTART: spawn in the village with no quest. */
 export function newSession() {
   releaseWaits();
-  for (const k in ITEMS) BOX.bag[k] ??= 0;
   const wk = WEAPONS[BOX.weapon] ? BOX.weapon : 'greatsword';
   setG({
     phase: 'village', quest: null, monsterKey: null, monster: null, smalls: {}, ents: [],
-    screen: 'field', busy: false, inventory: BOX.bag,
+    screen: 'field', busy: false,
     townUses: {},           // farm gathering; cleared when you return from a quest
     feast: null,            // Hub feast: +max HP for the next quest
     flags: { tip: 0, vetTip: 0, chiefMet: false },
@@ -126,8 +126,7 @@ export function returnToVillage() {
     tr.className = 'fadeIn'; await pause(400);
     let returned = false;
     for (const [k, n] of Object.entries(G.supplyGiven)) {
-      const r = Math.min(n, G.inventory[k] || 0);
-      if (r > 0) { G.inventory[k] -= r; returned = true; }
+      if (pouchRemove(k, n) > 0) returned = true;
     }
     if (won) BOX.zenny += q.fee;
     saveBox();

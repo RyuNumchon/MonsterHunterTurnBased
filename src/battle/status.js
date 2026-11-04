@@ -5,7 +5,9 @@
 import { pick } from "../core/utils.js";
 import { G } from "../core/state.js";
 import { STATUS } from "../data/status.js";
-import { ITEMS } from "../data/items.js";
+import { itemName } from '../data/items.js';
+import { BOX } from '../core/save.js';
+import { pouchRemove } from '../core/pouch.js';
 import { addLog } from '../ui/fx.js';
 
 export const uname = (u) =>
@@ -33,13 +35,13 @@ export function blockedBy(u, what) {
 
 /* ---------- Apply / cure ---------- */
 function steal(target, src) {
-  if (target !== G.player) return null;
-  const keys = Object.keys(G.inventory).filter((k) => G.inventory[k] > 0);
-  if (!keys.length)
-    return `${uname(src)} rummaged through the BAG...\nbut it was empty!`;
-  const k = pick(keys);
-  G.inventory[k]--;
-  return `${uname(src)} stole a ${ITEMS[k].name}\nfrom the BAG!`;
+  if (target !== G.player)
+    return null;
+  if (!BOX.pouch.length)
+    return `${uname(src)} rummaged through the POUCH...\nbut it was empty!`;
+  const id = pick(BOX.pouch).id;
+  pouchRemove(id);
+  return `${uname(src)} stole ${itemName(id)}\nfrom the POUCH!`;
 }
 
 /** Applies an effect. Returns the message to show, or null if nothing happened.

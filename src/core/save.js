@@ -1,13 +1,35 @@
-/* Item Box persistence: loot, zenny, chosen weapon and mute setting. */
+/* Save data: Item Box storage, pouch, zenny, chosen weapon, mute setting. */
 import { CONFIG } from './config.js';
+import { stackOf } from '../data/items.js';
 
 const BOX_KEY = 'mh_gen3_itembox_v3';
+const START_POUCH = { potion: 5, whetstone: 3, might: 1, nullberry: 1, antidote: 1, paintball: 1, flash: 1 };
+
 export const defaultBox = () => ({ items: {}, zenny: CONFIG.START_ZENNY, hunts: 0, weapon: 'greatsword', muted: false,
-  bag: { potion: 5, whetstone: 3, might: 1, nullberry: 1, antidote: 1, paintball: 1, flash: 1, shock: 0, tranq: 0 } });
+  pouch: Object.entries(START_POUCH).map(([id, n]) => ({ id, n })) });
+
+/** Converts an old `pouch` save, and moves anything over the pouch limits into the box. */
+function migrate(box, raw) {
+  if (!Array.isArray(raw.pouch) && raw.pouch)
+    box.pouch = Object.entries(raw.pouch).filter(([, n]) => n > 0).map(([id, n]) => ({ id, n }));
+  delete box.pouch;
+  const slots = CONFIG.POUCH_PAGES * CONFIG.POUCH_PAGE_SIZE;
+  const spill = (id, n) => { if (n > 0) box.items[id] = (box.items[id] || 0) + n; };
+  box.pouch = box.pouch.filter((s, i) => {
+    if (i >= slots) { spill(s.id, s.n); return false; }
+    spill(s.id, s.n - stackOf(s.id));
+    s.n = Math.min(s.n, stackOf(s.id));
+    return s.n > 0;
+  });
+  return box;
+}
 
 function loadBox() {
-  try { return { ...defaultBox(), ...(JSON.parse(localStorage.getItem(BOX_KEY)) || {}) }; }
-  catch (e) { return defaultBox(); }
+  try {
+    const raw = JSON.parse(localStorage.getItem(BOX_KEY));
+    if (raw) return migrate({ ...defaultBox(), ...raw }, raw);
+  } catch (e) { /* corrupt save: start fresh */ }
+  return defaultBox();
 }
 
 /** Live binding: always the current save object. */
@@ -17,7 +39,7 @@ export function saveBox() {
   try { localStorage.setItem(BOX_KEY, JSON.stringify(BOX)); } catch (e) { /* storage blocked: session only */ }
 }
 
-/** Clears loot and zenny but keeps the equipped weapon and audio preference. */
+/** Clears storage, pouch and zenny but keeps the equipped weapon and audio preference. */
 export function wipeBox() {
   BOX = { ...defaultBox(), weapon: BOX.weapon, muted: BOX.muted };
   saveBox();

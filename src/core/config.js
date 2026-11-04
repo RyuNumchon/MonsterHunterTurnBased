@@ -36,7 +36,13 @@ export const CONFIG = {
   ESCAPE_CHANCE: 0.75, GRACE_MS: 2500, BOSS_AGGRO: 5, GATHER_USES: 2, FARM_USES: 1, START_ZENNY: 1500,
 
   // Text
-  TEXT_SPEED: 14, AUTO_ADVANCE: 900, AUTO: true
+  TEXT_SPEED: 14, AUTO_ADVANCE: 900, AUTO: true,
+
+  // Item management
+  POUCH_PAGES: 3, POUCH_PAGE_SIZE: 8,     // 24 slots, one item kind per slot
+  STACK_DEFAULT: 10,
+  STACK: {},                              // per-item overrides, e.g. { whetstone: 20, HONEY: 5 }
+  CRAFT_POUCH_SUCCESS: 0.7,               // combining at the ITEM BOX always succeeds
 };
 
 // Great Sword: Charge, Charge, then Release on turn 3 = Lv3 (3×)

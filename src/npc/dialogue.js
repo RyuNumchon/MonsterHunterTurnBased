@@ -4,14 +4,15 @@
 import { pick } from '../core/utils.js';
 import { G } from '../core/state.js';
 import { BOX, saveBox } from '../core/save.js';
-import { ITEMS, ITEM_RAR, FEASTS } from '../data/items.js';
+import { ITEMS, FEASTS, itemName, itemRar } from '../data/items.js';
 import { MONSTERS, LOOT } from '../data/monsters.js';
 import { QUEST_BOARDS } from '../data/quests.js';
-import { DATA, matIcon } from '../art/index.js';
+import { DATA, itemIcon } from '../art/index.js';
 import { Audio8 } from '../audio/audio8.js';
-import { say, ask, choose } from '../ui/dialog.js';
+import { say, ask, choose, askCount } from '../ui/dialog.js';
 import { addLog } from '../ui/fx.js';
 import { VILLAGE, HUB } from '../data/world.js';
+import { pouchCount, pouchAdd, pouchRemove, boxCount, boxAdd, boxRemove } from '../core/pouch.js';
 
 /* ================= VILLAGE ================= */
 
@@ -121,18 +122,16 @@ async function talkChef() {
   await say('HUNTER feels tougher!\n(HEALTH up for the next quest)', 'good');
 }
 
-/* ---------- Merchant: buy consumables, sell bag items and materials ---------- */
+/* ---------- Merchant: purchases go to the ITEM BOX; selling is from the ITEM BOX ---------- */
 const MAT_PRICE = { 1: 15, 2: 40, 3: 90, 4: 180, 5: 360, 6: 720 };
-const bagPrice = k => Math.floor(ITEMS[k].price / 2);
-const matPrice = n => MAT_PRICE[ITEM_RAR[n] || 1];
+const sellPrice = id => ITEMS[id] ? Math.floor(ITEMS[id].price / 2) : MAT_PRICE[itemRar(id)];
 
 async function talkMerchant() {
   await say('MERCHANT: Welcome, welcome!\nBuying or selling today?');
   while (true) {
-    const i = await choose(`MERCHANT · WALLET ${BOX.zenny}z`, ['BUY', 'SELL ITEMS', 'SELL MATERIALS', 'BYE']);
+    const i = await choose(`MERCHANT · WALLET ${BOX.zenny}z`, ['BUY', 'SELL', 'BYE']);
     if (i === 0) await buy();
-    else if (i === 1) await sellBag();
-    else if (i === 2) await sellMaterials();
+    else if (i === 1) await sell();
     else { await say('MERCHANT: Come again, hunter!'); return; }
   }
 }
@@ -141,16 +140,18 @@ async function buy() {
   const keys = Object.keys(ITEMS);
   while (true) {
     const opts = keys.map(k => ({ icon: DATA['item_' + k], label: ITEMS[k].name, right: ITEMS[k].price + 'z',
-      desc: `${ITEMS[k].desc} (You have ${G.inventory[k]})` }));
+      desc: `${ITEMS[k].desc}<br>POUCH ${pouchCount(k)} · BOX ${boxCount(k)}` }));
     opts.push({ label: 'DONE', desc: 'Stop buying.' });
     const i = await choose(`BUY · WALLET ${BOX.zenny}z`, opts, { desc: true });
     if (i < 0 || i === keys.length) return;
     const k = keys[i], it = ITEMS[k];
-    if (BOX.zenny < it.price) { await say(`MERCHANT: That's ${it.price}z, friend.\nYou only have ${BOX.zenny}z.`, 'bad'); continue; }
-    if (!(await ask(`Buy a ${it.name} for ${it.price}z?`))) continue;
-    BOX.zenny -= it.price; G.inventory[k]++; saveBox();
+        const max = Math.floor(BOX.zenny / it.price);
+    if (max < 1) { await say(`MERCHANT: That's ${it.price}z, friend.\nYou only have ${BOX.zenny}z.`, 'bad'); continue; }
+    const n = await askCount(max, it.price);                                          // buy()
+    if (!n) continue;
+    BOX.zenny -= n * it.price; boxAdd(k, n); saveBox();
     Audio8.sfx('buy');
-    await say(`MERCHANT: Thank you! One ${it.name}.`, 'good');
+    await say(`MERCHANT: Thank you! ${it.name} x${n},\nsent to your ITEM BOX.`, 'good');
   }
 }
 
@@ -161,39 +162,21 @@ async function howMany(name, have, unit) {
   return i === 0 ? 1 : i === 1 ? have : 0;
 }
 
-async function sellBag() {
+async function sell() {
   while (true) {
-    const keys = Object.keys(ITEMS).filter(k => G.inventory[k] > 0);
-    if (!keys.length) { await say("MERCHANT: Your bag's empty, friend.", 'dim'); return; }
-    const opts = keys.map(k => ({ icon: DATA['item_' + k], label: ITEMS[k].name,
-      right: `x${G.inventory[k]} · ${bagPrice(k)}z`, desc: ITEMS[k].desc }));
+    const ids = Object.keys(BOX.items).filter(id => BOX.items[id] > 0)
+      .sort((a, b) => (ITEMS[b] ? 1 : 0) - (ITEMS[a] ? 1 : 0) || itemRar(b) - itemRar(a) || itemName(a).localeCompare(itemName(b)));
+    if (!ids.length) { await say('MERCHANT: Your ITEM BOX is empty, friend.\nStore pouch items there to sell them.', 'dim'); return; }
+    const opts = ids.map(id => ({ icon: itemIcon(id), label: itemName(id), right: `x${boxCount(id)} · ${sellPrice(id)}z`,
+      desc: ITEMS[id] ? ITEMS[id].desc : 'MATERIAL from your ITEM BOX.' }));
     opts.push({ label: 'DONE', desc: 'Stop selling.' });
-    const i = await choose(`SELL ITEMS · WALLET ${BOX.zenny}z`, opts, { desc: true });
-    if (i < 0 || i === keys.length) return;
-    const k = keys[i], unit = bagPrice(k), n = await howMany(ITEMS[k].name, G.inventory[k], unit);
+    const i = await choose(`SELL FROM BOX · WALLET ${BOX.zenny}z`, opts, { desc: true });
+    if (i < 0 || i === ids.length) return;
+    const id = ids[i], unit = sellPrice(id), n = await askCount(boxCount(id), unit);   // sell()
     if (!n) continue;
-    G.inventory[k] -= n; BOX.zenny += n * unit; saveBox();
+    boxRemove(id, n); BOX.zenny += n * unit; saveBox();
     Audio8.sfx('buy');
-    await say(`Sold ${ITEMS[k].name} x${n} for ${n * unit}z!`, 'good');
-  }
-}
-
-async function sellMaterials() {
-  while (true) {
-    const names = Object.keys(BOX.items).filter(n => BOX.items[n] > 0)
-      .sort((a, b) => (ITEM_RAR[b] || 1) - (ITEM_RAR[a] || 1) || a.localeCompare(b));
-    if (!names.length) { await say('MERCHANT: Your Item Box has no materials.\nGo hunt something!', 'dim'); return; }
-    const opts = names.map(n => ({ icon: matIcon(n, ITEM_RAR[n] || 1), label: n, right: `x${BOX.items[n]} · ${matPrice(n)}z`,
-      desc: `Rarity ${ITEM_RAR[n] || 1}. Stored in your ITEM BOX.` }));
-    opts.push({ label: 'DONE', desc: 'Stop selling.' });
-    const i = await choose(`SELL MATERIALS · WALLET ${BOX.zenny}z`, opts, { desc: true });
-    if (i < 0 || i === names.length) return;
-    const name = names[i], unit = matPrice(name), n = await howMany(name, BOX.items[name], unit);
-    if (!n) continue;
-    BOX.items[name] -= n; if (BOX.items[name] <= 0) delete BOX.items[name];
-    BOX.zenny += n * unit; saveBox();
-    Audio8.sfx('buy');
-    await say(`Sold ${name} x${n} for ${n * unit}z!`, 'good');
+    await say(`Sold ${itemName(id)} x${n} for ${n * unit}z!`, 'good');
   }
 }
 
@@ -270,10 +253,15 @@ async function markMonster() {
 async function talkComrade() {
   if (G.flags.fishTraded) { await say('FELYNE: Purr... that SUSHIFISH was\ndelicious. Good luck, nya!'); return; }
   await say("FELYNE: Mrrrow... I'm sooo hungry...\nI'd trade ANYTHING for a SUSHIFISH.");
-  if ((G.gathered.SUSHIFISH || 0) > 0) {
+  if (pouchCount('SUSHIFISH') > 0) {
     if (await ask('Give the FELYNE a SUSHIFISH?')) {
-      if (--G.gathered.SUSHIFISH <= 0) delete G.gathered.SUSHIFISH;
-      G.inventory.shock++; G.flags.fishTraded = true;
+      pouchRemove('SUSHIFISH');
+      if (!pouchAdd('shock')) {
+        pouchAdd('SUSHIFISH');
+        await say("FELYNE: Nya? Your POUCH can't hold my\nSHOCK TRAP! Make some room first.", 'dim');
+        return;
+      }
+      G.flags.fishTraded = true;
       Audio8.sfx('capture');
       await say('FELYNE: Nyaaa! Thank you!\nTake my SHOCK TRAP, nya!', 'good');
       await say('HUNTER received a SHOCK TRAP!', 'good');

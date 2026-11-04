@@ -79,7 +79,7 @@ function initGame(targetBoss = "rathalos") {
     boss: makeFoe(targetBoss, MONSTERS[targetBoss], true),
     smalls: {},
     npcs: NPC_DEFS.map((n) => ({ ...n, x: n.at[0], y: n.at[1] })),
-    bag: { potion: 5, whetstone: 1, might: 2, paintball: 3, flash: 2, shock: 1, tranq: 4 },
+    pouch: { potion: 5, whetstone: 1, might: 2, paintball: 3, flash: 2, shock: 1, tranq: 4 },
     log: []
   };
 
@@ -164,7 +164,7 @@ function setUI(mode, data = {}) {
       </div>
       <div class="cmds">
         <button class="cmd k-fight" data-act="cmd_fight">⚔ FIGHT<small>Engage Monster</small></button>
-        <button class="cmd k-bag" data-act="cmd_bag">🎒 ITEM BAG<small>Use / Inspect</small></button>
+        <button class="cmd k-pouch" data-act="cmd_pouch">🎒 ITEM POUCH<small>Use / Inspect</small></button>
         <button class="cmd k-map" data-act="cmd_map">🗺 FIELD MAP<small>Area Travel</small></button>
         <button class="cmd k-run" data-act="cmd_camp">⛺ RETURN<small>Back to Camp</small></button>
       </div>
@@ -181,7 +181,7 @@ function setUI(mode, data = {}) {
       </div>
       <div class="cmds">
         <button class="cmd k-fight" data-act="b_attack">⚔ ATTACK<small>Weapon Moves</small></button>
-        <button class="cmd k-bag" data-act="b_bag">🎒 ITEMS<small>Potions & Traps</small></button>
+        <button class="cmd k-pouch" data-act="b_pouch">🎒 ITEMS<small>Potions & Traps</small></button>
         <button class="cmd k-head" data-act="b_target">🎯 TARGET<small>Select Part</small></button>
         <button class="cmd k-run" data-act="b_flee">🏃 FLEE<small>Escape Area</small></button>
       </div>
