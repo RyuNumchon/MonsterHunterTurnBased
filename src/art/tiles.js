@@ -78,7 +78,7 @@ OVER['n'] = [paint(x => {
 
 /* Overworld hunter: steel helmet, bone horns, pauldrons, sword on back.
    k outline, W horn, m/M/H steel, s skin, e visor glow, a/A leather, g gold, l legs, b boots, w blade, h hilt */
-const HPAL = { k: '#1a1622', W: '#f0e8d0', m: '#9aa4b8', M: '#5e6680', H: '#e4eaf4', s: '#f0b890', e: '#ff7a40', a: '#9a6434', A: '#5e3a1e', g: '#e8b840', l: '#3c3448', b: '#5a3a22', w: '#d8dee8', h: '#6a4020' };
+export const HPAL = { k: '#1a1622', W: '#f0e8d0', m: '#9aa4b8', M: '#5e6680', H: '#e4eaf4', s: '#f0b890', e: '#ff7a40', a: '#9a6434', A: '#5e3a1e', g: '#e8b840', l: '#3c3448', b: '#5a3a22', w: '#d8dee8', h: '#6a4020' };
 const HUNTER_ROWS = {
   down: ['..kk.......kk...', '..kWk.kkkk.kWk..', '...kWkmmmmkWk.kh', '....kmHHmmmmk.kh', '...kmMkekkekMmkg',
          '...kMmmmmmmmmMkw', '....kMMsssMMk.kw', '..kaagkkkkgaak.w', '.kaaaamMMmaaaakw', '.kaAkmmHmmmkAakw',
@@ -119,14 +119,15 @@ function buildCat(fur, vest) {
 }
 
 /** SPR[dir][frame] for the player; NPCSPR = green-armoured veteran; CATSPR = Felynes. */
-export const SPR    = buildHunter(HPAL);
+export let SPR = buildHunter(HPAL);
+export function setHunterSprites(pal) { SPR = buildHunter(pal); }
 export const HUMANS = {
   veteran:  buildHunter({ ...HPAL, m: '#7a9a5a', M: '#4a6a3a', H: '#b8d8a0', a: '#6a5a3a', W: '#c8b890', e: '#40f080' }),
   chief:    buildHunter({ ...HPAL, m: '#e8e0d0', M: '#a89880', H: '#ffffff', a: '#8a3a70', A: '#5a2048', W: '#c8a850', g: '#f0d060', e: '#202020', w: '#8a5a30', h: '#5a3a20' }),
   merchant: buildHunter({ ...HPAL, m: '#d89838', M: '#9a6420', H: '#f8d080', a: '#3a7a5a', A: '#24503a', W: '#d89838', e: '#202020', w: '#c89060', h: '#7a5030' }),
   kid:      buildHunter({ ...HPAL, m: '#f07848', M: '#b04828', H: '#f8b090', a: '#e8c040', A: '#b08820', W: '#f07848', e: '#202020', w: '#a07040', h: '#6a4020' }),
-  receptionist: buildHunter({ ...HPAL, m: '#f0f0f8', M: '#b8b8d0', H: '#ffffff', a: '#d84870', A: '#902848', W: '#f0c040', e: '#202020', w: '#c89060', h: '#7a5030' })
-
+  receptionist: buildHunter({ ...HPAL, m: '#f0f0f8', M: '#b8b8d0', H: '#ffffff', a: '#d84870', A: '#902848', W: '#f0c040', e: '#202020', w: '#c89060', h: '#7a5030' }),
+  smith:    buildHunter({ ...HPAL, m: '#5a5a62', M: '#38383e', H: '#8a8a92', a: '#8a5a30', A: '#5a3a20', W: '#a0a0a8', e: '#202020', w: '#c89060', h: '#3a2a20' })
 };
 export const CATSPR = {
   cat: buildCat('#f8e8c8', '#4878c8'),

@@ -9,12 +9,12 @@ import { MONSTERS } from '../data/monsters.js';
 /* flip: set to true if that monster faces RIGHT in the file.
    crop: optional [x, y, w, h] if a file holds several frames and you only want one. */
 export const MONSTER_SPRITES = {
-  rathalos:  { src: 'resources/0_106.png', flip: false },
-  tigrex:    { src: 'resources/0_130.png', flip: false },
-  jaggi:     { src: 'resources/0_4.png',   flip: false },
-  bullfango: { src: 'resources/0_31.png',  flip: false }   // Bulldrome art on the boar slot
+  rathalos:  { src: 'resources/images/0_106.png', flip: false },
+  tigrex:    { src: 'resources/images/0_130.png', flip: false },
+  jaggi:     { src: 'resources/images/0_4.png',   flip: false },
+  bullfango: { src: 'resources/images/0_31.png',  flip: false }   // Bulldrome art on the boar slot
 };
-export const PALICO_SPRITE = { src: 'resources/0_170.png', flip: false };
+export const PALICO_SPRITE = { src: 'resources/images/0_170.png', flip: false };
 
 /* Largest size in game pixels (the shape is kept). The map is drawn at 2x, so 44 shows as 88 px.
    Battle sprites are only ever shrunk, never enlarged, then the page scales them up crisply. */

@@ -24,9 +24,11 @@ export const TOWN_MAPS = {
       { type: 'house', x: 3,  y: 2,  w: 5, h: 3, roof: '#c84030', label: "The CHIEF's hall. Lanterns glow by the door." },
       { type: 'house', x: 16, y: 2,  w: 5, h: 3, roof: '#3868b0', label: "The MERCHANT's shop. It smells of herbs and oil." },
       { type: 'house', x: 3,  y: 12, w: 5, h: 3, roof: '#5a8a40', label: 'Your house. Home sweet home.' },
+      { type: 'house', x: 13, y: 12, w: 4, h: 3, roof: '#4a4a52', label: 'The FORGE. Heat pours out of the doorway.' },
+      { type: 'anvil', x: 17, y: 15, w: 1, h: 1 },
       { type: 'itembox', x: 9, y: 13, w: 1, h: 1 },
       { type: 'sign', x: 14, y: 10, w: 1, h: 1, text: 'THEPARAK VILLAGE\nW: FARM · N: GATHERING HUB · E: QUEST GATE' },
-      { type: 'gate', x: 23, y: 8, w: 1, h: 2, deco: true }
+      { type: 'gate', x: 23, y: 8, w: 1, h: 2, deco: true },
     ]
   },
 

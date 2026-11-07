@@ -17,6 +17,7 @@ import { checkFaint, foeDefeated, returnToField } from './endings.js';
 import { applyStatus, blockedBy, defMult, atkMult, accMod, elementSealed, stunOnHit, tickStatuses } from './status.js';
 import { speedOf, speedHitMod, firstChance } from './speed.js';
 import { bossOffscreenTurn } from '../world/field.js';
+import { armorDef, armorMult } from '../core/gear.js';
 
 /* ---------- Moves ---------- */
 export function findMove(id) { return G ? WEAPONS[G.player.weapon].moves.find(m => m.id === id) || null : null; }
@@ -242,9 +243,10 @@ async function hitCalculationPhase(intent) {
   const atkM = atkMult(p), defM = defMult(m), variance = rand(0.9, 1.1);
   const elem = w.element && !elementSealed(p) ? w.element : null;
   const elemDmg = elem ? (w.elemPower || 0) : 0;
+  const wAtk = w.atk || 1;
   const dmg = Math.max(1, Math.round(
-    intent.power * pdef.dmgMult * sharpLv.dmg * mightM * intent.chargeMult * wakeM * crackM * variance * atkM * defM + elemDmg));
-  addLog(`[DMG ${intent.power} x part ${pdef.dmgMult} x sharp ${sharpLv.dmg} x might ${mightM} x charge ${intent.chargeMult} x wake ${wakeM} x crack ${crackM} x var ${variance.toFixed(2)} x atk ${atkM.toFixed(2)} x def ${defM.toFixed(2)} + elem ${elemDmg} = ${dmg}]`, 'dim');
+    intent.power * wAtk * pdef.dmgMult * sharpLv.dmg * mightM * intent.chargeMult * wakeM * crackM * variance * atkM * defM + elemDmg));
+  addLog(`[DMG ${intent.power} x wpn ${wAtk} x part ${pdef.dmgMult} x sharp ${sharpLv.dmg} x might ${mightM} x charge ${intent.chargeMult} x wake ${wakeM} x crack ${crackM} x var ${variance.toFixed(2)} x atk ${atkM.toFixed(2)} x def ${defM.toFixed(2)} + elem ${elemDmg} = ${dmg}]`, 'dim');
 
   m.hp = Math.max(0, m.hp - dmg);
   part.hp = Math.max(0, part.hp - dmg);
@@ -379,11 +381,11 @@ async function monsterActionPhase() {
     await inflictAll(atk, m, p, true);   // shockwaves / gusts still land
     return noHit();
   }
-  let dmg = atk.power * m.atkMult * atkMult(m) * defMult(p) * rand(0.9, 1.1);
+  let dmg = atk.power * m.atkMult * atkMult(m) * defMult(p) * armorMult() * rand(0.9, 1.1);
   if (p.guarding) dmg *= CONFIG.GUARD_TAKEN;
   dmg = Math.max(1, Math.round(dmg));
   p.hp = Math.max(0, p.hp - dmg);
-  addLog(`[HUNTER took ${dmg} → HP ${p.hp}/${p.maxHp}${p.guarding ? ' (guarded)' : ''}]`, 'dim');
+  addLog(`[HUNTER took ${dmg} (armor DEF ${armorDef()} x${armorMult().toFixed(2)}) → HP ${p.hp}/${p.maxHp}${p.guarding ? ' (guarded)' : ''}]`, 'dim');
   Audio8.sfx(p.guarding ? 'clang' : 'hurt');
   anim($('playerSprite'), 'a-shake', 400); renderBattle();
   await say(p.guarding ? 'HUNTER blocked the blow!' : atk.heavy ? 'HUNTER took a HEAVY blow!' : 'HUNTER was hit!', p.guarding ? 'warn' : 'bad');

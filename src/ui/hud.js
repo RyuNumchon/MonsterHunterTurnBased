@@ -14,6 +14,7 @@ import { findMove, moveDisabled } from '../battle/turn.js';
 import { blockedBy, statusChips, stunChance } from '../battle/status.js';
 import { speedOf } from '../battle/speed.js';
 import { BOX } from '../core/save.js';
+import { armorDef } from '../core/gear.js';
 
 export const hpColor = pct => pct > 50 ? '#58d080' : pct > 20 ? '#f8d030' : '#f05038';
 export const chip = (t, c) => `<span class="chip ${c}">${t}</span>`;
@@ -40,6 +41,7 @@ export function logSnapshot() {
   addLog(`[HUNTER HP ${p.hp}/${p.maxHp} · EDGE ${p.sharp}/${CONFIG.SHARP_MAX} · SPD ${speedOf(p)} · stun ${stunChance(p)}% · might ${p.buffs.might}t · status ${st(p)}]`, 'dim');
   if (m) addLog(`[${m.name} HP ${m.hp}/${m.maxHp} · ${Object.entries(m.parts).map(([k, v]) => `${k} ${v.hp}/${v.max}`).join(', ')} · SPD ${speedOf(m)} · trap ${m.trapped}t · tranq ${m.tranq}/${CONFIG.TRANQ_NEEDED} · blind ${m.flash}t · status ${st(m)}]`, 'dim');
   addLog(`[paint ${G.paint}t · items ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN}]`, 'dim');
+  addLog(`[GEAR ${p.weapon} (atk x${WEAPONS[p.weapon].atk || 1}${WEAPONS[p.weapon].element ? ' · ' + WEAPONS[p.weapon].element : ''}) · armor DEF ${armorDef()}]`, 'dim');
 }
 
 export function renderBattle() {
@@ -77,7 +79,7 @@ export function renderBattle() {
   const s = getSharp(p.sharp);
   setBar($('pSharp'), p.sharp / CONFIG.SHARP_MAX * 100, s.color);
   $('pSharpLbl').innerHTML = `<span style="color:${s.text}">${s.name}</span>`;
-  $('pGauge').innerHTML = p.weapon === 'greatsword' ? `CHG${pips(p.charge, 2)}` : `SPR${pips(p.spirit, 3)}`;
+  $('pGauge').innerHTML = WEAPONS[p.weapon].cls === 'greatsword' ? `CHG${pips(p.charge, 2)}` : `SPR${pips(p.spirit, 3)}`;
   const pc = [];
   if (p.buffs.might > 0) pc.push(chip('MIGHT', 'c-mgt'));
   if (p.guarding) pc.push(chip('GUARD', 'c-grd'));

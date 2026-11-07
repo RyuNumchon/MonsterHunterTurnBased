@@ -68,6 +68,13 @@ function drawObject(o) {
       CX.fillStyle = '#c8945a'; CX.fillRect(X + 3, Y + 3, 10, 6);
       CX.fillStyle = '#6a4428'; CX.fillRect(X + 5, Y + 5, 6, 1); CX.fillRect(X + 5, Y + 7, 4, 1);
       break;
+    case 'anvil':
+      CX.fillStyle = 'rgba(0,0,0,.25)'; ellipse(X + 8, Y + 14, 7, 2);
+      CX.fillStyle = '#5a3418'; CX.fillRect(X + 4, Y + 9, 8, 6);
+      CX.fillStyle = '#3a3a42'; CX.fillRect(X + 1, Y + 4, 14, 4); CX.fillRect(X + 5, Y + 8, 6, 2);
+      CX.fillStyle = '#7a7a86'; CX.fillRect(X + 1, Y + 4, 14, 1);
+      CX.fillStyle = '#f08030'; CX.fillRect(X + 12, Y + 2, 1, 1); CX.fillRect(X + 9, Y + 1, 1, 1);
+      break;
     case 'house': {
       const W = o.w * 16, H = o.h * 16, dx = X + W / 2;
       CX.fillStyle = 'rgba(0,0,0,.22)'; CX.fillRect(X + 4, Y + H - 2, W - 2, 4);
