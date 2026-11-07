@@ -13,6 +13,8 @@ import { say, ask, choose, askCount, MENU_PREV, MENU_NEXT } from '../ui/dialog.j
 import { addLog } from '../ui/fx.js';
 import { showStorage } from '../quest/rewards.js';
 import { curable, cureStatuses } from '../battle/status.js';
+import { ARMOR, ARMOR_SLOTS, SLOT_NAME } from '../data/armor.js';
+import { equipWeapon, equipArmor } from '../core/gear.js';
 
 /** Save outside quests only (quest progress is saved on returning to town). */
 const persist = () => { if (G.phase !== 'quest') saveBox(); };
@@ -102,34 +104,67 @@ export async function itemBoxMenu() {
   Audio8.sfx('item');
   await say('HUNTER opened the ITEM BOX.');
   while (true) {
-    const p = G.player;
+    const p = G.player, worn = ARMOR_SLOTS.filter(s => BOX.equip[s]).length;
     const i = await choose('ITEM BOX', [
       { icon: DATA['wpn_' + p.weapon], label: 'CHANGE WEAPON', right: WEAPONS[p.weapon].short },
+      { label: 'ARMOR', right: `${worn}/5` },
       { label: 'STORE (POUCH → BOX)', right: slotsLabel() },
       { label: 'TAKE (BOX → POUCH)', right: Object.keys(BOX.items).length },
       { label: 'COMBINE', right: 'SURE' },
       { label: 'VIEW STORAGE' },
       { label: 'CLOSE' }]);
     if (i === 0) await weaponMenu();
-    else if (i === 1) await storeMenu();
-    else if (i === 2) await takeMenu();
-    else if (i === 3) await craftMenu('box');
-    else if (i === 4) await showStorage();
+    else if (i === 1) await armorMenu();
+    else if (i === 2) await storeMenu();
+    else if (i === 3) await takeMenu();
+    else if (i === 4) await craftMenu('box');
+    else if (i === 5) await showStorage();
     else return;
   }
 }
 
 async function weaponMenu() {
-  const p = G.player, keys = Object.keys(WEAPONS);
+  const p = G.player, keys = BOX.weapons.filter(k => WEAPONS[k]);
   const j = await choose('EQUIP WEAPON', keys.map(k => ({
     icon: DATA['wpn_' + k], label: WEAPONS[k].name, right: k === p.weapon ? 'E' : '', desc: WEAPONS[k].blurb })), { desc: true });
   if (j < 0) return;
   const k = keys[j];
   if (k === p.weapon) { await say('That weapon is already equipped.', 'dim'); return; }
-  Object.assign(p, { weapon: k, charge: 0, spirit: 0 });
-  BOX.weapon = k; saveBox();
+  equipWeapon(k);
   Audio8.sfx('sharpen');
   await say(`HUNTER equipped the ${WEAPONS[k].name}!`, 'good');
+}
+
+async function armorMenu() {
+  while (true) {
+    const opts = ARMOR_SLOTS.map(s => {
+      const a = ARMOR[BOX.equip[s]];
+      return { label: SLOT_NAME[s], right: a ? a.short : '-', desc: a ? `${a.name}<br>${a.desc}` : 'Nothing equipped.' };
+    });
+    opts.push({ label: 'DONE', desc: '' });
+    const i = await choose('ARMOR', opts, { desc: true });
+    if (i < 0 || i === ARMOR_SLOTS.length) return;
+    await armorSlotMenu(ARMOR_SLOTS[i]);
+  }
+}
+
+async function armorSlotMenu(slot) {
+  const ids = BOX.armor.filter(id => ARMOR[id] && ARMOR[id].slot === slot);
+  if (!ids.length) { await say(`You don't own any ${SLOT_NAME[slot]} armor.\nThe BLACKSMITH can forge some!`, 'dim'); return; }
+  const opts = ids.map(id => ({ label: ARMOR[id].name, right: BOX.equip[slot] === id ? 'E' : '', desc: ARMOR[id].desc }));
+  opts.push({ label: 'REMOVE', desc: `Take off your ${SLOT_NAME[slot]} armor.` });
+  const j = await choose(`${SLOT_NAME[slot]} ARMOR`, opts, { desc: true });
+  if (j < 0) return;
+  if (j === ids.length) {
+    if (!BOX.equip[slot]) { await say('Nothing is equipped there.', 'dim'); return; }
+    equipArmor(slot, null); Audio8.sfx('back');
+    await say(`HUNTER took off the ${SLOT_NAME[slot]} armor.`);
+    return;
+  }
+  const id = ids[j];
+  if (BOX.equip[slot] === id) { await say('That piece is already equipped.', 'dim'); return; }
+  equipArmor(slot, id); Audio8.sfx('sharpen');
+  await say(`HUNTER put on the ${ARMOR[id].name}!`, 'good');
 }
 
 async function storeMenu() {

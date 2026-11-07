@@ -4,8 +4,15 @@ import { stackOf } from '../data/items.js';
 
 const BOX_KEY = 'mh_gen3_itembox_v3';
 const START_POUCH = { potion: 5, whetstone: 3, might: 1, nullberry: 1, antidote: 1, paintball: 1, flash: 1 };
+const BASE_WEAPONS = ['greatsword', 'longsword'];
 
-export const defaultBox = () => ({ items: {}, zenny: CONFIG.START_ZENNY, hunts: 0, weapon: 'greatsword', muted: false,
+export const defaultBox = () => ({
+  items: {},
+  zenny: CONFIG.START_ZENNY,
+  hunts: 0,
+  weapons: [...BASE_WEAPONS], armor: [],
+  equip: { head: null, chest: null, belt: null, gloves: null, legs: null },
+  muted: false,
   pouch: Object.entries(START_POUCH).map(([id, n]) => ({ id, n })) });
 
 /** Converts an old `pouch` save, and moves anything over the pouch limits into the box. */
@@ -21,6 +28,8 @@ function migrate(box, raw) {
     s.n = Math.min(s.n, stackOf(s.id));
     return s.n > 0;
   });
+  box.equip = { ...defaultBox().equip, ...(raw.equip || {}) };
+  if (!box.weapons.includes(box.weapon)) box.weapon = 'greatsword';
   return box;
 }
 
@@ -41,6 +50,6 @@ export function saveBox() {
 
 /** Clears storage, pouch and zenny but keeps the equipped weapon and audio preference. */
 export function wipeBox() {
-  BOX = { ...defaultBox(), weapon: BOX.weapon, muted: BOX.muted };
+  BOX = { ...defaultBox(), weapon: BASE_WEAPONS.includes(BOX.weapon) ? BOX.weapon : 'greatsword', muted: BOX.muted };
   saveBox();
 }

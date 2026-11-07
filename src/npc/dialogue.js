@@ -13,6 +13,7 @@ import { say, ask, choose, askCount } from '../ui/dialog.js';
 import { addLog } from '../ui/fx.js';
 import { VILLAGE, HUB } from '../data/world.js';
 import { pouchCount, pouchAdd, pouchRemove, boxCount, boxAdd, boxRemove } from '../core/pouch.js';
+import { talkSmith } from './smith.js';
 
 /* ================= VILLAGE ================= */
 
@@ -271,7 +272,7 @@ async function talkComrade() {
 
 /** NPC id -> conversation. Each returns a promise (run inside flow()). */
 export const NPC_TALK = {
-  chief: talkChief, merchant: talkMerchant, veteran: talkVeteran, kid: talkKid,
+  chief: talkChief, merchant: talkMerchant, veteran: talkVeteran, kid: talkKid, smith: talkSmith,
   chef: talkChef, receptionist: talkReceptionist,
   campcat: talkCampCat, comrade: talkComrade
 };

@@ -31,6 +31,7 @@ import { putAllInBox, renderStorage } from './quest/rewards.js';
 import { newSession, returnToVillage } from './game.js';
 import { fitText } from './ui/fx.js';
 import { pouchMenu } from './world/inventory.js';
+import { applyLook } from './art/look.js';
 
 const KEYDIR = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right' };
 
@@ -58,7 +59,7 @@ function onClick(e) {
     case 'auto':     CONFIG.AUTO = !CONFIG.AUTO; $('autoBtn').textContent = `BATTLE TEXT: ${CONFIG.AUTO ? 'AUTO' : 'CLICK'}`; return;
     case 'putall':   putAllInBox(); return;
     case 'closebox': Audio8.sfx('back'); closeStorage(); return;
-    case 'wipebox':  wipeBox(); renderStorage(); return;
+    case 'wipebox':  wipeBox(); G.player.weapon = BOX.weapon; applyLook(); renderStorage(); return;
     case 'advance':  doAdvance(); return;
     case 'menu':     pickMenu(+val); return;
     case 'closemap': closeMap(); return;

@@ -171,6 +171,7 @@ async function useObject(o) {
     case 'chair': await say('A wooden stool. Sit on it and face\nthe counter to order a meal.'); return;
     case 'table': await say('A long dining table. It smells of\ngrilled meat and spices.'); return;
     case 'house': await say(o.label); return;
+    case 'anvil': await say("The anvil is still hot.\nTalk to the BLACKSMITH to forge gear."); return;
     case 'gate': await say(
       G.quest
       ? 'The GATE to the hunting grounds.\nWalk through it to depart!'

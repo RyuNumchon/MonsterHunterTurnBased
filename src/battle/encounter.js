@@ -13,6 +13,7 @@ import { anim, addLog } from '../ui/fx.js';
 import { captureWin } from './endings.js';
 import { applyStatus, blockedBy, clearBattleOnly, curable, cureStatuses } from './status.js';
 import { pouchCount, pouchRemove } from '../core/pouch.js';
+import { hunterBack } from '../art/look.js';
 
 export function startEncounter(e, how) {
   if (!G || G.busy || G.screen !== 'field' || G.over) return;
@@ -34,7 +35,7 @@ export function startEncounter(e, how) {
     $('enemySprite').className = 'sprite';
     $('playerSprite').className = 'sprite';
     $('enemySprite').querySelector('img').src = DATA['mb_' + e.key];
-    $('playerSprite').querySelector('img').src = DATA['hb_' + G.player.weapon];
+    $('playerSprite').querySelector('img').src = hunterBack();
     showScreen(); renderBattle();
     anim($('enemySprite'), 'a-enter', 500);
     anim($('playerSprite'), 'a-enterL', 500);

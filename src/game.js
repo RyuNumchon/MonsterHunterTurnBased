@@ -16,6 +16,7 @@ import { resetMini } from './ui/map.js';
 import { makeFoe, makeNpcs, makeSmalls, buildEntities } from './world/spawn.js';
 import { putAllInBox } from './quest/rewards.js';
 import { pouchRemove } from './core/pouch.js';
+import { applyLook } from './art/look.js';
 
 function restorePlayer(p) {
   Object.assign(p, { hp: p.maxHp, sharp: CONFIG.SHARP_MAX, carts: 0, charge: 0, spirit: 0,
@@ -45,7 +46,8 @@ const deskName = () => G.f.area === HUB ? 'QUEST COUNTER' : 'VILLAGE CHIEF';
 /** Boot / RESTART: spawn in the village with no quest. */
 export function newSession() {
   releaseWaits();
-  const wk = WEAPONS[BOX.weapon] ? BOX.weapon : 'greatsword';
+  const wk = WEAPONS[BOX.weapon] && BOX.weapons.includes(BOX.weapon) ? BOX.weapon : 'greatsword';
+  BOX.weapon = wk;
   setG({
     phase: 'village', quest: null, monsterKey: null, monster: null, smalls: {}, ents: [],
     screen: 'field', busy: false,
@@ -57,6 +59,7 @@ export function newSession() {
               sharp: CONFIG.SHARP_MAX, charge: 0, spirit: 0, buffs: { might: 0 },
               guarding: false, foresight: false, down: false, status: {}, stunBuild: 0, acted: false }
   });
+  applyLook();
   questReset();
   G.npcs = makeNpcs();
   UI.mode = 'main'; UI.data = {}; input.dirs = [];

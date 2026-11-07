@@ -68,10 +68,11 @@ export const areaInfo = a => TOWN_INFO[a] || AREAS[a];
 export const NPC_DEFS = [
   { id: 'chief',        area: VILLAGE, at: [7, 6],   name: 'VILLAGE CHIEF',  look: 'chief',        wander: false },
   { id: 'merchant',     area: VILLAGE, at: [16, 6],  name: 'MERCHANT',       look: 'merchant',     wander: false },
+  { id: 'smith',        area: VILLAGE, at: [15, 15], name: 'BLACKSMITH',     look: 'smith',        wander: false },
   { id: 'veteran',      area: VILLAGE, at: [14, 11], name: 'VETERAN HUNTER', look: 'veteran',      wander: false },
   { id: 'kid',          area: VILLAGE, at: [8, 10],  name: 'VILLAGE KID',    look: 'kid',          wander: true },
   { id: 'chef',         area: HUB,     at: [5, 3],   name: 'FELYNE CHEF',    look: 'chef',         wander: false },
   { id: 'receptionist', area: HUB,     at: [18, 3],  name: 'QUEST HANDLER',  look: 'receptionist', wander: false },
   { id: 'campcat',      area: 0,       at: [9, 6],   name: 'CAMP FELYNE',    look: 'cat',          wander: true },
-  { id: 'comrade',      area: 3,       at: [16, 13], name: 'FELYNE COMRADE', look: 'cat2',         wander: true }
+  { id: 'comrade',      area: 3,       at: [16, 13], name: 'FELYNE COMRADE', look: 'cat2',         wander: true },
 ];
