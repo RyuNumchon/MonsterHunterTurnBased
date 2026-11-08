@@ -10,6 +10,10 @@ export const CONFIG = {
   CRIT_MULT: 1.5,
   CRIT_NEG_MULT: 0.5,
   BASE_DEF: 10,          // hunter's defense without armor
+  CHARGE_MAX: 2,
+  CHARGE_LV1_MULT: 2,
+  OVERCHARGE_MULT: 0.8,
+  MOVE_SLOTS: 4,
 
   // Big monster: fleeing mid-battle, limping, sleeping, healing
   FLEE_MIN: 4, FLEE_MAX: 6, FLEE_CHANCE: 0.5, LOW_HP_FLEE: 0.25, LOW_HP_FLEE_CHANCE: 0.4,

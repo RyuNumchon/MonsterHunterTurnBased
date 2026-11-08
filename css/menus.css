@@ -291,7 +291,15 @@
   font-size: 1em;
   padding: 0 0.3em;
 }
- /* skills with too few points */
+/* skills with too few points */
 .mdesc .off {
   color: #9098a8;
+}
+/* Moveset: equipped (highlight) / locked (grey) */
+#fMenu .mi.hl {
+  background: #fff2c0;
+  box-shadow: inset 0 0 0 0.12em #e0a020;
+}
+#fMenu .mi.lk {
+  color: #9aa0ac;
 }

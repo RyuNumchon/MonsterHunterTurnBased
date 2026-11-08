@@ -103,7 +103,7 @@ export function useItemBattle(key) {
         break;
       }
       case 'paintball':
-        G.paint = 15; renderBattle();
+        m.paint = 15; renderBattle();
         await say(`The ${m.name} was marked!\nThe MAP will track it for a while.`, 'good');
         break;
       case 'flash':

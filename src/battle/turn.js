@@ -17,9 +17,11 @@ import { checkFaint, foeDefeated, returnToField } from './endings.js';
 import { applyStatus, blockedBy, defMult, atkMult, accMod, elementSealed, stunOnHit, tickStatuses } from './status.js';
 import { speedOf, speedHitMod, firstChance } from './speed.js';
 import { bossOffscreenTurn } from '../world/field.js';
+import { liveBosses } from '../world/spawn.js';
 import { hunterDef, armorMult, skillVal, immuneTo } from '../core/gear.js';
 import { tryEnrage, tickMood, isEnraged, isTired, isLow, moodAtk, moodDef, moodAcc } from './mood.js';
 import { timingMeter } from './meter.js';
+import { overchargeMove } from '../data/moves.js';
 
 /* ---------- Moves ---------- */
 export function findMove(id) { return G ? WEAPONS[G.player.weapon].moves.find(m => m.id === id) || null : null; }
@@ -73,6 +75,10 @@ export function pickMove(id) {
   Audio8.sfx('select');
   if (isAttack(mv)) { if (G.foe.isBoss) setMode('target', { moveId: id });
   else confirmAttack(id, 'body'); return; }
+  if (mv.type === 'charge' && G.player.charge >= CONFIG.CHARGE_MAX) {
+    if (G.foe.isBoss) setMode('target', { moveId: id }); else confirmAttack(id, 'body');
+    return;
+  }
   const drop = p.charge > 0 && mv.type !== 'charge' ? '<br>Your held charge will be lost!' : '';
   if (mv.type === 'charge') setMode('confirm', { q: `Charge the ${WEAPONS[p.weapon].name}?`,
     sub: 'Build a deeper charge. A heavy blow may break it.',
@@ -83,11 +89,12 @@ export function pickMove(id) {
 
 export function confirmAttack(moveId, part) {
   const mv = findMove(moveId), p = G.player, m = G.foe;
+  const atk = mv.type === 'charge' ? overchargeMove() : mv;
   const name = mv.type === 'release' ? `${mv.name} Lv${p.charge + 1}` : mv.name;
   const notes = [];
   if (m.sleeping) notes.push("Sneak attack! It can't dodge while asleep.");
   else {
-    const c = hitChances(mv, part);
+    const c = hitChances(atk, part);
     addLog(`[aim ${m.isBoss ? PARTS[part].label : 'BODY'}: hit ${c.target}% · drift ${c.overall - c.target}% · miss ${100 - c.overall}% · first ${firstPct(mv)}% · SPD ${speedOf(p)} vs ${speedOf(m)}]`, 'dim');
     if(m.isBoss) notes.push('A near-miss may strike another part.');
   }
@@ -204,6 +211,14 @@ async function monsterTurn(m) {
 /* PHASE 2: returns an "intent" for attacks; charge / guard resolve here. */
 async function playerActionPhase(action) {
   const p = G.player, w = WEAPONS[p.weapon], move = findMove(action.moveId);
+  if (move.type === 'charge' && p.charge >= CONFIG.CHARGE_MAX) {
+    const oc = overchargeMove();
+    p.charge = 0;
+    addLog(`[overcharge: ${oc.power} power (lv1 x${CONFIG.CHARGE_LV1_MULT} x ${CONFIG.OVERCHARGE_MULT}) · charge reset]`, 'dim');
+    anim($('playerSprite'), 'a-lunge', 350); Audio8.sfx('swoosh'); renderBattle();
+    await say('The charge overflowed!\nHUNTER used OVERCHARGE SLASH!', 'warn');
+    return { move: oc, power: oc.power, chargeMult: 1, target: action.target, sharpLv: getSharp(p.sharp) };
+  }
   if (p.charge > 0 && move.type !== 'charge' && move.type !== 'release') {
     p.charge = 0; renderBattle();
     await say("HUNTER's held charge faded away.", 'warn');
@@ -266,7 +281,7 @@ async function hitCalculationPhase(intent) {
   const wakeM  = wake ? CONFIG.WAKE_MULT : 1;
   const crackM = m.armorCracked ? CONFIG.BODY_CRACK_MULT : 1;
   const skillAtk = skillVal('attack', 1);
-  const crit = (w.crit || 0) + skillVal('crit', 0), critRoll = Math.random() * 100, critHit = crit !== 0 && critRoll < Math.abs(crit);
+  const crit = (w.crit || 0) + skillVal('crit', 0) + (intent.move.crit || 0), critRoll = Math.random() * 100, critHit = crit !== 0 && critRoll < Math.abs(crit);
   const critM = critHit ? (crit > 0 ? CONFIG.CRIT_MULT : CONFIG.CRIT_NEG_MULT) : 1;
   const atkM = atkMult(p), defM = defMult(m) * moodDef(m), variance = rand(0.9, 1.1);
   const elem = w.element && !elementSealed(p) ? w.element : null;
@@ -277,7 +292,7 @@ async function hitCalculationPhase(intent) {
   addLog(`[DMG ${intent.power} x wpn ${wAtk} x skill ${skillAtk} x part ${partM} x sharp ${sharpLv.dmg} x might ${mightM} x charge ${intent.chargeMult} x wake ${wakeM} x crack ${crackM} x crit ${critM} x var ${variance.toFixed(2)} x atk ${atkM.toFixed(2)} x def ${defM.toFixed(2)} + elem ${elemDmg} = ${dmg}]`, 'dim');
 
   m.hp = Math.max(0, m.hp - dmg);
-  if (part) part.hp = Math.max(0, part.hp - dmg);
+  if (part) part.hp = Math.max(0, part.hp - Math.round(dmg * (intent.move.breakMult || 1)));
   addLog(`[${m.name} HP ${m.hp}/${m.maxHp}${part ? ` · ${hitPart} ${part.hp}/${part.max}` : ''}]`, 'dim');
   const weak = boss && hitPart === 'head' && !drifted;
   const big = wake || intent.chargeMult >= 2 || weak || (critHit && crit > 0);
@@ -474,7 +489,7 @@ async function monsterFlee(limping) {
     roamMs: rand(CONFIG.ROAM_MIN_MS, CONFIG.ROAM_MAX_MS), fleeAt: randInt(CONFIG.FLEE_MIN, CONFIG.FLEE_MAX),
     fleeLong: randInt(CONFIG.FLEE_LONG_MIN, CONFIG.FLEE_LONG_MAX)
   });
-  await say(G.paint > 0
+  await say(m.paint > 0
     ? `The ${m.name} fled to AREA ${dest}!\nThe paintball marks its trail.`
     : `The ${m.name} fled!\nWithout a paintball you'll have to search...`, 'warn');
   await returnToField(800);
@@ -512,7 +527,14 @@ async function endOfTurnTicks() {
     if (mood) { renderBattle(); await say(mood.msg, mood.tone); }
   }
   for (const msg of bossOffscreenTurn()) await say(msg, 'dim');   // battle turns count for the sleep timer
-  if (G.paint > 0 && --G.paint === 0) { renderBattle(); await say('The paintball scent faded...', 'warn'); }
+  const fadedPaint = [];
+  for (const boss of liveBosses()) {
+    if (boss.paint > 0 && --boss.paint === 0) fadedPaint.push(boss);
+  }
+  if (fadedPaint.length) {
+    renderBattle();
+    for (const boss of fadedPaint) await say(`The paintball scent faded from the ${boss.name}.`, 'warn');
+  }
   if (m.flash > 0 && --m.flash === 0) { renderBattle(); await say(`The ${m.name} can see again!`, 'warn'); }
   if (p.buffs.might > 0 && --p.buffs.might === 0) { renderBattle(); await say('The MIGHT SEED wore off.', 'warn'); }
   renderBattle();

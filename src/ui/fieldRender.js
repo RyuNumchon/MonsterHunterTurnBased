@@ -204,7 +204,7 @@ export function drawField(now) {
     const top = p.y + 16 - img.height;
     CX.fillStyle = 'rgba(0,0,0,.3)'; ellipse(p.x + 8, p.y + 14, img.width * 0.38, 3);
     
-    const pulse = e.kind === 'boss' && e.hp / e.maxHp <= CONFIG.CAPTURE_PCT;
+    const mm = e.ref || e, pulse = e.kind === 'boss' && mm.hp / mm.maxHp <= CONFIG.CAPTURE_PCT;
     if (pulse) CX.globalAlpha = .45 + .55 * Math.abs(Math.sin(now / 220));
     blit(img, p.x + 8 - img.width / 2, top + hop, e.dir === 'right');   // art faces left
     CX.globalAlpha = 1;

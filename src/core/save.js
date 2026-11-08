@@ -11,6 +11,7 @@ export const defaultBox = () => ({
   zenny: CONFIG.START_ZENNY,
   hunts: 0,
   weapons: [...BASE_WEAPONS], armor: [],
+  movesets: {},
   equip: { head: null, chest: null, belt: null, gloves: null, legs: null },
   muted: false,
   pouch: Object.entries(START_POUCH).map(([id, n]) => ({ id, n })) });

@@ -21,6 +21,7 @@ import { LOOT } from '../data/monsters.js';
 import { pouchAdd, pouchCount } from '../core/pouch.js';
 import { itemBoxMenu, pouchMenu, craftMenu, obtain } from './inventory.js';
 import { hunterDef } from '../core/gear.js';
+import { liveBosses } from './spawn.js';
 
 /** A button: act on whatever the hunter is facing. */
 export function interact() {
@@ -205,7 +206,7 @@ export function openStartMenu() {
         case 'MAP': await fieldMap(); break;
         case 'HUNTER': await say(`HUNTER · ${WEAPONS[p.weapon].name}\nEDGE ${s.name} · DEF ${hunterDef()} · CARTS ${p.carts}/${CONFIG.MAX_CARTS}`); break;
         case 'QUEST':
-          if (inQuest) await say(`QUEST: ${q.title}\nSlay or capture the ${G.monster.name}. TURN ${G.turn}`);
+          if (inQuest) await say(`QUEST: ${q.title}\nTARGETS LEFT ${liveBosses().length}/${q.targets.length} · TURN ${G.turn}`);
           else if (q) await say(`ACCEPTED: ${q.title}\nDepart through the GATE to the north.`);
           else await say('No quest accepted.\nVisit the VILLAGE CHIEF.', 'dim');
           break;

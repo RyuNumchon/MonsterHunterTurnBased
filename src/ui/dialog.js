@@ -91,10 +91,9 @@ export function renderMenu() {
       ? `<div class="mh paged"><button class="pg" data-act="mpage" data-val="-1">◀</button><span>${s.title}</span><button class="pg" data-act="mpage" data-val="1">▶</button></div>`
       : `<div class="mh">${s.title}</div>`;
   el.innerHTML = `<div class="menu${s.desc ? ' withdesc' : ''}">${head}${s.opts.map((o, i) =>
-      `<button class="mi ${i === s.idx ? 'focus' : ''}" data-act="menu" data-val="${i}" ${o.disabled ? 'disabled' : ''}>${o.icon ? pimg(o.icon) : ''}<span>${o.label}</span>${o.right !== undefined ? `<span class="q">${o.right}</span>` : ''}</button>`
+      `<button class="mi ${i === s.idx ? 'focus' : ''}${o.cls ? ' ' + o.cls : ''}" data-act="menu" data-val="${i}" ${o.disabled ? 'disabled' : ''}>${o.icon ? pimg(o.icon) : ''}<span>${o.label}</span>${o.right !== undefined ? `<span class="q">${o.right}</span>` : ''}</button>`
     ).join('')}${s.desc ? `<div class="mdesc"><span>${(cur && cur.desc) || ''}</span></div>` : ''}</div>`;
   UI.lastMenu = { html: el.innerHTML, cls: el.className };
-
 }
 
 export function moveMenu(d) {
