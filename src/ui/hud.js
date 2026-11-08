@@ -15,8 +15,9 @@ import { curable, elementSealed, blockedBy, statusChips, stunChance } from '../b
 import { speedOf } from '../battle/speed.js';
 import { BOX } from '../core/save.js';
 import { armorDef } from '../core/gear.js';
-import { pouchCount } from '../core/pouch.js';
+import { hunterDef, skillPoints } from '../core/gear.js';
 import { isEnraged, isTired } from '../battle/mood.js';
+import { pouchCount } from '../core/pouch.js';
 
 /* HP bars never change colour. */
 export const HP_COLOR = '#58d080';
@@ -52,7 +53,7 @@ export function logSnapshot() {
   addLog(`[HUNTER HP ${p.hp}/${p.maxHp} · EDGE ${p.sharp}/${CONFIG.SHARP_MAX} · SPD ${speedOf(p)} · stun ${stunChance(p)}% · might ${p.buffs.might}t · status ${st(p)}]`, 'dim');
   if (m) addLog(`[${m.name} HP ${m.hp}/${m.maxHp} · ${Object.entries(m.parts).map(([k, v]) => `${k} ${v.hp}/${v.max}`).join(', ')} · SPD ${speedOf(m)} · trap ${m.trapped}t · tranq ${m.tranq}/${CONFIG.TRANQ_NEEDED} · blind ${m.flash}t · status ${st(m)}  · mood ${m.mood || 'calm'} ${m.moodTurns || 0}t · cd ${m.calmTurns || 0}t]`, 'dim');
   addLog(`[paint ${G.paint}t · items ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN}]`, 'dim');
-  addLog(`[GEAR ${p.weapon} (atk x${WEAPONS[p.weapon].atk || 1}${WEAPONS[p.weapon].element ? ' · ' + WEAPONS[p.weapon].element : ''}) · armor DEF ${armorDef()}]`, 'dim');
+  addLog(`[GEAR ${p.weapon} (atk x${WEAPONS[p.weapon].atk || 1}${WEAPONS[p.weapon].element ? ' · ' + WEAPONS[p.weapon].element : ''}) · DEF ${hunterDef()} · skill pts ${JSON.stringify(skillPoints())}]`, 'dim');
 }
 
 export function renderBattle() {

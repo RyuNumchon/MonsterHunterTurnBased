@@ -14,6 +14,7 @@ import { captureWin } from './endings.js';
 import { applyStatus, blockedBy, clearBattleOnly, curable, cureStatuses } from './status.js';
 import { pouchCount, pouchRemove } from '../core/pouch.js';
 import { hunterBack } from '../art/look.js';
+import { immuneTo } from '../core/gear.js';
 
 export function startEncounter(e, how) {
   if (!G || G.busy || G.screen !== 'field' || G.over) return;
@@ -52,7 +53,7 @@ export function startEncounter(e, how) {
       anim($('enemySprite'), 'a-shake', 400); Audio8.sfx('roar');
       await say(`The ${n} let out a mighty ROAR!`, 'warn');
       const msg = applyStatus(G.player, 'roar', e);
-      if (msg) { renderBattle(); await say(msg, 'bad'); }
+      if (msg) { renderBattle(); await say(msg, immuneTo('roar') ? 'good' : 'bad'); }
     }
     return 'main';
   });

@@ -17,7 +17,7 @@ import { checkFaint, foeDefeated, returnToField } from './endings.js';
 import { applyStatus, blockedBy, defMult, atkMult, accMod, elementSealed, stunOnHit, tickStatuses } from './status.js';
 import { speedOf, speedHitMod, firstChance } from './speed.js';
 import { bossOffscreenTurn } from '../world/field.js';
-import { armorDef, armorMult } from '../core/gear.js';
+import { hunterDef, armorMult, skillVal, immuneTo } from '../core/gear.js';
 import { tryEnrage, tickMood, isEnraged, isTired, isLow, moodAtk, moodDef, moodAcc } from './mood.js';
 
 /* ---------- Moves ---------- */
@@ -25,7 +25,7 @@ export function findMove(id) { return G ? WEAPONS[G.player.weapon].moves.find(m 
 
 export function moveDisabled(mv) {
   const p = G.player;
-  if (blockedBy(p, 'act')) return true;                                          // paralysis / tremor / stun
+  if (blockedBy(p, 'act')) return true;                                          // paralysis / tremble / stun
   if (isAttack(mv) && blockedBy(p, 'attack')) return true;;                       // wind pressure
   if (mv.type === 'charge' && p.charge >= 2) return true;                        // Lv2 is the max you can hold
   if ((mv.type === 'counter' || mv.type === 'finisher') && p.spirit < 1) return true;
@@ -43,7 +43,8 @@ export const runLock = p => blockedBy(p, 'act') || blockedBy(p, 'move') || block
    PartHit = clamp(part.baseHit + acc, 5, 98);  Overall = max(PartHit, clamp(90 + acc, 5, 99)) */
 export function hitChances(move, partKey, sharpLv = getSharp(G.player.sharp)) {
   const m = G.foe, p = G.player;
-  const acc = (move.acc || 0) + sharpLv.hit + accMod(p) + speedHitMod(p, m) + moodAcc(m) + (m.trapped > 0 ? CONFIG.TRAP_HIT_BONUS : 0);
+  const acc = (move.acc || 0) + sharpLv.hit + accMod(p) + speedHitMod(p, m) + moodAcc(m) + skillVal('accuracy', 0)
+            + (m.trapped > 0 ? CONFIG.TRAP_HIT_BONUS : 0);
   const overall = clamp(CONFIG.OVERALL_HIT + acc, 5, 99);
   if (!m.isBoss) return { target: overall, overall };          // one body: no drift
   const target = clamp(PARTS[partKey].baseHit + acc, 5, 98);
@@ -53,7 +54,7 @@ export function hitChances(move, partKey, sharpLv = getSharp(G.player.sharp)) {
 /** Monster accuracy: 60% (30% blinded) + its accuracy effects + speed mod. */
 export function monsterHitChance(m, p) {
   const base = m.flash > 0 ? CONFIG.MONSTER_HIT_FLASHED : CONFIG.MONSTER_HIT;
-  return clamp(base + accMod(m) + speedHitMod(m, p), 5, 95);
+  return clamp(base + accMod(m) + speedHitMod(m, p) - skillVal('evasion', 0), 5, 95);
 }
 
 const escapeChance = () => clamp(CONFIG.ESCAPE_CHANCE + (speedOf(G.player) - speedOf(G.foe)) * CONFIG.SPEED_ESCAPE_FACTOR, .2, .95);
@@ -253,15 +254,16 @@ async function hitCalculationPhase(intent) {
   const mightM = p.buffs.might > 0 ? CONFIG.MIGHT_MULT : 1;
   const wakeM  = wake ? CONFIG.WAKE_MULT : 1;
   const crackM = m.armorCracked ? CONFIG.BODY_CRACK_MULT : 1;
-  const crit = w.crit || 0, critRoll = Math.random() * 100, critHit = crit !== 0 && critRoll < Math.abs(crit);
+  const skillAtk = skillVal('attack', 1);
+  const crit = (w.crit || 0) + skillVal('crit', 0), critRoll = Math.random() * 100, critHit = crit !== 0 && critRoll < Math.abs(crit);
   const critM = critHit ? (crit > 0 ? CONFIG.CRIT_MULT : CONFIG.CRIT_NEG_MULT) : 1;
   const atkM = atkMult(p), defM = defMult(m) * moodDef(m), variance = rand(0.9, 1.1);
   const elem = w.element && !elementSealed(p) ? w.element : null;
   const elemDmg = elem ? (w.elemPower || 0) : 0;
   const dmg = Math.max(1, Math.round(
-    intent.power * wAtk * partM * sharpLv.dmg * mightM * intent.chargeMult * wakeM * crackM * critM * variance * atkM * defM + elemDmg));
+    intent.power * wAtk * skillAtk * partM * sharpLv.dmg * mightM * intent.chargeMult * wakeM * crackM * critM * variance * atkM * defM + elemDmg));
   addLog(`[crit ${crit}% · roll ${critRoll.toFixed(1)} → x${critM}]`, 'dim');
-  addLog(`[DMG ${intent.power} x wpn ${wAtk} x part ${partM} x sharp ${sharpLv.dmg} x might ${mightM} x charge ${intent.chargeMult} x wake ${wakeM} x crack ${crackM} x crit ${critM} x var ${variance.toFixed(2)} x atk ${atkM.toFixed(2)} x def ${defM.toFixed(2)} + elem ${elemDmg} = ${dmg}]`, 'dim');
+  addLog(`[DMG ${intent.power} x wpn ${wAtk} x skill ${skillAtk} x part ${partM} x sharp ${sharpLv.dmg} x might ${mightM} x charge ${intent.chargeMult} x wake ${wakeM} x crack ${crackM} x crit ${critM} x var ${variance.toFixed(2)} x atk ${atkM.toFixed(2)} x def ${defM.toFixed(2)} + elem ${elemDmg} = ${dmg}]`, 'dim');
 
   m.hp = Math.max(0, m.hp - dmg);
   if (part) part.hp = Math.max(0, part.hp - dmg);
@@ -341,7 +343,7 @@ async function inflictAll(atk, src, target, missed) {
     if (missed && !f.aoe) continue;
     if (Math.random() >= (f.chance ?? 1)) continue;
     const msg = applyStatus(target, f.id, src);
-    if (msg) { Audio8.sfx(STATUS[f.id].sfx || 'tranq'); renderBattle(); await say(msg, 'bad'); }
+    if (msg) { Audio8.sfx(STATUS[f.id].sfx || 'tranq'); renderBattle(); await say(msg, immuneTo(f.id) ? 'good' : 'bad'); }
   }
 }
 
@@ -387,7 +389,7 @@ async function monsterActionPhase() {
     await say(`The ${m.name} let out a deafening ROAR!`, 'warn');
     if (p.foresight) { await say('HUNTER read it and braced through the roar!', 'good'); return noHit(); }
     const msg = applyStatus(p, 'roar', m);
-    if (msg) { renderBattle(); await say(msg, 'bad'); }
+    if (msg) { renderBattle(); await say(msg, immuneTo('roar') ? 'good' : 'bad'); }
     return noHit();
   }
 
@@ -407,7 +409,7 @@ async function monsterActionPhase() {
   if (p.guarding) dmg *= CONFIG.GUARD_TAKEN;
   dmg = Math.max(1, Math.round(dmg));
   p.hp = Math.max(0, p.hp - dmg);
-  addLog(`[HUNTER took ${dmg} (armor DEF ${armorDef()} x${armorMult().toFixed(2)}) → HP ${p.hp}/${p.maxHp}${p.guarding ? ' (guarded)' : ''}]`, 'dim');
+  addLog(`[HUNTER took ${dmg} (DEF ${hunterDef()} x${armorMult().toFixed(2)}) → HP ${p.hp}/${p.maxHp}${p.guarding ? ' (guarded)' : ''}]`, 'dim');
   Audio8.sfx(p.guarding ? 'clang' : 'hurt');
   anim($('playerSprite'), 'a-shake', 400); renderBattle();
   await say(p.guarding ? 'HUNTER blocked the blow!' : atk.heavy ? 'HUNTER took a HEAVY blow!' : 'HUNTER was hit!', p.guarding ? 'warn' : 'bad');

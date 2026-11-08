@@ -9,6 +9,7 @@ export const CONFIG = {
   WHETSTONE_SHARP: 15,              // sharpness restored per whetstone (max 40)
   CRIT_MULT: 1.5,
   CRIT_NEG_MULT: 0.5,
+  BASE_DEF: 10,          // hunter's defense without armor
 
   // Big monster: fleeing mid-battle, limping, sleeping, healing
   FLEE_MIN: 4, FLEE_MAX: 6, FLEE_CHANCE: 0.5, LOW_HP_FLEE: 0.25, LOW_HP_FLEE_CHANCE: 0.4,

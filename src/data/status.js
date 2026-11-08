@@ -137,7 +137,7 @@ export const STATUS = {
     onMsg: "{u} covers its ears!\nIt can't use items next turn!",
   },
   tremble: {
-    name: "TREMOR",
+    name: "TREMBLE",
     short: "TREM",
     kind: "physical",
     color: "#8a6a40",

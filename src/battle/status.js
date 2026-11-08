@@ -9,6 +9,7 @@ import { itemName } from '../data/items.js';
 import { BOX } from '../core/save.js';
 import { pouchRemove } from '../core/pouch.js';
 import { addLog } from '../ui/fx.js';
+import { immuneSkill } from '../core/gear.js';
 
 export const uname = (u) =>
   !u ? "Something" : u === G.player ? "HUNTER" : `The ${u.name}`;
@@ -46,6 +47,10 @@ function steal(target, src) {
 /** Applies an effect. Returns the message to show, or null if nothing happened.
     Re-applying refreshes the duration (Thunder keeps its escalation). */
 export function applyStatus(u, id, source = null) {
+  if (u === G.player) {
+    const s = immuneSkill(id);
+    if (s) { addLog(`[${s.name} blocked ${id}]`, 'dim'); return `HUNTER was unaffected!\n(${s.name})`; }
+  }
   const d = STATUS[id];
   if (d.kind === "physical" && source && !source.isBoss) return null; // big monsters only
   if (d.instant) return id === "steal" ? steal(u, source) : null;
@@ -91,6 +96,7 @@ export function stunChance(u) {
 
 /** Call when `target` takes a hit. build = % added to the buildup (capped at `cap`). Returns a message if stunned. */
 export function stunOnHit(target, build, cap = 100) {
+  if (target === G.player && immuneSkill('stun')) return null;
   if (hasStatus(target, 'stun')) return null;
   target.stunBuild = Math.min(cap, (target.stunBuild || 0) + build);
   const chance = stunChance(target), roll = Math.random() * 100;

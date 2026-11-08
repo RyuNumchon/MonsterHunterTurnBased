@@ -291,3 +291,7 @@
   font-size: 1em;
   padding: 0 0.3em;
 }
+ /* skills with too few points */
+.mdesc .off {
+  color: #9098a8;
+}
