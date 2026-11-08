@@ -20,6 +20,17 @@ export const CONFIG = {
   ROAM_MIN_MS: 20000, ROAM_MAX_MS: 35000,   // big monster changes area every 20–35 s
   SMALL_ROAM_RADIUS: 8,                     // tiles a small monster may wander from home
 
+  // Large-monster phases
+  BOSS_LOW_HP: 0.4,                       // "low health" for enrage frequency and quick fleeing
+  ENRAGE_CHANCE: 0.12, ENRAGE_CHANCE_LOW: 0.35,
+  ENRAGE_TURNS: [6, 12], ENRAGE_MAX: 15,
+  ENRAGE_COOLDOWN: 4, ENRAGE_COOLDOWN_LOW: 1,
+  ENRAGE_ATK: 1.3, ENRAGE_SPD: 1.25, ENRAGE_HUNTER_ACC: -12,
+  FATIGUE_TURNS: [4, 8], FATIGUE_MAX: 8, FATIGUE_SKIP: 0.15,
+  FATIGUE_SPD: 0.75, FATIGUE_DMG_TAKEN: 0.85, FATIGUE_HUNTER_ACC: 15,
+  // Fleeing: FLEE_MIN/FLEE_MAX (existing) now apply only when tired or at low HP
+  FLEE_LONG_MIN: 10, FLEE_LONG_MAX: 15,
+
   // Traps & capture
   CAPTURE_PCT: 0.25, TRAP_TURNS_FIRST: 3, TRAP_TURNS_AFTER: 2, TRAP_HIT_BONUS: 25, TRANQ_NEEDED: 2,
 

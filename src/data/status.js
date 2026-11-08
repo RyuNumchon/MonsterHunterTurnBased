@@ -121,7 +121,7 @@ export const STATUS = {
     kind: "physical",
     color: "#7890a0",
     turns: 1,
-    acc: -20,
+    blocks: ["attack"],
     battleOnly: true,
     sfx: "swoosh",
     onMsg: "{u} is pinned by WIND PRESSURE!\nIt can't attack next turn!",

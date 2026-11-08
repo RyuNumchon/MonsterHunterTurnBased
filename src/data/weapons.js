@@ -46,3 +46,9 @@ WEAPONS.tigrex_ls = forged('longsword', {
 
 /** Displayed ATTACK value (menus only). */
 export const attackOf = w => Math.round(100 * (w.atk || 1));
+
+/** Menu stat line: ATTACK, CRIT and ELEMENT (shown in the forge and the Item Box). */
+export function weaponStats(w) {
+  const c = w.crit || 0;
+  return `ATTACK ${attackOf(w)} · CRIT ${c > 0 ? '+' : ''}${c}%<br>ELEMENT ${w.element ? `${w.element.toUpperCase()} ${w.elemPower}` : 'NONE'}`;
+}
