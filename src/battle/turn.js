@@ -18,6 +18,7 @@ import { applyStatus, blockedBy, defMult, atkMult, accMod, elementSealed, stunOn
 import { speedOf, speedHitMod, firstChance } from './speed.js';
 import { bossOffscreenTurn } from '../world/field.js';
 import { armorDef, armorMult } from '../core/gear.js';
+import { tryEnrage, tickMood, isEnraged, isTired, isLow, moodAtk, moodDef, moodAcc } from './mood.js';
 
 /* ---------- Moves ---------- */
 export function findMove(id) { return G ? WEAPONS[G.player.weapon].moves.find(m => m.id === id) || null : null; }
@@ -42,7 +43,7 @@ export const runLock = p => blockedBy(p, 'act') || blockedBy(p, 'move') || block
    PartHit = clamp(part.baseHit + acc, 5, 98);  Overall = max(PartHit, clamp(90 + acc, 5, 99)) */
 export function hitChances(move, partKey, sharpLv = getSharp(G.player.sharp)) {
   const m = G.foe, p = G.player;
-  const acc = (move.acc || 0) + sharpLv.hit + accMod(p) + speedHitMod(p, m) + (m.trapped > 0 ? CONFIG.TRAP_HIT_BONUS : 0);
+  const acc = (move.acc || 0) + sharpLv.hit + accMod(p) + speedHitMod(p, m) + moodAcc(m) + (m.trapped > 0 ? CONFIG.TRAP_HIT_BONUS : 0);
   const overall = clamp(CONFIG.OVERALL_HIT + acc, 5, 99);
   if (!m.isBoss) return { target: overall, overall };          // one body: no drift
   const target = clamp(PARTS[partKey].baseHit + acc, 5, 98);
@@ -227,9 +228,6 @@ async function playerActionPhase(action) {
 }
 
 /* PHASE 3: HIT CALCULATION (all numbers logged, never shown)
-   DAMAGE = power × partMult × sharpMult × might × charge × wake × crack × variance(0.9–1.1)
-            × hunter atkMult × monster defMult + weapon element power */
-/* PHASE 3: HIT CALCULATION (all numbers logged, never shown)
    DAMAGE = power × weaponAtk × partMult × sharp × might × charge × wake × crack × crit × variance
             × hunter atkMult × monster defMult + element
    CRIT: |weapon.crit|% chance. Positive → ×1.5, negative → ×0.5.
@@ -257,7 +255,7 @@ async function hitCalculationPhase(intent) {
   const crackM = m.armorCracked ? CONFIG.BODY_CRACK_MULT : 1;
   const crit = w.crit || 0, critRoll = Math.random() * 100, critHit = crit !== 0 && critRoll < Math.abs(crit);
   const critM = critHit ? (crit > 0 ? CONFIG.CRIT_MULT : CONFIG.CRIT_NEG_MULT) : 1;
-  const atkM = atkMult(p), defM = defMult(m), variance = rand(0.9, 1.1);
+  const atkM = atkMult(p), defM = defMult(m) * moodDef(m), variance = rand(0.9, 1.1);
   const elem = w.element && !elementSealed(p) ? w.element : null;
   const elemDmg = elem ? (w.elemPower || 0) : 0;
   const dmg = Math.max(1, Math.round(
@@ -368,11 +366,19 @@ async function monsterActionPhase() {
   }
   const held = blockedBy(m, 'act');
   if (held) { await say(`The ${m.name} can't move! (${held.name})`, 'good'); return noHit(); }
+    if (m.isBoss && tryEnrage(m)) {
+    Audio8.sfx('roar'); anim($('enemySprite'), 'a-shake', 400); renderBattle();
+    await say(`The ${m.name} is ENRAGED!`, 'warn');
+  }
   if (m.isBoss) {
     if (m.hp / m.maxHp < CONFIG.LOW_HP_FLEE && !m.lowHpFled && Math.random() < CONFIG.LOW_HP_FLEE_CHANCE) {
       m.lowHpFled = true; await monsterFlee(true); return;
     }
-    if (m.turnsInArea >= m.fleeAt && Math.random() < CONFIG.FLEE_CHANCE) { await monsterFlee(false); return; }
+    // Long fights by default; the old (quick) timer only when tired or at low HP. Enraged monsters stand and fight.
+    m.fleeLong ??= randInt(CONFIG.FLEE_LONG_MIN, CONFIG.FLEE_LONG_MAX);
+    const quick = isTired(m) || isLow(m), limit = quick ? m.fleeAt : m.fleeLong;
+    addLog(`[flee check: ${m.turnsInArea}/${limit} turns in area${quick ? ' (quick)' : ''}${isEnraged(m) ? ' · enraged: stays' : ''}]`, 'dim');
+    if (!isEnraged(m) && m.turnsInArea >= limit && Math.random() < CONFIG.FLEE_CHANCE) { await monsterFlee(false); return; }
   }
 
   const atk = pickAttack(m);
@@ -397,7 +403,7 @@ async function monsterActionPhase() {
     await inflictAll(atk, m, p, true);   // shockwaves / gusts still land
     return noHit();
   }
-  let dmg = atk.power * m.atkMult * atkMult(m) * defMult(p) * armorMult() * rand(0.9, 1.1);
+  let dmg = atk.power * m.atkMult * moodAtk(m) * atkMult(m) * defMult(p) * armorMult() * rand(0.9, 1.1);
   if (p.guarding) dmg *= CONFIG.GUARD_TAKEN;
   dmg = Math.max(1, Math.round(dmg));
   p.hp = Math.max(0, p.hp - dmg);
@@ -431,7 +437,8 @@ async function monsterFlee(limping) {
   Object.assign(m, {
     area: dest, posArea: null, turnsInArea: 0, sleeping: false, goal: null, leaving: null,
     limping: limping || m.limping, searched: 0,              // limping -> sleeps after 3 unfound areas
-    roamMs: rand(CONFIG.ROAM_MIN_MS, CONFIG.ROAM_MAX_MS), fleeAt: randInt(CONFIG.FLEE_MIN, CONFIG.FLEE_MAX)
+    roamMs: rand(CONFIG.ROAM_MIN_MS, CONFIG.ROAM_MAX_MS), fleeAt: randInt(CONFIG.FLEE_MIN, CONFIG.FLEE_MAX),
+    fleeLong: randInt(CONFIG.FLEE_LONG_MIN, CONFIG.FLEE_LONG_MAX)
   });
   await say(G.paint > 0
     ? `The ${m.name} fled to AREA ${dest}!\nThe paintball marks its trail.`
@@ -465,6 +472,10 @@ async function endOfTurnTicks() {
     u.acted = false;
   }
   if (await checkFaint()) return;
+  if (m.hp > 0 && !m.captured) {
+    const mood = tickMood(m);
+    if (mood) { renderBattle(); await say(mood.msg, mood.tone); }
+  }
   for (const msg of bossOffscreenTurn()) await say(msg, 'dim');   // battle turns count for the sleep timer
   if (G.paint > 0 && --G.paint === 0) { renderBattle(); await say('The paintball scent faded...', 'warn'); }
   if (m.flash > 0 && --m.flash === 0) { renderBattle(); await say(`The ${m.name} can see again!`, 'warn'); }

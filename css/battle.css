@@ -556,3 +556,14 @@
   background: #777;
   text-decoration: line-through;
 }
+.c-rage {
+  background: #d82828;
+  color: #fff;
+}
+.c-tired {
+  background: #8a7a5a;
+  color: #fff;
+}
+#enemySprite.enraged img {
+  filter: drop-shadow(0 0 0.25em #ff3020) saturate(1.3);
+}

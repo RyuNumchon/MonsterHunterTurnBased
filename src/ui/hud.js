@@ -16,6 +16,7 @@ import { speedOf } from '../battle/speed.js';
 import { BOX } from '../core/save.js';
 import { armorDef } from '../core/gear.js';
 import { pouchCount } from '../core/pouch.js';
+import { isEnraged, isTired } from '../battle/mood.js';
 
 /* HP bars never change colour. */
 export const HP_COLOR = '#58d080';
@@ -49,7 +50,7 @@ export function logSnapshot() {
   const p = G.player, m = G.foe;
   const st = u => Object.entries(u.status || {}).map(([k, s]) => `${k}:${s.turns}t`).join(' ') || '-';
   addLog(`[HUNTER HP ${p.hp}/${p.maxHp} · EDGE ${p.sharp}/${CONFIG.SHARP_MAX} · SPD ${speedOf(p)} · stun ${stunChance(p)}% · might ${p.buffs.might}t · status ${st(p)}]`, 'dim');
-  if (m) addLog(`[${m.name} HP ${m.hp}/${m.maxHp} · ${Object.entries(m.parts).map(([k, v]) => `${k} ${v.hp}/${v.max}`).join(', ')} · SPD ${speedOf(m)} · trap ${m.trapped}t · tranq ${m.tranq}/${CONFIG.TRANQ_NEEDED} · blind ${m.flash}t · status ${st(m)}]`, 'dim');
+  if (m) addLog(`[${m.name} HP ${m.hp}/${m.maxHp} · ${Object.entries(m.parts).map(([k, v]) => `${k} ${v.hp}/${v.max}`).join(', ')} · SPD ${speedOf(m)} · trap ${m.trapped}t · tranq ${m.tranq}/${CONFIG.TRANQ_NEEDED} · blind ${m.flash}t · status ${st(m)}  · mood ${m.mood || 'calm'} ${m.moodTurns || 0}t · cd ${m.calmTurns || 0}t]`, 'dim');
   addLog(`[paint ${G.paint}t · items ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN}]`, 'dim');
   addLog(`[GEAR ${p.weapon} (atk x${WEAPONS[p.weapon].atk || 1}${WEAPONS[p.weapon].element ? ' · ' + WEAPONS[p.weapon].element : ''}) · armor DEF ${armorDef()}]`, 'dim');
 }
@@ -69,6 +70,8 @@ export function renderBattle() {
   }
   const ec = [];
   if (m.captured) ec.push(chip('CAPTURED', 'c-cap'));
+  if (isEnraged(m)) ec.push(chip('ENRAGED', 'c-rage'));
+  if (isTired(m)) ec.push(chip('TIRED', 'c-tired'));
   if (m.sleeping && !m.captured) ec.push(chip('SLP', 'c-slp'));
   if (m.trapped > 0) ec.push(chip('TRAP', 'c-trap'));
   if (m.tranq > 0 && !m.captured) ec.push(chip('DROWSY', 'c-tq'));
@@ -102,6 +105,7 @@ export function renderBattle() {
   const es = $('enemySprite');
   es.querySelector('.zzz').classList.toggle('hidden', !m.sleeping);
   es.classList.toggle('small', !m.isBoss);
+  es.classList.toggle('enraged', isEnraged(m));
   es.classList.toggle('trapped', m.trapped > 0);
   const ps = $('playerSprite');
   ps.classList.toggle('chg1', p.charge === 1);

@@ -189,7 +189,7 @@ async function sell() {
 /* ---------- Veteran: tips (quest-specific when a quest is accepted) ---------- */
 const VET_QUEST = {
   rathalos: ['It breathes FIRE. Carry NULL-BERRIES.\nIts talons are POISONOUS: bring ANTIDOTES!',
-             'Its WING GUST throws off your aim.\nGUARD or wait until it passes.'],
+             'Its WING GUST pins you in place.\nYou can still GUARD while you recover.'],
   tigrex:   ["Its ROAR stops you from using items.\nHeal BEFORE it gets angry.",
              'When it slams the ground, you lose your footing.\nIt is FAST: expect it to strike first.']
 };

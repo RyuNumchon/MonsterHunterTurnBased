@@ -4,7 +4,7 @@ import { CONFIG } from '../core/config.js';
 import { G } from '../core/state.js';
 import { BOX, saveBox } from '../core/save.js';
 import { pouchCount, pouchAdd, pouchRemove, pouchRoom, pouchSlots, boxCount, boxAdd, boxRemove } from '../core/pouch.js';
-import { attackOf, WEAPONS } from '../data/weapons.js';
+import { weaponStats, WEAPONS } from '../data/weapons.js';
 import { ITEMS, itemName, itemRar, isConsumable, stackOf } from '../data/items.js';
 import { RECIPES, needOf } from '../data/recipes.js';
 import { DATA, itemIcon } from '../art/index.js';
@@ -128,7 +128,9 @@ export async function itemBoxMenu() {
 async function weaponMenu() {
   const p = G.player, keys = BOX.weapons.filter(k => WEAPONS[k]);
   const j = await choose('EQUIP WEAPON', keys.map(k => ({
-    icon: DATA['wpn_' + k], label: WEAPONS[k].name, right: k === p.weapon ? 'E' : '',     desc: `ATTACK ${attackOf(WEAPONS[k])}<br>${WEAPONS[k].blurb}` })), { desc: true });
+    icon: DATA['wpn_' + k], label: WEAPONS[k].name, right: k === p.weapon ? 'E' : '',
+    desc: `${weaponStats(WEAPONS[k])}<br>${WEAPONS[k].blurb}`
+  })), { desc: true });
   if (j < 0) return;
   const k = keys[j];
   if (k === p.weapon) { await say('That weapon is already equipped.', 'dim'); return; }
