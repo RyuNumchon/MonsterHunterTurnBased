@@ -9,7 +9,7 @@ export const ITEMS = {
   whetstone: { name: 'WHETSTONE',  field: true, price: 40,  desc: 'Sharpens your weapon.' },
   might:     { name: 'MIGHT SEED', field: true, price: 150, desc: 'Boosts ATTACK for a few turns.' },
   paintball: { name: 'PAINTBALL',  price: 80,  desc: 'Mark the big monster so the MAP can track it for a while.' },
-  flash:     { name: 'FLASH BOMB', price: 120, desc: 'Blinds the monster. Its attacks will often miss for a short time.' },
+  flash:     { name: 'FLASH BOMB', price: 120, desc: 'Blinds the monster. Its attacks become easier to dodge.Blinds the monster. Its attacks become easier to dodge.' },
   shock:     { name: 'SHOCK TRAP', price: 400, desc: 'Paralyzes the big monster for a few turns. It grows wary of traps.' },
   tranq:     { name: 'TRANQ BOMB', price: 150, desc: 'Throw at a TRAPPED or SLEEPING monster that is weak enough to CAPTURE it.' },
   nullberry: { name: 'NULL-BERRY', field: true, price: 30, desc: 'Cures elemental blights: FIRE, WATER, ICE, THUNDER, DRAGON.' },

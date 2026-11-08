@@ -131,8 +131,8 @@ export function moveSub(mv) {
   switch (mv.type) {
     case 'release':  return `CHARGE Lv${p.charge + 1}`;
     case 'charge':   return `HELD Lv${p.charge}`;
-    case 'guard':    return 'DEFEND · FIRST';
-    case 'counter':  return p.spirit < 1 ? 'NEED SPIRIT' : 'EVADE · FIRST';
+    case 'guard':    return 'BLOCK · FIRST';
+    case 'counter':  return p.spirit < 1 ? 'NEED SPIRIT' : 'COUNTER · FIRST';
     case 'finisher': return p.spirit < 1 ? 'NEED SPIRIT' : 'FINISHER';
     default:         return mv.tag;
   }
