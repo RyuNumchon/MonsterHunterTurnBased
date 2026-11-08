@@ -58,6 +58,19 @@ export const CONFIG = {
   STACK_DEFAULT: 10,
   STACK: {},                              // per-item overrides, e.g. { whetstone: 20, HONEY: 5 }
   CRAFT_POUCH_SUCCESS: 0.7,               // combining at the ITEM BOX always succeeds
+
+  // Timing meter (monster attacks)
+  METER: true,                                    // false = old hit-chance roll
+  METER_KEYS: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', METER_DECOYS: 2,
+  METER_SLOW_MS: 2600, METER_FAST_MS: 110,        // one sweep: very slow … impossible
+  METER_SPEED_MED: .4, METER_SPEED_LEAN: .25,     // typical roll; how far a speed gap leans rolls
+  METER_SPEED_SENS: 2.5, METER_SPEED_CUT: .6,     // speed gap → how much of the range is cut (max 60%)
+  METER_MIN_ZONE: .004,                           // ≈ one pixel
+  METER_ZONE_MED: .6, METER_ACC_SCALE: 30, METER_ACC_W: .25, METER_DANGER_W: .5,
+  METER_FLASH_BONUS: .2, METER_STUCK_PENALTY: .3,
+  METER_LEAD_MS: 450, METER_PASSES: 4, METER_MAX_MS: 6000, METER_RESULT_MS: 380,
+  GUARD_PERFECT_SHARP: .5,                        // perfect guard pays half the sharpness cost
+  COUNTER_MULT: 1.5,                              // counter strike power
 };
 
 // Great Sword: Charge, Charge, then Release on turn 3 = Lv3 (3×)

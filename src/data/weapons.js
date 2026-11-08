@@ -15,12 +15,12 @@ export const WEAPONS = {
     { id: 'gs_slash',   name: 'OVERHEAD SLASH', type: 'attack',  tag: 'SLASH',  power: 24, acc: 0,  sharp: 2, desc: 'A reliable, heavy downward slash.' },
     { id: 'gs_charge',  name: 'CHARGE',         type: 'charge',  tag: 'CHARGE', sharp: 0, desc: 'Spend the turn charging. Holds up to Lv2.' },
     { id: 'gs_release', name: 'CHARGED SLASH',  type: 'release', tag: 'SLASH',  power: 24, acc: -5, sharp: 3, desc: 'Release the charge. The longer the charge, the bigger the hit.' },
-    { id: 'gs_guard', name: 'GUARD', type: 'guard', tag: 'DEFEND', sharp: 1, priority: 1, desc: 'Block with the blade to reduce damage. Always acts first.' }
+    { id: 'gs_guard', name: 'GUARD', type: 'guard', tag: 'DEFEND', sharp: 1, priority: 1, desc: 'Block with the blade. Time it perfectly to stop the hit completely. Always acts first.' }
   ]},
   longsword:  { name: 'LONGSWORD', short: 'LS', cls: 'longsword', speed: 1.1, dmgType: 'cut', crit: 0, element: null, elemPower: 0, elemChance: 0, blurb: 'Fast and accurate. Builds SPIRIT for a big finisher.', moves: [
     { id: 'ls_thrust',    name: 'THRUST',       type: 'attack',   tag: 'PIERCE',  power: 13, acc: 15, sharp: 1, desc: 'Fast, very accurate poke.' },
     { id: 'ls_spirit',    name: 'SPIRIT SLASH', type: 'attack',   tag: 'SLASH',   power: 18, acc: 5,  sharp: 2, spirit: 1, desc: 'Builds the SPIRIT gauge.' },
-    { id: 'ls_foresight', name: 'FORESIGHT', type: 'counter', tag: 'COUNTER', power: 14, acc: 0, sharp: 2, priority: 1, desc: 'Uses SPIRIT. Evades the monster attack this turn. Always acts first.' },
+    { id: 'ls_foresight', name: 'FORESIGHT', type: 'counter', tag: 'COUNTER', power: 14, acc: 0, sharp: 2, priority: 1, desc: 'Uses SPIRIT. Time the monster attack to dodge and strike back hard. Always acts first.' },
     { id: 'ls_round',     name: 'ROUNDSLASH',   type: 'finisher', tag: 'SPIRIT',  power: 18, acc: 0,  sharp: 3, desc: 'Spends the whole SPIRIT gauge. Stronger with more SPIRIT.' }
   ]}
 }

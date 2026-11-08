@@ -19,6 +19,7 @@ import { speedOf, speedHitMod, firstChance } from './speed.js';
 import { bossOffscreenTurn } from '../world/field.js';
 import { hunterDef, armorMult, skillVal, immuneTo } from '../core/gear.js';
 import { tryEnrage, tickMood, isEnraged, isTired, isLow, moodAtk, moodDef, moodAcc } from './mood.js';
+import { timingMeter } from './meter.js';
 
 /* ---------- Moves ---------- */
 export function findMove(id) { return G ? WEAPONS[G.player.weapon].moves.find(m => m.id === id) || null : null; }
@@ -77,7 +78,7 @@ export function pickMove(id) {
     sub: 'Build a deeper charge. A heavy blow may break it.',
     action: { kind: 'move', moveId: id }, back: 'fight' });
   else if (mv.type === 'guard') setMode('confirm', { q: 'Raise your GUARD?',
-    sub: `Brace to cut the damage this turn. GUARD always acts first.${drop}`, action: { kind: 'move', moveId: id }, back: 'fight' });
+    sub: `Time your block to stop the hit completely. GUARD always acts first.${drop}`, action: { kind: 'move', moveId: id }, back: 'fight' });
 }
 
 export function confirmAttack(moveId, part) {
@@ -93,6 +94,7 @@ export function confirmAttack(moveId, part) {
   if (m.trapped > 0) notes.push("It's trapped: easier to hit!");
   if (p.charge > 0 && mv.type !== 'release') notes.push('Your held charge will be lost!');
   if (getSharp(p.sharp).bounce) notes.push('WARNING: your blade is dull and may BOUNCE!');
+  if (mv.type === 'counter') notes.unshift("It only strikes if you time the monster's attack!");
   Audio8.sfx('select');
   setMode('confirm', { q: m.isBoss ? `Use ${name}<br>on the ${PARTS[part].label}?` : `Use ${name}<br>on the ${m.name}?`,
     sub: notes.join('<br>'),
@@ -147,6 +149,7 @@ export function runTurn(action) {
       await say(`The ${m.name} is quicker!`, 'warn');
       await monsterTurn(m);
       if (ended()) return;
+      if (m.hp <= 0) { await foeDefeated(); return; }     // a counter can finish it
     }
 
     if (action.kind === 'run') {
@@ -163,6 +166,7 @@ export function runTurn(action) {
       setPhase(4);
       await monsterTurn(m);
       if (ended()) return;
+      if (m.hp <= 0) { await foeDefeated(); return; }     // a counter can finish it
     }
 
     await endOfTurnTicks();
@@ -211,7 +215,7 @@ async function playerActionPhase(action) {
     return null;
   }
   if (move.type === 'guard') {
-    p.guarding = true; p.sharp = Math.max(0, p.sharp - move.sharp);   // blocking wears the edge
+    p.guarding = { sharp: move.sharp };          // sharpness is paid when a blow is blocked
     Audio8.sfx('clang'); renderBattle();
     await say('HUNTER raised the blade to GUARD!');
     return null;
@@ -220,7 +224,14 @@ async function playerActionPhase(action) {
   let chargeMult = 1, label = move.name;
   if (move.type === 'release') { chargeMult = CHARGE_MULT[p.charge]; label = `${move.name} Lv${p.charge + 1}`; p.charge = 0; }
   if (move.type === 'finisher') { chargeMult = 1 + 0.5 * p.spirit; p.spirit = 0; }
-  if (move.type === 'counter') { p.foresight = true; p.spirit = Math.max(0, p.spirit - 1); }
+  if (move.type === 'counter') {                 // a stance: strikes only on a successful meter
+    p.spirit = Math.max(0, p.spirit - 1);
+    p.foresight = { move, label: move.name, power: move.power * (move.counterMult || CONFIG.COUNTER_MULT),
+                    chargeMult: 1, target: action.target, sure: true };
+    Audio8.sfx('charge'); renderBattle();
+    await say(`HUNTER readied a ${move.name}!\nWatch for the attack...`);
+    return null;
+  }
   if (move.spirit) p.spirit = Math.min(3, p.spirit + move.spirit);
   renderBattle();
   anim($('playerSprite'), 'a-lunge', 350); Audio8.sfx('swoosh');
@@ -236,7 +247,7 @@ async function playerActionPhase(action) {
 async function hitCalculationPhase(intent) {
   const p = G.player, m = G.foe, w = WEAPONS[p.weapon], { target, sharpLv } = intent, wake = m.sleeping;
   let hitPart = null, drifted = false;
-  if (wake) { hitPart = target; addLog('[sleeping target: guaranteed hit]', 'dim'); }
+    if (wake || intent.sure) { hitPart = target; addLog(wake ? '[sleeping target: guaranteed hit]' : '[counter: guaranteed hit]', 'dim'); }
   else {
     const c = hitChances(intent.move, target, sharpLv), roll = Math.random() * 100;
     addLog(`[roll ${roll.toFixed(1)} | hit <${c.target} | drift <${c.overall} | miss >=${c.overall}]`, 'dim');
@@ -387,7 +398,7 @@ async function monsterActionPhase() {
   if (atk.roar) {   // no damage, no accuracy roll
     Audio8.sfx('roar'); anim($('enemySprite'), 'a-shake', 400);
     await say(`The ${m.name} let out a deafening ROAR!`, 'warn');
-    if (p.foresight) { await say('HUNTER read it and braced through the roar!', 'good'); return noHit(); }
+    if (p.foresight) { p.foresight = false; await say('HUNTER read it and braced through the roar!', 'good'); return noHit(); }
     const msg = applyStatus(p, 'roar', m);
     if (msg) { renderBattle(); await say(msg, immuneTo('roar') ? 'good' : 'bad'); }
     return noHit();
@@ -395,18 +406,39 @@ async function monsterActionPhase() {
 
   anim($('enemySprite'), 'a-elunge', 350); Audio8.sfx('swoosh');
   await say(`The ${m.name} used ${atk.name}!`);
-  if (p.foresight) { Audio8.sfx('miss'); await say("HUNTER's FORESIGHT SLASH evaded it!", 'good'); return noHit(); }
 
-  const hitChance = monsterHitChance(m, p), roll = Math.random() * 100;
-  addLog(`[monster roll ${roll.toFixed(1)} vs ${hitChance}%]`, 'dim');
-  if (roll >= hitChance) {
-    Audio8.sfx('miss');
-    await say(m.flash > 0 ? `The blinded ${m.name} missed wildly!` : 'HUNTER dodged! The attack missed!', 'good');
-    await inflictAll(atk, m, p, true);   // shockwaves / gusts still land
+  // TIMING METER: dodge / block / counter
+  const stance = p.foresight ? 'counter' : p.guarding ? 'guard' : 'evade', guard = p.guarding;
+  const ok = CONFIG.METER ? await timingMeter(m, p, atk, stance) : Math.random() * 100 >= monsterHitChance(m, p);
+  if (ok) {
+    if (stance === 'counter') {
+      const c = p.foresight; p.foresight = false;
+      Audio8.sfx('miss');
+      await say(`HUNTER read the attack!\n${c.label}!`, 'good');
+      anim($('playerSprite'), 'a-lunge', 350); Audio8.sfx('swoosh');
+      await hitCalculationPhase({ ...c, sharpLv: getSharp(p.sharp) });
+      if (G.over || m.hp <= 0) return;
+    } else if (stance === 'guard') {
+      const cost = Math.ceil(guard.sharp * CONFIG.GUARD_PERFECT_SHARP);
+      p.sharp = Math.max(0, p.sharp - cost);
+      addLog(`[perfect guard: edge -${cost} → ${p.sharp}/${CONFIG.SHARP_MAX}]`, 'dim');
+      Audio8.sfx('clang'); anim($('playerSprite'), 'a-shake', 200); renderBattle();
+      await say('PERFECT GUARD!\nHUNTER blocked it completely!', 'good');
+    } else {
+      Audio8.sfx('miss');
+      await say(m.flash > 0 ? `The blinded ${m.name} missed wildly!` : 'HUNTER dodged the attack!', 'good');
+    }
+    await inflictAll(atk, m, p, true);           // area effects still land
     return noHit();
   }
+  if (stance === 'counter') { p.foresight = false; await say('The counter was mistimed!', 'bad'); }
+
   let dmg = atk.power * m.atkMult * moodAtk(m) * atkMult(m) * defMult(p) * armorMult() * rand(0.9, 1.1);
-  if (p.guarding) dmg *= CONFIG.GUARD_TAKEN;
+  if (guard) {
+    dmg *= CONFIG.GUARD_TAKEN;
+    p.sharp = Math.max(0, p.sharp - guard.sharp);
+    addLog(`[guard: edge -${guard.sharp} → ${p.sharp}/${CONFIG.SHARP_MAX}]`, 'dim');
+  }
   dmg = Math.max(1, Math.round(dmg));
   p.hp = Math.max(0, p.hp - dmg);
   addLog(`[HUNTER took ${dmg} (DEF ${hunterDef()} x${armorMult().toFixed(2)}) → HP ${p.hp}/${p.maxHp}${p.guarding ? ' (guarded)' : ''}]`, 'dim');
@@ -463,6 +495,7 @@ async function tryEscape() {
 
 async function endOfTurnTicks() {
   const p = G.player, m = G.foe;
+  if (p.foresight) await say(`The ${p.foresight.label} found nothing to counter.`, 'dim');
   p.guarding = false; p.foresight = false;
   G.turn++; G.itemsUsed = 0;                    // item allowance resets every turn
   for (const u of [p, m]) {

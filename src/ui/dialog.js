@@ -11,6 +11,7 @@ import { Audio8 } from '../audio/audio8.js';
 import { pimg } from '../art/index.js';
 import { addLog, fitText } from './fx.js';
 import { setMode, renderPanel } from './hud.js';
+import { cancelMeter } from '../battle/meter.js';
 
 export async function typeText(str, cls) {
   const g = G;
@@ -174,7 +175,7 @@ export function releaseWaits() {
   if (UI.menu) { const s = UI.menu; UI.menu = null; renderMenu(); s.resolve(-1); }
   closeCount(0);
   if (waits.map) { const r = waits.map; waits.map = null; r(); }
-  doCarve(); closeStorage();
+  doCarve(); closeStorage(); cancelMeter();
 }
 
 /* ---------- Flow control ---------- */
