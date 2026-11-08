@@ -63,15 +63,16 @@ export function buildEntities(reset) {
     n.next = now + 1000; list.push(n);
   });
   (G.smalls[a] || []).filter(s => !s.dead).forEach(s => {
-    if (reset) { s.x = s.hx; s.y = s.hy; s.mv = null; s.alerted = false; s.goal = null;}
+    if (reset) { s.x = s.hx; s.y = s.hy; s.mv = null; s.alerted = false; s.goal = null; }
     s.next = now + 800 + Math.random() * 800; list.push(s);
   });
-  const m = G.monster;
-  if (m && !m.dead && !m.captured && m.area === a) {
+  for (const m of liveBosses()) if (m.area === a) {
     if (reset || m.posArea !== a) {
       const p = findFree(M, 11, 8, (x, y) => list.some(e => Math.abs(e.x - x) + Math.abs(e.y - y) < 2), true);
-      Object.assign(m, { x: p.x, y: p.y, hx: p.x, hy: p.y, mv: null, posArea: a, alerted: false, turnsInArea: 0, goal: null, leaving: null});
+      Object.assign(m, { x: p.x, y: p.y, hx: p.x, hy: p.y, mv: null, posArea: a, alerted: false, turnsInArea: 0, goal: null, leaving: null, ref: m });
       m.next = now + 1500;
+    } else {
+      m.ref = m;
     }
     list.push(m);
   }
@@ -83,12 +84,29 @@ export function refreshEntities() {
   G.ents = G.ents.filter(e => !e.dead && !(e.kind === 'boss' && (e.area !== G.f.area || e.captured)));
 }
 
-/** Next quest target from G.queue. Appears away from the hunter; paint and the camp mark reset. */
-export function spawnNextTarget() {
-  const key = G.queue.shift();
-  G.monsterKey = key;
-  G.monster = makeFoe(key, MONSTERS[key], true);
-  G.monster.area = pick([4, 5, 6, 7, 9].filter(a => a !== G.f.area));
-  G.paint = 0; G.flags.campMark = false;
-  return G.monster;
+/** Big monsters still in the hunt. */
+export const liveBosses = () => (G.monsters || []).filter(m => !m.dead && !m.captured);
+
+/** All quest targets at once, each in a different area away from camp. */
+export function spawnTargets(keys) {
+  const pool = [4, 5, 6, 7, 9];
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  return keys.map((k, i) => {
+    const m = makeFoe(k, MONSTERS[k], true);
+    Object.assign(m, { uid: i, area: pool[i % pool.length], paint: 0 });
+    return m;
+  });
+}
+
+/** Old single-monster reads keep working (the monster being fought, else the first alive)
+    and print the file and line once, so they can be updated. Writes are ignored. */
+export function installMonsterAlias(g) {
+  const seen = new Set();
+  Object.defineProperty(g, 'monster', { configurable: true, enumerable: false,
+    get() {
+      const at = (new Error().stack || '').split('\n')[2]?.trim() || '?';
+      if (!seen.has(at)) { seen.add(at); console.warn('[monsters] old G.monster read', at); }
+      return g.foe?.isBoss ? g.foe : liveBosses()[0] || null;
+    },
+    set() {} });
 }

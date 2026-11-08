@@ -14,7 +14,7 @@ export const WEAPONS = {
   greatsword: { name: 'GREAT SWORD', short: 'GS', cls: 'greatsword', speed: .85, dmgType: 'cut', crit: 0, element: null, elemPower: 0, elemChance: 0, blurb: 'Slow but massive. Charge up for huge hits and GUARD.', moves: [
     { id: 'gs_slash',   name: 'OVERHEAD SLASH', type: 'attack',  tag: 'SLASH',  power: 24, acc: 0,  sharp: 2, desc: 'A reliable, heavy downward slash.' },
     { id: 'gs_charge',  name: 'CHARGE',         type: 'charge',  tag: 'CHARGE', sharp: 0, desc: 'Spend the turn charging. Holds up to Lv2.' },
-    { id: 'gs_release', name: 'CHARGED SLASH',  type: 'release', tag: 'SLASH',  power: 24, acc: -5, sharp: 3, desc: 'Release the charge. The longer the charge, the bigger the hit.' },
+    { id: 'gs_chargeslash', name: 'CHARGED SLASH',  type: 'release', tag: 'SLASH',  power: 24, acc: -5, sharp: 3, desc: 'Release the charge. The longer the charge, the bigger the hit.' },
     { id: 'gs_guard', name: 'GUARD', type: 'guard', tag: 'DEFEND', sharp: 1, priority: 1, desc: 'Block with the blade. Time it perfectly to stop the hit completely. Always acts first.' }
   ]},
   longsword:  { name: 'LONGSWORD', short: 'LS', cls: 'longsword', speed: 1.1, dmgType: 'cut', crit: 0, element: null, elemPower: 0, elemChance: 0, blurb: 'Fast and accurate. Builds SPIRIT for a big finisher.', moves: [

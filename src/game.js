@@ -13,7 +13,7 @@ import { flow, say, ask, pause, releaseWaits } from './ui/dialog.js';
 import { showScreen, renderPanel } from './ui/hud.js';
 import { setPhase, showLocation, addLog } from './ui/fx.js';
 import { resetMini } from './ui/map.js';
-import { makeFoe, makeNpcs, makeSmalls, buildEntities, spawnNextTarget } from './world/spawn.js';
+import { makeNpcs, makeSmalls, buildEntities, spawnTargets, installMonsterAlias } from './world/spawn.js';
 import { putAllInBox } from './quest/rewards.js';
 import { pouchRemove } from './core/pouch.js';
 import { applyLook } from './art/look.js';
@@ -26,8 +26,8 @@ function restorePlayer(p) {
 }
 
 function questReset() {
-  Object.assign(G, { turn: 1, loggedTurn: 0, over: false, outcome: null, paint: 0, itemsUsed: 0, foe: null, grace: 0,
-    gathered: {}, gatherUses: {}, carves: [], tailDrop: null, rewards: null, boxed: false, supplyGiven: {}, queue: [], hunted: [] });
+  Object.assign(G, { turn: 1, loggedTurn: 0, over: false, outcome: null, itemsUsed: 0, foe: null, grace: 0,
+    gathered: {}, gatherUses: {}, carves: [], tailDrop: null, rewards: null, boxed: false, supplyGiven: {}, hunted: [] });
   Object.assign(G.flags, { supply: false, campMark: false, fishTraded: false });
 }
 
@@ -50,7 +50,7 @@ export function newSession() {
   const wk = WEAPONS[BOX.weapon] && BOX.weapons.includes(BOX.weapon) ? BOX.weapon : 'greatsword';
   BOX.weapon = wk;
   setG({
-    phase: 'village', quest: null, monsterKey: null, monster: null, smalls: {}, ents: [],
+    phase: 'village', quest: null, monsterKey: null, monsters: [], hunted: [], smalls: {}, ents: [],
     screen: 'field', busy: false,
     townUses: {},           // farm gathering; cleared when you return from a quest
     feast: null,            // Hub feast: +max HP for the next quest
@@ -60,6 +60,7 @@ export function newSession() {
               sharp: CONFIG.SHARP_MAX, charge: 0, spirit: 0, buffs: { might: 0 },
               guarding: false, foresight: false, down: false, status: {}, stunBuild: 0, acted: false }
   });
+  installMonsterAlias(G);
   applyLook();
   questReset();
   G.npcs = makeNpcs();
@@ -105,18 +106,18 @@ async function departQuest() {
   p.maxHp = CONFIG.PLAYER_MAX_HP + (G.feast ? G.feast.hp : 0);
   restorePlayer(p);
   G.phase = 'quest';
-  G.queue = [...q.targets]; G.hunted = [];
-  spawnNextTarget();
+  G.monsters = spawnTargets(q.targets); G.hunted = [];
+  G.monsterKey = q.targets[0];
   G.smalls = makeSmalls(G.npcs);
   Object.assign(G.f, { area: 0, x: CAMP_SPAWN.x, y: CAMP_SPAWN.y, dir: CAMP_SPAWN.dir, mv: null });
   $('log').innerHTML = '';
-  addLog(`[quest ${q.id} · fee ${q.fee}z · ${G.monster.name} starts in area ${G.monster.area} · max HP ${p.maxHp}${G.feast ? ` (feast +${G.feast.hp})` : ''}]`, 'dim');
+  addLog(`[quest ${q.id} · fee ${q.fee}z ·${G.monsters.map(m => `m.name@{m.area}`).join(', ')} · max HP ${p.maxHp}${G.feast ? ` (feast +${G.feast.hp})` : ''}]`, 'dim');
   resetMini(); buildEntities(true); renderPanel();
   Audio8.music('camp');
   tr.className = 'fadeOut'; showLocation(0);
   await pause(300); tr.className = '';
   await say(`QUEST: ${q.title}\nHunt the ${questTargets(q)} in the ${q.map}!`);
-  if (q.targets.length > 1) await say('Targets appear one at a time.\nThe next shows up when one goes down.', 'dim');
+  if (q.targets.length > 1) await say(`${q.targets.length} targets are roaming the forest at once.\nStay sharp!`, 'dim');
   if (G.feast) await say(`The ${G.feast.name} keeps HUNTER going strong!`, 'good');
   await say('Grab supplies from the blue SUPPLY BOX.\nThe CAMP FELYNE can mark the monster for you.', 'dim');
 }
@@ -135,8 +136,8 @@ export function returnToVillage() {
     }
     if (won) BOX.zenny += q.fee;
     saveBox();
-    Object.assign(G, { phase: 'village', quest: null, monster: null, monsterKey: null, smalls: {},
-                       over: false, outcome: null, screen: 'field', foe: null, townUses: {}, feast: null, queue: [], hunted: [] });
+    Object.assign(G, { phase: 'village', quest: null, smalls: {}, monsters: [], monsterKey: null,
+                       over: false, outcome: null, screen: 'field', foe: null, townUses: {}, feast: null, hunted: [] });
     p.maxHp = CONFIG.PLAYER_MAX_HP;
     restorePlayer(p);
     Object.assign(G.f, { area: home, ...TOWN_SPAWN[home], mv: null });

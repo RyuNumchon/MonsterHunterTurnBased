@@ -10,7 +10,7 @@ import { FEASTS, ITEMS, BOSS_ONLY } from '../data/items.js';
 import { areaInfo } from '../data/world.js';
 import { DATA, pimg, itemIcon } from '../art/index.js';
 import { addLog, setPhase, fitText } from './fx.js';
-import { findMove, moveDisabled, runLock } from '../battle/turn.js';
+import { hitChances, findMove, moveDisabled, runLock } from '../battle/turn.js';
 import { curable, elementSealed, blockedBy, statusChips, stunChance } from '../battle/status.js';
 import { speedOf } from '../battle/speed.js';
 import { BOX } from '../core/save.js';
@@ -52,7 +52,7 @@ export function logSnapshot() {
   const st = u => Object.entries(u.status || {}).map(([k, s]) => `${k}:${s.turns}t`).join(' ') || '-';
   addLog(`[HUNTER HP ${p.hp}/${p.maxHp} · EDGE ${p.sharp}/${CONFIG.SHARP_MAX} · SPD ${speedOf(p)} · stun ${stunChance(p)}% · might ${p.buffs.might}t · status ${st(p)}]`, 'dim');
   if (m) addLog(`[${m.name} HP ${m.hp}/${m.maxHp} · ${Object.entries(m.parts).map(([k, v]) => `${k} ${v.hp}/${v.max}`).join(', ')} · SPD ${speedOf(m)} · trap ${m.trapped}t · tranq ${m.tranq}/${CONFIG.TRANQ_NEEDED} · blind ${m.flash}t · status ${st(m)}  · mood ${m.mood || 'calm'} ${m.moodTurns || 0}t · cd ${m.calmTurns || 0}t]`, 'dim');
-  addLog(`[paint ${G.paint}t · items ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN}]`, 'dim');
+  addLog(`[paint ${G.foe?.paint || 0}t · items ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN}]`, 'dim');
   addLog(`[GEAR ${p.weapon} (atk x${WEAPONS[p.weapon].atk || 1}${WEAPONS[p.weapon].element ? ' · ' + WEAPONS[p.weapon].element : ''}) · DEF ${hunterDef()} · skill pts ${JSON.stringify(skillPoints())}]`, 'dim');
 }
 
@@ -77,7 +77,7 @@ export function renderBattle() {
   if (m.trapped > 0) ec.push(chip('TRAP', 'c-trap'));
   if (m.tranq > 0 && !m.captured) ec.push(chip('DROWSY', 'c-tq'));
   if (m.flash > 0) ec.push(chip('BLIND', 'c-bln'));
-  if (m.isBoss && G.paint > 0) ec.push(chip('PAINT', 'c-pnt'));
+  if (m.isBoss && m.paint > 0) ec.push(chip('PAINT', 'c-pnt'));
   if (m.skipNext) ec.push(chip('STAGGER', 'c-stun'));
   if (m.isBoss && m.parts.tail.broken) ec.push(chip('ATK↓', 'c-cut'));
   if (m.armorCracked) ec.push(chip('DEF↓', 'c-crk'));
@@ -127,6 +127,7 @@ export function setMode(mode, data = {}) {
 }
 
 export function moveSub(mv) {
+  if (mv.type === 'charge' && mv.charge >= CONFIG.CHARGE_MAX) return 'OVERCHARGE';
   const p = G.player;
   switch (mv.type) {
     case 'release':  return `CHARGE Lv${p.charge + 1}`;

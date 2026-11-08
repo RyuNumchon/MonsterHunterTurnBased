@@ -11,7 +11,7 @@ import { Audio8, fieldMusic } from '../audio/audio8.js';
 import { flow, pause } from '../ui/dialog.js';
 import { toast, showLocation, addLog } from '../ui/fx.js';
 import { MAPS, findFree } from './mapgen.js';
-import { buildEntities } from './spawn.js';
+import { buildEntities, liveBosses } from './spawn.js';
 import { startEncounter } from '../battle/encounter.js';
 import { tickStatuses } from '../battle/status.js';
 import { stepMs } from '../battle/speed.js';
@@ -100,7 +100,7 @@ function walkStep(e, M, now, ms, exitOk) {
 export function updateField(dt, now) {
   if (!canAct()) return;
   const f = G.f;
-  roamClock(dt);
+  for (const m of liveBosses()) roamClock(m, dt);
   if (f.mv) {
     f.mv.t += dt / stepMs(G.player, CONFIG.MOVE_MS);
     if (f.mv.t >= 1) { f.x = f.mv.tx; f.y = f.mv.ty; f.mv = null;
@@ -115,7 +115,12 @@ export function updateField(dt, now) {
     if (d) {
       f.dir = d;
       const [dx, dy] = DIRV[d], tx = f.x + dx, ty = f.y + dy, e = entAt(tx, ty);
-      if (e) { if (e.kind !== 'npc') { startEncounter(e, e.kind === 'boss' && e.sleeping ? 'sneak' : 'engage'); return; } }
+      if (e) {
+        if (e.kind !== 'npc') {
+          startEncounter(e.kind === 'boss' ? e.ref : e, e.kind === 'boss' && e.sleeping ? 'sneak' : 'engage');
+          return;
+        }
+      }
       else if (tileWalk(MAPS[f.area], tx, ty)) { f.mv = { tx, ty, t: 0 }; f.step++; }
     }
   }
@@ -202,8 +207,7 @@ function aiStep(e, now) {
    Same area as the hunter: it walks to the exit visibly (unless it has spotted the hunter).
    Elsewhere: it simply moves; if it moves INTO the hunter's area, it walks in through that exit.
    Sleeping or limping monsters stay put. */
-function roamClock(dt) {
-  const m = G.monster;
+function roamClock(m, dt) {
   if (!m || m.dead || m.captured || m.sleeping || m.limping || m.leaving) return;
   if (m.area === G.f.area && m.alerted) return;
   if ((m.roamMs -= dt) > 0) return;
@@ -213,7 +217,7 @@ function roamClock(dt) {
   const from = m.area;
   m.area = to; m.posArea = null;
   if (to === G.f.area) bossEnters(m, from);
-  else if (G.paint > 0) toast(`PAINTBALL: the ${m.name} moved to AREA ${to}.`);
+  else if (m.paint > 0) toast(`PAINTBALL: the ${m.name} moved to AREA ${to}.`);
 }
 
 function bossLeaves(e) {
@@ -261,20 +265,21 @@ export function changeArea(to) {
 
 /** World turn: area change, resting or carting. Statuses can't knock anyone out on the map. */
 export function worldTick() {
-  const msgs = [], p = G.player, m = G.monster;
+  const msgs = [], p = G.player;
   G.turn++;
   for (const r of tickStatuses(p, false)) msgs.push(r.msg);
-  if (G.paint > 0 && --G.paint === 0) msgs.push('The paintball scent faded...');
+  for (const m of liveBosses()) if (m.paint > 0 && --m.paint === 0)
+    msgs.push(`The paintball scent faded from the ${m.name}.`);
   if (p.buffs.might > 0 && --p.buffs.might === 0) msgs.push('The MIGHT SEED wore off.');
-  if (m && !m.dead && !m.captured) tickStatuses(m, false);
-  return msgs.concat(bossOffscreenTurn());
+  for (const m of liveBosses()) tickStatuses(m, false);
+  return msgs.concat(liveBosses().filter(m => m !== G.foe).flatMap(m => bossOffscreenTurn(m)));
 }
 
 /* Every turn the hunter spends OUTSIDE the boss's area (world turns and battle turns):
    limping -> falls asleep after SLEEP_AFTER_TURNS unfound turns;
    asleep -> heals REST_HEAL_PCT per turn, wakes after WAKE_AFTER turns. Finding it resets the count. */
-export function bossOffscreenTurn() {
-  const msgs = [], m = G.monster;
+export function bossOffscreenTurn(m) {
+  const msgs = []
   if (!m || m.dead || m.captured) return msgs;
   if (m.area === G.f.area) { m.searched = 0; return msgs; }
   if (m.sleeping) {
@@ -283,13 +288,13 @@ export function bossOffscreenTurn() {
     addLog(`[${m.name} asleep: +${m.hp - before} → HP ${m.hp}/${m.maxHp} · slept ${m.sleepTurns + 1}/${CONFIG.WAKE_AFTER}]`, 'dim');
     if (++m.sleepTurns >= CONFIG.WAKE_AFTER) {
       m.sleeping = false; m.limping = false;
-      if (G.paint > 0) msgs.push(`The ${m.name} woke up.`);
+      if (m.paint > 0) msgs.push(`The ${m.name} woke up.`);
     }
   } else if (m.limping) {
     addLog(`[${m.name} limping, unfound ${++m.searched}/${CONFIG.SLEEP_AFTER_TURNS} turns]`, 'dim');
     if (m.searched >= CONFIG.SLEEP_AFTER_TURNS) {
       m.sleeping = true; m.sleepTurns = 0;
-      msgs.push(G.paint > 0 ? `PAINTBALL: the ${m.name} fell ASLEEP in AREA ${m.area}!` : 'The mountain has gone quiet...');
+      msgs.push(m.paint > 0 ? `PAINTBALL: the ${m.name} fell ASLEEP in AREA ${m.area}!` : 'The mountain has gone quiet...');
     }
   }
   return msgs;

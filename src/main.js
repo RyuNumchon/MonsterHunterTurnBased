@@ -9,6 +9,7 @@ import { drawField } from './ui/fieldRender.js';
 import { updateField } from './world/field.js';
 import { initInput, updateMuteLabel } from './input.js';
 import { newSession } from './game.js';
+import './data/moves.js';
 
 let lastT = performance.now();
 function loop(now) {

@@ -5,6 +5,7 @@ import { AREAS, LINKS, THEMES } from '../data/world.js';
 import { GATHER } from '../data/items.js';
 import { DATA, pimg } from '../art/index.js';
 import { Audio8 } from '../audio/audio8.js';
+import { liveBosses } from '../world/spawn.js';
 
 // The minimap is rebuilt only when what it shows changes (checked every frame)
 let miniKey = '';
@@ -16,9 +17,9 @@ export function renderMini() {
     && $('mapOv').classList.contains('hidden') && $('rewardOv').classList.contains('hidden');
   el.classList.toggle('hidden', !show);
   if (!show) return;
-  const m = G.monster, cur = G.f.area;
-  const vis = !m.dead && !m.captured && (G.paint > 0 || m.area === cur);
-  const key = `${cur}|${vis ? m.area : '-'}|${m.sleeping}|${G.paint}`;
+  const cur = G.f.area, bosses = liveBosses();
+  const visible = bosses.filter(m => m.paint > 0 || m.area === cur);
+  const key = `${cur}|${bosses.map(m => `${m.uid}:${m.area}:${m.paint}:${m.sleeping}`).join('|')}`;
   if (key === miniKey) return;
   miniKey = key;
   const lines = LINKS.map(([a, b]) =>
@@ -31,17 +32,18 @@ export function renderMini() {
   }
   const C = AREAS[cur];
   h += `<img class="mmk" src="${DATA.player}" style="left:${C.mx - 3}%;top:${C.my}%" alt="">`;
-  if (vis) {
+  for (const m of visible) {
     const M = AREAS[m.area];
     h += `<img class="mmk mon" src="${DATA['mf_' + m.key]}" style="left:${M.mx + 5}%;top:${M.my}%" alt="">`;
   }
-  h += `<div class="mtag">${G.paint > 0 ? 'PAINT' : 'M = MAP'}}${vis && m.sleeping ? ' · ZZZ' : ''}</div>`;
+  const marked = visible.filter(m => m.paint > 0);
+  h += `<div class="mtag">${marked.length ? `PAINT ${marked.length}` : 'M = MAP'}${visible.some(m => m.sleeping) ? ' · ZZZ' : ''}</div>`;
   el.innerHTML = h;
 }
 
 export function renderMapOv() {
-  const cur = G.f.area, m = G.monster;
-  const showMon = !m.dead && !m.captured && (G.paint > 0 || m.area === cur);
+  const cur = G.f.area, bosses = liveBosses();
+  const visible = bosses.filter(m => m.paint > 0 || m.area === cur);
   const lines = LINKS.map(([a, b]) => {
     const A = AREAS[a], B = AREAS[b], c = `x1="${A.mx}" y1="${A.my}" x2="${B.mx}" y2="${B.my}" stroke-linecap="round"`;
     return `<line ${c} stroke="#3e4436" stroke-width="2.6"/><line ${c} stroke="#a8a890" stroke-width="1" stroke-dasharray="1.5 2"/>`;
@@ -56,15 +58,20 @@ export function renderMapOv() {
   }
   const C = AREAS[cur];
   h += `<img class="mk" src="${DATA.player}" style="left:${C.mx - 3}%;top:${C.my - 4}%" alt="">`;
-  if (showMon) {
+  for (const m of visible) {
     const M = AREAS[m.area];
     h += `<img class="mk mon" src="${DATA['mf_' + m.key]}" style="left:${M.mx + 4}%;top:${M.my - 4}%" alt="">`;
   }
+  const monsterLegend = bosses.map(m => {
+    const tracked = m.paint > 0 || m.area === cur;
+    return `${pimg(DATA['mf_' + m.key])} ${m.name} ${tracked
+      ? `→ AREA ${m.area}${m.sleeping ? ' (ASLEEP)' : ''}${m.paint > 0 ? ' · PAINT' : ''}`
+      : '(needs PAINTBALL)'}`;
+  }).join('<br>');
   h += `</div><div class="legend"><div class="lgh">Legend</div>
     ${Object.keys(GATHER).map(g => `<div>${pimg(DATA['g_' + g])} ${GATHER[g].label}</div>`).join('')}
-    <div class="lgs">${pimg(DATA.player)} YOU<br>${pimg(DATA.ic_bubble)} NPC<br>${pimg(DATA['mf_' + m.key])} ${m.name}
-      ${showMon ? `→ AREA ${m.area}${m.sleeping ? ' (ASLEEP)' : ''}` : '(needs PAINTBALL)'}<br>
-      PAINT: ${G.paint > 0 ? 'ACTIVE' : 'none'} · TURN ${G.turn}</div>
+    <div class="lgs">${pimg(DATA.player)} YOU<br>${pimg(DATA.ic_bubble)} NPC<br>${monsterLegend}
+      <br>TURN ${G.turn}</div>
     <button class="mi focus" data-act="closemap">CLOSE</button></div>`;
   $('mapOv').innerHTML = h;
 }

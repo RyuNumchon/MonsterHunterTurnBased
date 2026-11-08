@@ -15,6 +15,7 @@ import { showStorage } from '../quest/rewards.js';
 import { curable, cureStatuses } from '../battle/status.js';
 import { ARMOR, ARMOR_SLOTS, SLOT_NAME, armorStats } from '../data/armor.js';
 import { equipWeapon, equipArmor, hunterDef, skillSummary } from '../core/gear.js';
+import { MOVES, MOVE_CLASSES, movesetOf, lockedBy, dependents, isAttackMove } from '../data/moves.js';
 
 /** Save outside quests only (quest progress is saved on returning to town). */
 const persist = () => { if (G.phase !== 'quest') saveBox(); };
@@ -110,6 +111,7 @@ export async function itemBoxMenu() {
     const i = await choose('ITEM BOX', [
       { icon: DATA['wpn_' + p.weapon], label: 'CHANGE WEAPON', right: WEAPONS[p.weapon].short },
       { label: 'ARMOR', right: `${worn}/5` },
+      { label: 'HUNTING MOVESET' },
       { label: 'STORE (POUCH → BOX)', right: slotsLabel() },
       { label: 'TAKE (BOX → POUCH)', right: Object.keys(BOX.items).length },
       { label: 'COMBINE', right: 'SURE' },
@@ -117,10 +119,11 @@ export async function itemBoxMenu() {
       { label: 'CLOSE' }]);
     if (i === 0) await weaponMenu();
     else if (i === 1) await armorMenu();
-    else if (i === 2) await storeMenu();
-    else if (i === 3) await takeMenu();
-    else if (i === 4) await craftMenu('box');
-    else if (i === 5) await showStorage();
+    else if (i === 2) await movesetMenu();
+    else if (i === 3) await storeMenu();
+    else if (i === 4) await takeMenu();
+    else if (i === 5) await craftMenu('box');
+    else if (i === 6) await showStorage();
     else return;
   }
 }
@@ -258,4 +261,63 @@ async function craft(r, fromBox) {
   if (fromBox) boxAdd(r.out, r.n); else pouchAdd(r.out, r.n);
   persist(); Audio8.sfx('gather');
   await say(`Combined a ${itemName(r.out)}!${fromBox ? '\nIt was put in the ITEM BOX.' : ''}`, 'good');
+}
+
+/* ---------- HUNTING MOVESET: weapon type → slot → move ---------- */
+const moveDesc = m => `${m.requires ? `NEEDS ${MOVES[m.requires].name}<br>` : ''}${m.desc || ''}`;
+
+async function movesetMenu() {
+  const classes = Object.keys(MOVE_CLASSES);
+  while (true) {
+    const opts = classes.map(c => ({ label: MOVE_CLASSES[c], right: `${movesetOf(c).filter(Boolean).length}/${CONFIG.MOVE_SLOTS}` }));
+    opts.push({ label: 'BACK' });
+    const i = await choose('HUNTING MOVESET', opts);
+    if (i < 0 || i === classes.length) return;
+    await moveSlots(classes[i]);
+  }
+}
+
+async function moveSlots(cls) {
+  while (true) {
+    const set = movesetOf(cls);
+    const opts = set.map((id, n) => id
+      ? { label: MOVES[id].name, right: `SLOT ${n + 1}`, desc: moveDesc(MOVES[id]) }
+      : { label: '- empty -', right: `SLOT ${n + 1}`, desc: 'Add a move to this slot.' });
+    opts.push({ label: 'DONE', desc: '' });
+    const i = await choose(`${MOVE_CLASSES[cls]} · MOVESET`, opts, { desc: true });
+    if (i < 0 || i === set.length) return;
+    await replaceMove(cls, i);
+  }
+}
+
+async function replaceMove(cls, slot) {
+  const set = movesetOf(cls), cur = set[slot], others = set.filter((_, n) => n !== slot);
+  const ids = Object.keys(MOVES).filter(id => MOVES[id].cls === cls);
+  const opts = ids.map(id => {
+    const inSet = set.includes(id), lock = !inSet && lockedBy(id, others);
+    return { label: MOVES[id].name, right: id === cur ? 'THIS SLOT' : inSet ? 'SET' : lock ? 'LOCKED' : '',
+             cls: inSet ? 'hl' : lock ? 'lk' : '',
+             desc: `${lock ? `Unlocked by ${lock.name}.<br>` : ''}${moveDesc(MOVES[id])}` };
+  });
+  if (cur) opts.push({ label: 'REMOVE', desc: 'Leave this slot empty.' });
+  opts.push({ label: 'BACK', desc: '' });
+  const j = await choose(`SLOT ${slot + 1} · ${cur ? MOVES[cur].name : 'EMPTY'}`, opts, { desc: true });
+  if (j < 0 || j === opts.length - 1) return;
+  const pick = j < ids.length ? ids[j] : null;               // null = REMOVE
+  if (pick === cur) return;
+
+  if (pick && set.includes(pick)) {                          // already set: swap the two slots
+    const k = set.indexOf(pick);
+    set[k] = cur; set[slot] = pick; saveBox(); Audio8.sfx('select');
+    await say(`Swapped ${MOVES[pick].name} into SLOT ${slot + 1}.`, 'good');
+    return;
+  }
+  const lock = pick && lockedBy(pick, others);
+  if (lock) { await say(`${MOVES[pick].name} needs ${lock.name}\nin another slot first.`, 'dim'); return; }
+  const next = [...set]; next[slot] = pick;
+  const deps = cur ? dependents(cur, next) : [];
+  if (deps.length) { await say(`${deps.map(d => MOVES[d].name).join(', ')} needs\n${MOVES[cur].name}. Change those first.`, 'dim'); return; }
+  if (!next.some(id => id && isAttackMove(MOVES[id]))) { await say('Keep at least one attack move!', 'dim'); return; }
+  set[slot] = pick; saveBox(); Audio8.sfx(pick ? 'sharpen' : 'back');
+  await say(pick ? `SLOT ${slot + 1}: ${MOVES[pick].name}!` : `SLOT ${slot + 1} is now empty.`, pick ? 'good' : undefined);
 }

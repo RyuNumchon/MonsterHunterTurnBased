@@ -16,6 +16,7 @@ import { pouchCount, pouchAdd, pouchRemove, boxCount, boxAdd, boxRemove } from '
 import { talkSmith } from './smith.js';
 import { CONFIG } from '../core/config.js';
 import { renderPanel } from '../ui/hud.js';
+import { liveBosses } from '../world/spawn.js';
 
 /* ================= VILLAGE ================= */
 
@@ -246,15 +247,15 @@ async function talkCampCat() {
 
 /** Once per quest: the Felyne's scouts mark the big monster (like a short paintball). */
 async function markMonster() {
-  const m = G.monster;
-  if (!m || m.dead || m.captured) { await say('Nya? The hunt is already over!', 'dim'); return; }
+  const live = liveBosses();
+  if (!live.length) { await say('Nya? The hunt is already over!', 'dim'); return; }
   if (G.flags.campMark) { await say("My scouts are worn out, nya...\nUse a PAINTBALL from here on!", 'dim'); return; }
   G.flags.campMark = true;
-  G.paint = Math.max(G.paint, 4);
-  addLog(`[camp mark: paint ${G.paint} turns]`, 'dim');
+  live.forEach(m => { m.paint = Math.max(m.paint || 0, 4); });   // keep your camp-mark value
+  addLog(`[camp mark: ${live.map(m => `${m.name}@${m.area}`).join(', ')}]`, 'dim');
   Audio8.sfx('item');
-  await say(`My scouts spotted the ${m.name}\nin AREA ${m.area}, nya!`, 'good');
-  await say('I marked it on your MAP for a while.', 'good');
+  await say(`My scouts spotted ${live.map(m => `the ${m.name} in AREA ${m.area}`).join('\nand ')}, nya!`, 'good');
+  await say('I marked them on your MAP for a while.', 'good');
 }
 
 async function talkComrade() {

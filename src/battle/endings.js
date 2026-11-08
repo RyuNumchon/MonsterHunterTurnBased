@@ -8,7 +8,7 @@ import { Audio8, fieldMusic } from '../audio/audio8.js';
 import { say, pause } from '../ui/dialog.js';
 import { showScreen, renderBattle, setMode } from '../ui/hud.js';
 import { addLog, anim, pop, setPhase, toast, showLocation } from '../ui/fx.js';
-import { buildEntities, refreshEntities, spawnNextTarget } from '../world/spawn.js';
+import { buildEntities, refreshEntities, liveBosses } from '../world/spawn.js';
 import { MAPS, findFree } from '../world/mapgen.js';
 import { worldTick } from '../world/field.js';
 import { obtain } from '../world/inventory.js';
@@ -148,16 +148,16 @@ export async function captureWin() {
   await targetDone('capture')
 }
 
-/** A target is down. More left: the next one appears. Last one: the quest ends. */
+/** A target is down. Others still alive: back to the field. None left: quest complete. */
 async function targetDone(outcome) {
   G.hunted.push({ m: G.foe, outcome });
-  if (!G.queue.length) {
+  const left = liveBosses();
+  if (!left.length) {
     await say('QUEST COMPLETE!\nReturning to the village...', 'good');
     await finishQuest(outcome);
     return;
   }
-  const next = spawnNextTarget();
   await say(`TARGET DOWN! (${G.hunted.length}/${G.quest.targets.length})`, 'good');
-  await say(`A ${next.name} has been sighted\nin the ${G.quest.map}!`, 'warn');
+  await say(`${left.length === 1 ? `The ${left[0].name} is` : `${left.length} targets are`} still out there!`, 'warn');
   await returnToField(CONFIG.GRACE_MS);
 }
