@@ -8,7 +8,7 @@ import { Audio8, fieldMusic } from '../audio/audio8.js';
 import { say, pause } from '../ui/dialog.js';
 import { showScreen, renderBattle, setMode } from '../ui/hud.js';
 import { addLog, anim, pop, setPhase, toast, showLocation } from '../ui/fx.js';
-import { buildEntities, refreshEntities } from '../world/spawn.js';
+import { buildEntities, refreshEntities, spawnNextTarget } from '../world/spawn.js';
 import { MAPS, findFree } from '../world/mapgen.js';
 import { worldTick } from '../world/field.js';
 import { obtain } from '../world/inventory.js';
@@ -133,8 +133,7 @@ export async function foeDefeated() {
     await stow(weighted(LOOT[m.key].carve).name, es, `CARVE ${i + 1}/${CONFIG.CARVES}\n`);
   }
   await carveTail(es);
-  await say('QUEST COMPLETE!\nReturning to the village...', 'good');
-  await finishQuest('slay');
+  await targetDone('slay');
 }
 
 /** Captured: no carving, but bigger rewards. */
@@ -146,5 +145,19 @@ export async function captureWin() {
   await say(`The ${m.name} was CAPTURED!`, 'good');
   await say("Captured monsters can't be carved...\nbut the Guild pays a CAPTURE BONUS!", 'dim');
   await carveTail($('enemySprite'));   // a severed tail can still be carved
-  await finishQuest('capture');
+  await targetDone('capture')
+}
+
+/** A target is down. More left: the next one appears. Last one: the quest ends. */
+async function targetDone(outcome) {
+  G.hunted.push({ m: G.foe, outcome });
+  if (!G.queue.length) {
+    await say('QUEST COMPLETE!\nReturning to the village...', 'good');
+    await finishQuest(outcome);
+    return;
+  }
+  const next = spawnNextTarget();
+  await say(`TARGET DOWN! (${G.hunted.length}/${G.quest.targets.length})`, 'good');
+  await say(`A ${next.name} has been sighted\nin the ${G.quest.map}!`, 'warn');
+  await returnToField(CONFIG.GRACE_MS);
 }

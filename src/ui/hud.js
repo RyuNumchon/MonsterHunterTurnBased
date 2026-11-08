@@ -6,17 +6,27 @@ import { $, clamp } from '../core/utils.js';
 import { G, UI } from '../core/state.js';
 import { WEAPONS, getSharp } from '../data/weapons.js';
 import { PARTS, MONSTERS } from '../data/monsters.js';
-import { ITEMS, BOSS_ONLY } from '../data/items.js';
+import { FEASTS, ITEMS, BOSS_ONLY } from '../data/items.js';
 import { areaInfo } from '../data/world.js';
 import { DATA, pimg, itemIcon } from '../art/index.js';
 import { addLog, setPhase, fitText } from './fx.js';
-import { findMove, moveDisabled } from '../battle/turn.js';
-import { blockedBy, statusChips, stunChance } from '../battle/status.js';
+import { findMove, moveDisabled, runLock } from '../battle/turn.js';
+import { curable, elementSealed, blockedBy, statusChips, stunChance } from '../battle/status.js';
 import { speedOf } from '../battle/speed.js';
 import { BOX } from '../core/save.js';
 import { armorDef } from '../core/gear.js';
+import { pouchCount } from '../core/pouch.js';
 
-export const hpColor = pct => pct > 50 ? '#58d080' : pct > 20 ? '#f8d030' : '#f05038';
+/* HP bars never change colour. */
+export const HP_COLOR = '#58d080';
+export const hpColor = () => HP_COLOR;
+/** Hunter HP bar length (%): shorter by default, longer after a feast. */
+const FULL_HP = CONFIG.PLAYER_MAX_HP + Math.max(...FEASTS.map(f => f.hp));
+export const hpLen = p => Math.min(100, p.maxHp / FULL_HP * 100);
+export const elemTag = p => {
+  const w = WEAPONS[p.weapon];
+  return w.element ? `<span class="elem e-${w.element}${elementSealed(p) ? ' sealed' : ''}">${w.element.toUpperCase()}</span>` : '';
+};
 export const chip = (t, c) => `<span class="chip ${c}">${t}</span>`;
 export function setBar(el, pct, color) { el.style.width = clamp(pct, 0, 100) + '%'; el.style.backgroundColor = color; }
 export const pips = (n, max) => Array.from({ length: max }, (_, i) => `<span class="pip ${i < n ? 'on' : ''}"></span>`).join('');
@@ -50,16 +60,15 @@ export function renderBattle() {
   // --- Enemy box ---
   $('eName').textContent = m.name;
   $('eRank').textContent = m.isBoss ? `★${m.rank}` : `Lv${m.rank}`;
-  const eP = m.hp / m.maxHp * 100;
-  setBar($('eHp'), eP, hpColor(eP));
-  for (const k in PARTS) {
+  setBar($('eHp'), m.hp / m.maxHp * 100, HP_COLOR);
+  $('eParts').classList.toggle('hidden', !m.isBoss);          // small monsters: one body
+  if (m.isBoss) for (const k in PARTS) {
     const pt = m.parts[k], el = $('pb-' + k);
     el.classList.toggle('brk', pt.broken);
     setBar(el.querySelector('.fill'), pt.hp / pt.max * 100, pt.broken ? '#8a8a8a' : '#e09030');
   }
   const ec = [];
   if (m.captured) ec.push(chip('CAPTURED', 'c-cap'));
-  else if (m.isBoss && !m.dead && eP <= CONFIG.CAPTURE_PCT * 100) ec.push(chip('CAPTURE OK', 'c-cap'));
   if (m.sleeping && !m.captured) ec.push(chip('SLP', 'c-slp'));
   if (m.trapped > 0) ec.push(chip('TRAP', 'c-trap'));
   if (m.tranq > 0 && !m.captured) ec.push(chip('DROWSY', 'c-tq'));
@@ -72,10 +81,11 @@ export function renderBattle() {
   fitText($('eChips'), $('eChips').children);
 
   // --- Player box ---
-  $('pWpn').textContent = WEAPONS[p.weapon].short;
+  $('pWpn').innerHTML = `${WEAPONS[p.weapon].short} ${elemTag(p)}`;
   $('pBalls').textContent = 'CARTS ' + cartsUsed(p.carts);
-  const pP = p.hp / p.maxHp * 100;
-  setBar($('pHp'), pP, hpColor(pP));
+  const track = $('pHp').parentElement;
+  track.style.width = hpLen(p) + '%'; track.style.flex = 'none';
+  setBar($('pHp'), p.hp / p.maxHp * 100, HP_COLOR);
   const s = getSharp(p.sharp);
   setBar($('pSharp'), p.sharp / CONFIG.SHARP_MAX * 100, s.color);
   $('pSharpLbl').innerHTML = `<span style="color:${s.text}">${s.name}</span>`;
@@ -179,7 +189,8 @@ export function renderPanel() {
             : left > 0 ? 'Choose an item.<br>It takes effect immediately.' : 'No more items this turn!'}
           <div class="sub">ITEMS USED ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN} THIS TURN · no turn cost</div></div>
         <div class="pouchlist">${usable.map(s => {
-          const dis = !!itemLock || left <= 0 || (BOSS_ONLY.includes(s.id) && !m.isBoss);
+          const deo = s.id === 'deodorant' && curable(p, 'deodorant');
+          const dis = (!!itemLock && !deo) || left <= 0 || (BOSS_ONLY.includes(s.id) && !m.isBoss);
           return `<button class="it" data-act="item" data-val="${s.id}" data-info="${s.id}" ${dis ? 'disabled' : ''}>
             ${pimg(itemIcon(s.id))}${ITEMS[s.id].name}<span class="q">x${s.n}</span></button>`;
         }).join('')}<button class="cmd back" data-act="back">BACK</button></div>`;
@@ -191,6 +202,7 @@ export function renderPanel() {
         <div class="cmds"><button class="cmd k-fight carvebtn" data-act="carve">CARVE</button></div>`;
       break;
     default: { // 'main'
+      const run = runLock(p), deoOk = pouchCount('deodorant') > 0 && curable(p, 'deodorant');
       const act = blockedBy(p, 'act'), itemLock = blockedBy(p, 'item');
       const left = CONFIG.MAX_ITEMS_PER_TURN - G.itemsUsed;
       h = `<div class="tb">${act ? `HUNTER can't move!<br>(${act.name})` : 'What will<br>HUNTER do?'}
@@ -198,9 +210,9 @@ export function renderPanel() {
         <div class="cmds">
           ${act ? `<button class="cmd k-fight" data-act="wait">WAIT<small>${act.name}</small></button>`
                 : `<button class="cmd k-fight" data-act="fight">FIGHT</button>`}
-          <button class="cmd k-pouch" data-act="pouch" ${itemLock ? 'disabled' : ''}>POUCH<small>${itemLock ? itemLock.name : left + ' LEFT'}</small></button>
+          <button class="cmd k-pouch" data-act="pouch" ${itemLock && !deoOk ? 'disabled' : ''}>POUCH<small>${itemLock ? itemLock.name : left + ' LEFT'}</small></button>
           <button class="cmd k-map" data-act="map">MAP</button>
-          <button class="cmd k-run" data-act="run" ${act ? 'disabled' : ''}>RUN</button>
+          <button class="cmd k-run" data-act="run" ${run ? 'disabled' : ''}>RUN${run ? `${run.name}` : ''}</button>
         </div>`;
     }
   }
@@ -216,10 +228,10 @@ export function renderFieldPanel(P) {
     <div class="fmid">
       <div class="fstat">
         <div class="srow"><b>AREA</b>${areaInfo(f.area).name} · ${areaInfo(f.area).sub}</div>
-        <div class="srow"><b>HP</b><span class="mbar"><i style="width:${hp}%;background:${hpColor(hp)}"></i></span></div>
+        <div class="srow"><b>HP</b><span class="mbar" style="flex:none;width:${(hpLen(p) * .09).toFixed(2)}em"><i style="width:${hp}%;background:${HP_COLOR}"></i></span></div>
         <div class="srow"><b>EDGE</b><span class="mbar"><i style="width:${p.sharp / CONFIG.SHARP_MAX * 100}%;background:${s.color}"></i></span>${s.name}</div>
         <div class="srow"><b>COND</b>${G.feast ? chip('FEAST', 'c-mgt') : ''}${statusChips(p) || (G.feast ? '' : 'NORMAL')}</div>
-        <div class="srow"><b>GEAR</b>${pimg(DATA['wpn_' + p.weapon])}${WEAPONS[p.weapon].name} · CARTS ${cartsUsed(p.carts)}</div>
+        <div class="srow"><b>GEAR</b>${pimg(DATA['wpn_' + p.weapon])}${WEAPONS[p.weapon].name} ${elemTag(p)} · CARTS ${cartsUsed(p.carts)}</div>
       </div>
       <div class="ss"><button data-act="fstart">START</button><button data-act="fmap">MAP</button><button data-act="fpouch">POUCH</button></div>
       <div class="keys">ARROWS/WASD move · Z talk/A · X back · ENTER menu · M map · N music</div>

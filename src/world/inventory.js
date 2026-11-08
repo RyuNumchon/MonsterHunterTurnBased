@@ -4,7 +4,7 @@ import { CONFIG } from '../core/config.js';
 import { G } from '../core/state.js';
 import { BOX, saveBox } from '../core/save.js';
 import { pouchCount, pouchAdd, pouchRemove, pouchRoom, pouchSlots, boxCount, boxAdd, boxRemove } from '../core/pouch.js';
-import { WEAPONS } from '../data/weapons.js';
+import { attackOf, WEAPONS } from '../data/weapons.js';
 import { ITEMS, itemName, itemRar, isConsumable, stackOf } from '../data/items.js';
 import { RECIPES, needOf } from '../data/recipes.js';
 import { DATA, itemIcon } from '../art/index.js';
@@ -84,14 +84,16 @@ async function useInField(id) {
   if (!it.field) { await say(`There's no target here.\nUse the ${it.name} in battle!`, 'dim'); return; }
   if (it.heal && p.hp >= p.maxHp) { await say("It won't have any effect.", 'dim'); return; }
   if (id === 'whetstone' && p.sharp >= CONFIG.SHARP_MAX) { await say('Your blade is already sharp.', 'dim'); return; }
-  if ((id === 'nullberry' || id === 'antidote') && !curable(p, id)) { await say("It won't have any effect.", 'dim'); return; }
+  if (['nullberry', 'antidote', 'deodorant'].includes(id) && !curable(p, id)) { await say("It won't have any effect.", 'dim'); return; }
   pouchRemove(id); persist();
   if (it.heal) {
     const b = p.hp; p.hp = Math.min(p.maxHp, p.hp + it.heal);
     addLog(`[${id} +${p.hp - b} → HP ${p.hp}/${p.maxHp}]`, 'dim');
     Audio8.sfx('heal'); await say(`HUNTER used a ${it.name}.\nHP was restored!`, 'good');
-  } else if (id === 'whetstone') {
-    p.sharp = CONFIG.SHARP_MAX; Audio8.sfx('sharpen'); await say('HUNTER sharpened the blade.\nEDGE is back to GREEN!', 'good');
+    } else if (id === 'whetstone') {
+    const b = p.sharp; p.sharp = Math.min(CONFIG.SHARP_MAX, p.sharp + CONFIG.WHETSTONE_SHARP);
+    addLog(`[whetstone +${p.sharp - b} → EDGE ${p.sharp}/${CONFIG.SHARP_MAX}]`, 'dim');
+    Audio8.sfx('sharpen'); await say('HUNTER sharpened the blade.', 'good');
   } else if (id === 'might') {
     p.buffs.might = 3; Audio8.sfx('item'); await say('HUNTER ate a MIGHT SEED!\nATTACK rose!', 'good');
   } else {
@@ -126,7 +128,7 @@ export async function itemBoxMenu() {
 async function weaponMenu() {
   const p = G.player, keys = BOX.weapons.filter(k => WEAPONS[k]);
   const j = await choose('EQUIP WEAPON', keys.map(k => ({
-    icon: DATA['wpn_' + k], label: WEAPONS[k].name, right: k === p.weapon ? 'E' : '', desc: WEAPONS[k].blurb })), { desc: true });
+    icon: DATA['wpn_' + k], label: WEAPONS[k].name, right: k === p.weapon ? 'E' : '',     desc: `ATTACK ${attackOf(WEAPONS[k])}<br>${WEAPONS[k].blurb}` })), { desc: true });
   if (j < 0) return;
   const k = keys[j];
   if (k === p.weapon) { await say('That weapon is already equipped.', 'dim'); return; }

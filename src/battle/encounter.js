@@ -63,12 +63,12 @@ export function useItemBattle(key) {
   if (!G || G.itemsUsed >= CONFIG.MAX_ITEMS_PER_TURN || pouchCount(key) <= 0) return;
   flow(async () => {
     const p = G.player, m = G.foe, it = ITEMS[key];
-    const lock = blockedBy(p, 'item');
+    const lock = key === 'deodorant' && curable(p, key) ? null : blockedBy(p, 'item');
     let why = null;
     if (lock) why = `HUNTER can't use items right now!\n(${lock.name})`;
     else if (ITEMS[key].heal && p.hp >= p.maxHp) why = "It won't have any effect.";
     else if (key === 'whetstone' && p.sharp >= CONFIG.SHARP_MAX) why = 'Your blade is already sharp.';
-    else if ((key === 'nullberry' || key === 'antidote') && !curable(p, key)) why = "It won't have any effect.";
+    else if (['nullberry', 'antidote', 'deodorant'].includes(key) && !curable(p, key)) why = "It won't have any effect.";
     else if (BOSS_ONLY.includes(key) && !m.isBoss) why = `That won't work on a small monster\nlike the ${m.name}.`;
     else if (key === 'shock' && m.trapped > 0) why = `The ${m.name} is already trapped!`;
     else if (key === 'shock' && m.sleeping) why = "It's asleep... the trap won't trigger.\nTry TRANQ BOMBs if it's weak!";
@@ -87,12 +87,15 @@ export function useItemBattle(key) {
         await say("HUNTER's HP was restored!", 'good');
         break;
       }
-      case 'whetstone':
-        p.sharp = CONFIG.SHARP_MAX; Audio8.sfx('sharpen'); renderBattle();
-        await say('The blade is razor-sharp again!', 'good');
+      case 'whetstone': {
+        const b = p.sharp;
+        p.sharp = Math.min(CONFIG.SHARP_MAX, p.sharp + CONFIG.WHETSTONE_SHARP);
+        addLog(`[whetstone +${p.sharp - b} → EDGE ${p.sharp}/${CONFIG.SHARP_MAX}]`, 'dim');
+        Audio8.sfx('sharpen'); renderBattle();
+        await say('HUNTER sharpened the blade!', 'good');
         break;
-      case 'nullberry':
-      case 'antidote': {
+      }
+      case 'nullberry': case 'antidote': case 'deodorant':{
         const cured = cureStatuses(p, key);
         Audio8.sfx('heal'); renderBattle();
         await say(`HUNTER was cured of ${cured.join(' & ')}!`, 'good');

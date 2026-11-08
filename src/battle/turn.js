@@ -34,14 +34,19 @@ export function moveDisabled(mv) {
 /** The monster can't act this turn (so the hunter effectively goes first and escape is sure). */
 const foeHeld = m => m.trapped > 0 || m.sleeping || !!m.skipNext || !!blockedBy(m, 'act');
 
+/** Anything that stops moving or item use also stops running. */
+export const runLock = p => blockedBy(p, 'act') || blockedBy(p, 'move') || blockedBy(p, 'item');
+
 /* HUNTER HIT CHANCES (hidden; logged)
    acc     = move.acc + sharp.hit + statuses (water −20) + speed mod (±15) + (trapped ? 25 : 0)
    PartHit = clamp(part.baseHit + acc, 5, 98);  Overall = max(PartHit, clamp(90 + acc, 5, 99)) */
 export function hitChances(move, partKey, sharpLv = getSharp(G.player.sharp)) {
   const m = G.foe, p = G.player;
   const acc = (move.acc || 0) + sharpLv.hit + accMod(p) + speedHitMod(p, m) + (m.trapped > 0 ? CONFIG.TRAP_HIT_BONUS : 0);
+  const overall = clamp(CONFIG.OVERALL_HIT + acc, 5, 99);
+  if (!m.isBoss) return { target: overall, overall };          // one body: no drift
   const target = clamp(PARTS[partKey].baseHit + acc, 5, 98);
-  return { target, overall: Math.max(target, clamp(CONFIG.OVERALL_HIT + acc, 5, 99)) };
+  return { target, overall: Math.max(target, overall) };
 }
 
 /** Monster accuracy: 60% (30% blinded) + its accuracy effects + speed mod. */
@@ -63,7 +68,8 @@ export function pickMove(id) {
   const mv = findMove(id), p = G.player;
   if (!mv || moveDisabled(mv)) return;
   Audio8.sfx('select');
-  if (isAttack(mv)) { setMode('target', { moveId: id }); return; }
+  if (isAttack(mv)) { if (G.foe.isBoss) setMode('target', { moveId: id });
+  else confirmAttack(id, 'body'); return; }
   const drop = p.charge > 0 && mv.type !== 'charge' ? '<br>Your held charge will be lost!' : '';
   if (mv.type === 'charge') setMode('confirm', { q: `Charge the ${WEAPONS[p.weapon].name}?`,
     sub: 'Build a deeper charge. A heavy blow may break it.',
@@ -79,20 +85,22 @@ export function confirmAttack(moveId, part) {
   if (m.sleeping) notes.push("Sneak attack! It can't dodge while asleep.");
   else {
     const c = hitChances(mv, part);
-    addLog(`[aim ${PARTS[part].label}: hit ${c.target}% · drift ${c.overall - c.target}% · miss ${100 - c.overall}% · first ${firstPct(mv)}% · SPD ${speedOf(p)} vs ${speedOf(m)}]`, 'dim');
-    notes.push('A near-miss may strike another part.');
+    addLog(`[aim ${m.isBoss ? PARTS[part].label : 'BODY'}: hit ${c.target}% · drift ${c.overall - c.target}% · miss ${100 - c.overall}% · first ${firstPct(mv)}% · SPD ${speedOf(p)} vs ${speedOf(m)}]`, 'dim');
+    if(m.isBoss) notes.push('A near-miss may strike another part.');
   }
   if (m.trapped > 0) notes.push("It's trapped: easier to hit!");
   if (p.charge > 0 && mv.type !== 'release') notes.push('Your held charge will be lost!');
   if (getSharp(p.sharp).bounce) notes.push('WARNING: your blade is dull and may BOUNCE!');
   Audio8.sfx('select');
-  setMode('confirm', { q: `Use ${name}<br>on the ${PARTS[part].label}?`, sub: notes.join('<br>'),
-    action: { kind: 'move', moveId, target: part }, back: 'target', backData: { moveId } });
+  setMode('confirm', { q: m.isBoss ? `Use ${name}<br>on the ${PARTS[part].label}?` : `Use ${name}<br>on the ${m.name}?`,
+    sub: notes.join('<br>'),
+    action: { kind: 'move', moveId, target: part },
+    back: m.isBoss ? 'target' : 'fight', backData: m.isBoss ? { moveId } : {} });
 }
 
 export function confirmRun() {
   const m = G.foe;
-  if (blockedBy(G.player, 'act')) return;
+  if (runLock(G.player)) return;
   Audio8.sfx('select');
   addLog(`[escape ${foeHeld(m) ? 100 : Math.round(escapeChance() * 100)}% · SPD ${speedOf(G.player)} vs ${speedOf(m)}]`, 'dim');
   setMode('confirm', { q: `Retreat from the ${m.name}?`,
@@ -221,57 +229,65 @@ async function playerActionPhase(action) {
 /* PHASE 3: HIT CALCULATION (all numbers logged, never shown)
    DAMAGE = power × partMult × sharpMult × might × charge × wake × crack × variance(0.9–1.1)
             × hunter atkMult × monster defMult + weapon element power */
+/* PHASE 3: HIT CALCULATION (all numbers logged, never shown)
+   DAMAGE = power × weaponAtk × partMult × sharp × might × charge × wake × crack × crit × variance
+            × hunter atkMult × monster defMult + element
+   CRIT: |weapon.crit|% chance. Positive → ×1.5, negative → ×0.5.
+   Small monsters are one body: no part multiplier, no drift, no part HP. */
 async function hitCalculationPhase(intent) {
   const p = G.player, m = G.foe, w = WEAPONS[p.weapon], { target, sharpLv } = intent, wake = m.sleeping;
   let hitPart = null, drifted = false;
   if (wake) { hitPart = target; addLog('[sleeping target: guaranteed hit]', 'dim'); }
   else {
     const c = hitChances(intent.move, target, sharpLv), roll = Math.random() * 100;
-    addLog(`[roll ${roll.toFixed(1)} | ${PARTS[target].label} <${c.target} | drift <${c.overall} | miss >=${c.overall}]`, 'dim');
+    addLog(`[roll ${roll.toFixed(1)} | hit <${c.target} | drift <${c.overall} | miss >=${c.overall}]`, 'dim');
     if (roll < c.target) hitPart = target;
     else if (roll < c.overall) { hitPart = pick(PARTS[target].drift); drifted = true; }
   }
-  if (!hitPart) { Audio8.sfx('miss'); await say("HUNTER's attack missed!", 'bad'); return; }   // a miss costs no sharpness
+  if (!hitPart) { Audio8.sfx('miss'); await say("HUNTER's attack missed!", 'bad'); return; }
   p.sharp = Math.max(0, p.sharp - intent.move.sharp);
   addLog(`[edge -${intent.move.sharp} → ${p.sharp}/${CONFIG.SHARP_MAX}]`, 'dim');
   if (drifted) await say(`The swing drifted off the ${PARTS[target].label}...\nand struck the ${PARTS[hitPart].label}!`, 'warn');
 
-  const part = m.parts[hitPart], pdef = PARTS[hitPart];
+  const boss = m.isBoss, part = boss ? m.parts[hitPart] : null, pdef = PARTS[hitPart];
+  const partM  = boss ? pdef.dmgMult : 1;
+  const wAtk   = w.atk || 1;
   const mightM = p.buffs.might > 0 ? CONFIG.MIGHT_MULT : 1;
   const wakeM  = wake ? CONFIG.WAKE_MULT : 1;
   const crackM = m.armorCracked ? CONFIG.BODY_CRACK_MULT : 1;
+  const crit = w.crit || 0, critRoll = Math.random() * 100, critHit = crit !== 0 && critRoll < Math.abs(crit);
+  const critM = critHit ? (crit > 0 ? CONFIG.CRIT_MULT : CONFIG.CRIT_NEG_MULT) : 1;
   const atkM = atkMult(p), defM = defMult(m), variance = rand(0.9, 1.1);
   const elem = w.element && !elementSealed(p) ? w.element : null;
   const elemDmg = elem ? (w.elemPower || 0) : 0;
-  const wAtk = w.atk || 1;
   const dmg = Math.max(1, Math.round(
-    intent.power * wAtk * pdef.dmgMult * sharpLv.dmg * mightM * intent.chargeMult * wakeM * crackM * variance * atkM * defM + elemDmg));
-  addLog(`[DMG ${intent.power} x wpn ${wAtk} x part ${pdef.dmgMult} x sharp ${sharpLv.dmg} x might ${mightM} x charge ${intent.chargeMult} x wake ${wakeM} x crack ${crackM} x var ${variance.toFixed(2)} x atk ${atkM.toFixed(2)} x def ${defM.toFixed(2)} + elem ${elemDmg} = ${dmg}]`, 'dim');
+    intent.power * wAtk * partM * sharpLv.dmg * mightM * intent.chargeMult * wakeM * crackM * critM * variance * atkM * defM + elemDmg));
+  addLog(`[crit ${crit}% · roll ${critRoll.toFixed(1)} → x${critM}]`, 'dim');
+  addLog(`[DMG ${intent.power} x wpn ${wAtk} x part ${partM} x sharp ${sharpLv.dmg} x might ${mightM} x charge ${intent.chargeMult} x wake ${wakeM} x crack ${crackM} x crit ${critM} x var ${variance.toFixed(2)} x atk ${atkM.toFixed(2)} x def ${defM.toFixed(2)} + elem ${elemDmg} = ${dmg}]`, 'dim');
 
   m.hp = Math.max(0, m.hp - dmg);
-  part.hp = Math.max(0, part.hp - dmg);
-  // The tail drops where the fight happened; it's placed on the map when the battle ends
-  addLog(`[${m.name} HP ${m.hp}/${m.maxHp} · ${hitPart} ${part.hp}/${part.max}]`, 'dim');
-  const big = wake || intent.chargeMult >= 2 || (hitPart === 'head' && !drifted);
+  if (part) part.hp = Math.max(0, part.hp - dmg);
+  addLog(`[${m.name} HP ${m.hp}/${m.maxHp}${part ? ` · ${hitPart} ${part.hp}/${part.max}` : ''}]`, 'dim');
+  const weak = boss && hitPart === 'head' && !drifted;
+  const big = wake || intent.chargeMult >= 2 || weak || (critHit && crit > 0);
   Audio8.sfx(sharpLv.bounce ? 'clang' : big ? 'crit' : 'hit');
   anim($('enemySprite'), 'a-hit', 500); renderBattle();
-  await say(`The attack struck the ${m.name}'s ${pdef.label}!`);
+  await say(boss ? `The attack struck the ${m.name}'s ${pdef.label}!` : `The attack struck the ${m.name}!`);
+  if (critHit) await say(crit > 0 ? 'A CRITICAL HIT!' : 'The blow landed weakly...', crit > 0 ? 'good' : 'warn');
   if (wake) await say('A WAKE-UP BLOW! Massive damage!', 'good');
-  else if (hitPart === 'head' && !drifted) await say('It hit a weak spot!', 'good');
+  else if (weak) await say('It hit a weak spot!', 'good');
   if (intent.chargeMult >= 3) await say('A full-power charge!', 'good');
   if (w.element && elementSealed(p)) await say(`Dragonblight sealed the ${STATUS[w.element].name} element!`, 'warn');
 
-  // Weapon element can inflict its status (no weapon has one yet)
   if (elem && m.hp > 0 && Math.random() < (w.elemChance || 0)) {
     const msg = applyStatus(m, elem, p);
     if (msg) { renderBattle(); await say(msg, 'good'); }
   }
-  // Stun (KO) on monsters: BLUNT weapons only. Every demo weapon cuts, so this stays dormant.
+  // Stun (KO) on monsters: BLUNT weapons only (none in the demo yet)
   if (m.hp > 0 && w.dmgType === 'blunt') {
-    const s = stunOnHit(m, hitPart === 'head' ? CONFIG.KO_BUILD_HEAD : CONFIG.KO_BUILD);
+    const s = stunOnHit(m, weak ? CONFIG.KO_BUILD_HEAD : CONFIG.KO_BUILD);
     if (s) { renderBattle(); await say(s, 'good'); }
   }
-  // Red sharpness: bounce (half damage already applied) + recoil. A killing blow can't faint you.
   if (sharpLv.bounce) {
     const recoil = Math.round(p.maxHp * CONFIG.BOUNCE_RECOIL_PCT);
     p.hp = Math.max(m.hp <= 0 ? 1 : 0, p.hp - recoil);
@@ -283,8 +299,8 @@ async function hitCalculationPhase(intent) {
     m.sleeping = false; m.limping = false; renderBattle(); Audio8.sfx('roar');
     await say(`The ${m.name} woke up in a rage!`, 'warn');
   }
-  if (m.isBoss && !part.broken && part.hp <= 0) { part.broken = true; await applyBreak(hitPart); }
-  if (m.isBoss && m.hp > 0 && m.hp / m.maxHp <= CONFIG.CAPTURE_PCT && !m.warnedCap) {
+  if (part && !part.broken && part.hp <= 0) { part.broken = true; await applyBreak(hitPart); }
+  if (boss && m.hp > 0 && m.hp / m.maxHp <= CONFIG.CAPTURE_PCT && !m.warnedCap) {
     m.warnedCap = true; renderBattle();
     await say(`The ${m.name} looks exhausted...\nIt can be CAPTURED now!`, 'warn');
   }

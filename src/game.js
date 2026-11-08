@@ -13,10 +13,11 @@ import { flow, say, ask, pause, releaseWaits } from './ui/dialog.js';
 import { showScreen, renderPanel } from './ui/hud.js';
 import { setPhase, showLocation, addLog } from './ui/fx.js';
 import { resetMini } from './ui/map.js';
-import { makeFoe, makeNpcs, makeSmalls, buildEntities } from './world/spawn.js';
+import { makeFoe, makeNpcs, makeSmalls, buildEntities, spawnNextTarget } from './world/spawn.js';
 import { putAllInBox } from './quest/rewards.js';
 import { pouchRemove } from './core/pouch.js';
 import { applyLook } from './art/look.js';
+import { questTargets } from './data/quests.js';
 
 function restorePlayer(p) {
   Object.assign(p, { hp: p.maxHp, sharp: CONFIG.SHARP_MAX, carts: 0, charge: 0, spirit: 0,
@@ -26,7 +27,7 @@ function restorePlayer(p) {
 
 function questReset() {
   Object.assign(G, { turn: 1, loggedTurn: 0, over: false, outcome: null, paint: 0, itemsUsed: 0, foe: null, grace: 0,
-    gathered: {}, gatherUses: {}, carves: [], tailDrop: null, rewards: null, boxed: false, supplyGiven: {} });
+    gathered: {}, gatherUses: {}, carves: [], tailDrop: null, rewards: null, boxed: false, supplyGiven: {}, queue: [], hunted: [] });
   Object.assign(G.flags, { supply: false, campMark: false, fishTraded: false });
 }
 
@@ -103,9 +104,9 @@ async function departQuest() {
   questReset();
   p.maxHp = CONFIG.PLAYER_MAX_HP + (G.feast ? G.feast.hp : 0);
   restorePlayer(p);
-  G.phase = 'quest'; G.monsterKey = q.target;
-  G.monster = makeFoe(q.target, MONSTERS[q.target], true);
-  G.monster.area = pick([4, 5, 6, 7, 9]);
+  G.phase = 'quest';
+  G.queue = [...q.targets]; G.hunted = [];
+  spawnNextTarget();
   G.smalls = makeSmalls(G.npcs);
   Object.assign(G.f, { area: 0, x: CAMP_SPAWN.x, y: CAMP_SPAWN.y, dir: CAMP_SPAWN.dir, mv: null });
   $('log').innerHTML = '';
@@ -114,7 +115,8 @@ async function departQuest() {
   Audio8.music('camp');
   tr.className = 'fadeOut'; showLocation(0);
   await pause(300); tr.className = '';
-  await say(`QUEST: ${q.title}\nHunt the ${G.monster.name} in the ${q.map}!`);
+  await say(`QUEST: ${q.title}\nHunt the ${questTargets(q)} in the ${q.map}!`);
+  if (q.targets.length > 1) await say('Targets appear one at a time.\nThe next shows up when one goes down.', 'dim');
   if (G.feast) await say(`The ${G.feast.name} keeps HUNTER going strong!`, 'good');
   await say('Grab supplies from the blue SUPPLY BOX.\nThe CAMP FELYNE can mark the monster for you.', 'dim');
 }
@@ -134,7 +136,7 @@ export function returnToVillage() {
     if (won) BOX.zenny += q.fee;
     saveBox();
     Object.assign(G, { phase: 'village', quest: null, monster: null, monsterKey: null, smalls: {},
-                       over: false, outcome: null, screen: 'field', foe: null, townUses: {}, feast: null });
+                       over: false, outcome: null, screen: 'field', foe: null, townUses: {}, feast: null, queue: [], hunted: [] });
     p.maxHp = CONFIG.PLAYER_MAX_HP;
     restorePlayer(p);
     Object.assign(G.f, { area: home, ...TOWN_SPAWN[home], mv: null });

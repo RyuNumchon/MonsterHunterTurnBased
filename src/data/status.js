@@ -121,7 +121,7 @@ export const STATUS = {
     kind: "physical",
     color: "#7890a0",
     turns: 1,
-    blocks: ["attack"],
+    acc: -20,
     battleOnly: true,
     sfx: "swoosh",
     onMsg: "{u} is pinned by WIND PRESSURE!\nIt can't attack next turn!",
@@ -147,6 +147,15 @@ export const STATUS = {
     sfx: "hurt",
     onMsg: "The ground shakes!\n{u} lost its footing and can't move!",
   },
+  blast: {
+    name: 'BLASTBLIGHT',
+    short: 'BLAST',
+    color: '#e8a020',
+    turns: 3,
+    blast: .4,
+    sfx: 'flash',
+    onMsg: 'HUNTER is covered in BLASTBLIGHT!\nCure it with a DEODORANT, fast!' },
+
   mud: {
     name: "MUD",
     short: "MUD",

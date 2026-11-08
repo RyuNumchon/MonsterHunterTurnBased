@@ -35,8 +35,7 @@ export function blockedBy(u, what) {
 
 /* ---------- Apply / cure ---------- */
 function steal(target, src) {
-  if (target !== G.player)
-    return null;
+  if (target !== G.player) return null;
   if (!BOX.pouch.length)
     return `${uname(src)} rummaged through the POUCH...\nbut it was empty!`;
   const id = pick(BOX.pouch).id;
@@ -58,11 +57,20 @@ export function applyStatus(u, id, source = null) {
   return fmt(d.onMsg, u);
 }
 
+const DEO = ['blast', 'stench']
 /** True if this cure item would remove something. */
-export const curable = (u, item) => each(u).some((d) => d.cure === item);
+export function curable(u, item) {
+  if (item === 'deodorant') return DEO.some(id => hasStatus(u, id));
+  return each(u).some((d) => d.cure === item);
+}
 
 /** Removes every effect cured by `item`; returns their names. */
 export function cureStatuses(u, item) {
+  if (item === 'deodorant') {
+  const c = DEO.filter(id => hasStatus(u, id)).map(id => STATUS[id].name);
+  DEO.forEach(id => delete u.status[id]);
+  return c;
+  }
   const names = [];
   for (const id of Object.keys(u.status || {})) {
     if (STATUS[id].cure === item) {
@@ -100,24 +108,23 @@ export function tickStatuses(u, lethal = true) {
   const out = [];
   for (const [id, s] of Object.entries(u.status || {})) {
     const d = STATUS[id];
-    if (s.fresh) {
-      s.fresh = false;
-      continue;
-    }
+    if (s.fresh) { s.fresh = false; continue; }
     if (d.dot) {
       const before = u.hp;
-      u.hp = Math.max(
-        lethal ? 0 : 1,
-        u.hp - Math.max(1, Math.round(u.maxHp * d.dot))
-      );
+      u.hp = Math.max(lethal ? 0 : 1, u.hp - Math.max(1, Math.round(u.maxHp * d.dot)));
       const dmg = before - u.hp;
       if (dmg > 0) { addLog(`[${uname(u)} ${id} -${dmg} → HP ${u.hp}/${u.maxHp}]`, 'dim'); out.push({ msg: fmt(d.dotMsg, u), dmg }); }
     }
     s.age++;
-    if (--s.turns <= 0) {
-      delete u.status[id];
-      out.push({ msg: `${uname(u)}'s ${d.name} wore off.` });
-    }
+    if (--s.turns > 0) continue;
+    delete u.status[id];
+    if (d.blast) {   // Blastblight: explodes when the timer runs out
+      const before = u.hp;
+      u.hp = Math.max(lethal ? 0 : 1, u.hp - Math.round(u.maxHp * d.blast));
+      const dmg = before - u.hp;
+      addLog(`[${uname(u)} blast -${dmg} → HP ${u.hp}/${u.maxHp}]`, 'dim');
+      out.push({ msg: `The BLASTBLIGHT exploded!\n${uname(u)} was caught in the blast!`, dmg });
+    } else out.push({ msg: `${uname(u)}'s ${d.name} wore off.` });
   }
   return out;
 }

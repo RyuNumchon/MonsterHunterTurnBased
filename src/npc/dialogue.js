@@ -6,7 +6,7 @@ import { G } from '../core/state.js';
 import { BOX, saveBox } from '../core/save.js';
 import { ITEMS, FEASTS, itemName, itemRar } from '../data/items.js';
 import { MONSTERS, LOOT } from '../data/monsters.js';
-import { QUEST_BOARDS } from '../data/quests.js';
+import { questTargets, questReward, QUEST_BOARDS } from '../data/quests.js';
 import { DATA, itemIcon } from '../art/index.js';
 import { Audio8 } from '../audio/audio8.js';
 import { say, ask, choose, askCount } from '../ui/dialog.js';
@@ -14,6 +14,8 @@ import { addLog } from '../ui/fx.js';
 import { VILLAGE, HUB } from '../data/world.js';
 import { pouchCount, pouchAdd, pouchRemove, boxCount, boxAdd, boxRemove } from '../core/pouch.js';
 import { talkSmith } from './smith.js';
+import { CONFIG } from '../core/config.js';
+import { renderPanel } from '../ui/hud.js';
 
 /* ================= VILLAGE ================= */
 
@@ -46,7 +48,7 @@ async function questMenu(board, lines) {
     else if (i === 1) await cancelQuest(board);
     else if (i === 2) await say(pick(lines));
     else {
-      await say(q ? `${D.who}: The ${MONSTERS[q.target].name} awaits.\nThe GATE is to the ${D.gate}. Return safely!`
+            await say(q ? `${D.who}: Your targets await: ${questTargets(q)}.\nThe GATE is to the ${D.gate}. Return safely!`
                   : `${D.who}: Come back whenever you are ready.`);
       return;
     }
@@ -58,9 +60,9 @@ async function questBoard(board) {
   const D = DESK[board], list = QUEST_BOARDS[board];
   while (true) {
     const opts = list.map(q => ({
-      icon: DATA['mf_' + q.target], label: q.title,
+      icon: DATA['mf_' + q.targets[0]], label: q.title,
       right: G.quest && G.quest.id === q.id ? 'ACCEPTED' : '★' + q.stars,
-      desc: `${'★'.repeat(q.stars)} · HUNT: ${MONSTERS[q.target].name}<br>MAP: ${q.map}<br>REWARD ${LOOT[q.target].zenny}z · FEE ${q.fee}z<br>${q.desc}`
+      desc: `${'★'.repeat(q.stars)} · HUNT: ${questTargets(q)}<br>MAP: ${q.map}<br>REWARD ${questReward(q)}z · FEE ${q.fee}z<br>${q.desc}`
     }));
     opts.push({ label: 'BACK', desc: `Return to the ${D.title}.` });
     const i = await choose(`${D.title} · QUESTS`, opts, { desc: true });
@@ -117,6 +119,9 @@ async function talkChef() {
   if (!(await ask(`Order the ${f.name} for ${f.price}z?`))) return;
   BOX.zenny -= f.price; saveBox();
   G.feast = f;
+  G.player.maxHp = CONFIG.PLAYER_MAX_HP + f.hp;   // the HP bar grows right away
+  G.player.hp = G.player.maxHp;
+  renderPanel();
   addLog(`[feast ${f.id}: +${f.hp} max HP for the next quest]`, 'dim');
   Audio8.sfx('heal');
   await say(`*munch munch munch*...\nThe ${f.name} was delicious!`, 'good');
@@ -184,7 +189,7 @@ async function sell() {
 /* ---------- Veteran: tips (quest-specific when a quest is accepted) ---------- */
 const VET_QUEST = {
   rathalos: ['It breathes FIRE. Carry NULL-BERRIES.\nIts talons are POISONOUS: bring ANTIDOTES!',
-             'Its WING GUST pins you in place.\nYou can still GUARD while you recover.'],
+             'Its WING GUST throws off your aim.\nGUARD or wait until it passes.'],
   tigrex:   ["Its ROAR stops you from using items.\nHeal BEFORE it gets angry.",
              'When it slams the ground, you lose your footing.\nIt is FAST: expect it to strike first.']
 };
@@ -199,8 +204,9 @@ const VET_GENERAL = [
 async function talkVeteran() {
   const q = G.quest;
   if (q) {
-    await say(`VETERAN: So you're after the ${MONSTERS[q.target].name}, rookie.`);
-    await say(VET_QUEST[q.target][G.flags.vetTip++ % VET_QUEST[q.target].length]);
+    const tips = VET_QUEST[q.targets[G.flags.vetTip % q.targets.length]];
+    await say(`VETERAN: So you're after the ${questTargets(q)}, rookie.`);
+    await say(tips[G.flags.vetTip++ % tips.length]);
   } else {
     await say('VETERAN: No quest yet? The CHIEF has work.');
     await say(VET_GENERAL[G.flags.vetTip++ % VET_GENERAL.length]);

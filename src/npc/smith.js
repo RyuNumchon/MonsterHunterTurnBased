@@ -2,7 +2,7 @@
 import { BOX, saveBox } from '../core/save.js';
 import { boxCount, boxRemove } from '../core/pouch.js';
 import { equipWeapon, equipArmor } from '../core/gear.js';
-import { WEAPONS } from '../data/weapons.js';
+import { attackOf, WEAPONS } from '../data/weapons.js';
 import { ARMOR, SETS, SLOT_NAME } from '../data/armor.js';
 import { ITEM_RAR } from '../data/items.js';
 import { LOOT } from '../data/monsters.js';
@@ -53,7 +53,7 @@ async function weaponList() {
     const opts = keys.map(k => {
       const w = WEAPONS[k];
       return { icon: DATA['wpn_' + k], label: w.name, right: BOX.weapons.includes(k) ? 'OWNED' : w.cost.z + 'z',
-               desc: `${w.blurb}<br>${matsText(w.cost)}` };
+              desc: `ATTACK ${attackOf(w)}<br>${w.blurb}<br>${matsText(w.cost)}` };
     });
     opts.push({ label: 'BACK', desc: '' });
     const i = await choose(`FORGE WEAPON · ${BOX.zenny}z`, opts, { desc: true });

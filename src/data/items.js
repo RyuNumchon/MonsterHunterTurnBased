@@ -6,7 +6,7 @@ export const ITEMS = {
   herb:      { name: 'HERB',        field: true, price: 10,  heal: 15, desc: 'Restores a little HP.' },
   potion:    { name: 'POTION',      field: true, price: 60,  heal: 30, desc: 'Restores some HP.' },
   mega:      { name: 'MEGA POTION', field: true, price: 150, heal: 50, desc: 'Restores a good amount of HP.' },
-  whetstone: { name: 'WHETSTONE',  field: true, price: 40,  desc: 'Sharpens your weapon back to its best edge.' },
+  whetstone: { name: 'WHETSTONE',  field: true, price: 40,  desc: 'Sharpens your weapon.' },
   might:     { name: 'MIGHT SEED', field: true, price: 150, desc: 'Boosts ATTACK for a few turns.' },
   paintball: { name: 'PAINTBALL',  price: 80,  desc: 'Mark the big monster so the MAP can track it for a while.' },
   flash:     { name: 'FLASH BOMB', price: 120, desc: 'Blinds the monster. Its attacks will often miss for a short time.' },
@@ -14,6 +14,8 @@ export const ITEMS = {
   tranq:     { name: 'TRANQ BOMB', price: 150, desc: 'Throw at a TRAPPED or SLEEPING monster that is weak enough to CAPTURE it.' },
   nullberry: { name: 'NULL-BERRY', field: true, price: 30, desc: 'Cures elemental blights: FIRE, WATER, ICE, THUNDER, DRAGON.' },
   antidote:  { name: 'ANTIDOTE',   field: true, price: 40, desc: 'Cures POISON.' },
+  deodorant: { name: 'DEODORANT', field: true, price: 40, desc: 'Cures BLASTBLIGHT and STENCH.' },
+
 };
 export const BOSS_ONLY = ['paintball', 'shock', 'tranq'];
 
