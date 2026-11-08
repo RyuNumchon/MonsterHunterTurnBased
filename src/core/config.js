@@ -6,6 +6,9 @@ export const CONFIG = {
   OVERALL_HIT: 90, MONSTER_HIT: 60, MONSTER_HIT_FLASHED: 30,
   MIGHT_MULT: 1.25, WAKE_MULT: 2, GUARD_TAKEN: 0.4, HEAVY_INTERRUPT_CHANCE: 0.30,
   TAIL_ATK_MULT: 0.75, BODY_CRACK_MULT: 1.10,
+  WHETSTONE_SHARP: 15,              // sharpness restored per whetstone (max 40)
+  CRIT_MULT: 1.5,
+  CRIT_NEG_MULT: 0.5,
 
   // Big monster: fleeing mid-battle, limping, sleeping, healing
   FLEE_MIN: 4, FLEE_MAX: 6, FLEE_CHANCE: 0.5, LOW_HP_FLEE: 0.25, LOW_HP_FLEE_CHANCE: 0.4,

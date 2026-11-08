@@ -151,13 +151,15 @@ export function drawField(now) {
 
   // --- Exit markers with the destination area number ---
   const glow = Math.sin(now / 250) > 0;
-  M.exits.forEach(e => {
-    const X = e.x * 16, Y = e.y * 16, label = e.to === 0 ? 'C' : e.to === GATE ? 'Q' : String(e.to);
-    CX.fillStyle = glow ? '#f8d850' : '#e0b830'; CX.fillRect(X + 3, Y + 3, 10, 10);
-    CX.fillStyle = '#1c2818'; CX.fillRect(X + 3, Y + 3, 10, 1); CX.fillRect(X + 3, Y + 12, 10, 1);
-    CX.fillRect(X + 3, Y + 3, 1, 10); CX.fillRect(X + 12, Y + 3, 1, 10);
-    pxText(CX, label, X + 8 - Math.floor((label.length * 4 - 1) / 2), Y + 6, '#1c2818');
-  });
+  if (!M.town) {
+    M.exits.forEach(e => {
+      const X = e.x * 16, Y = e.y * 16, label = e.to === 0 ? 'C' : e.to === GATE ? 'Q' : String(e.to);
+      CX.fillStyle = glow ? '#f8d850' : '#e0b830'; CX.fillRect(X + 3, Y + 3, 10, 10);
+      CX.fillStyle = '#1c2818'; CX.fillRect(X + 3, Y + 3, 10, 1); CX.fillRect(X + 3, Y + 12, 10, 1);
+      CX.fillRect(X + 3, Y + 3, 1, 10); CX.fillRect(X + 12, Y + 3, 1, 10);
+      pxText(CX, label, X + 8 - Math.floor((label.length * 4 - 1) / 2), Y + 6, '#1c2818');
+    });
+  }
 
   // --- Props & gathering points (used-up spots turn grey but stay opaque) ---
   M.gathers.forEach(gp => {
@@ -201,7 +203,12 @@ export function drawField(now) {
     const img = ART['mf_' + e.key], hop = e.mv ? -2 * Math.sin(Math.PI * p.t) : 0;
     const top = p.y + 16 - img.height;
     CX.fillStyle = 'rgba(0,0,0,.3)'; ellipse(p.x + 8, p.y + 14, img.width * 0.38, 3);
+    
+    const pulse = e.kind === 'boss' && e.hp / e.maxHp <= CONFIG.CAPTURE_PCT;
+    if (pulse) CX.globalAlpha = .45 + .55 * Math.abs(Math.sin(now / 220));
     blit(img, p.x + 8 - img.width / 2, top + hop, e.dir === 'right');   // art faces left
+    CX.globalAlpha = 1;
+
     if (e.kind === 'boss' && e.sleeping) {
       const k = (now / 900) % 1;
       pxText(CX, 'Z', Math.round(p.x + 16 + k * 4), Math.round(top - 2 - k * 6), '#3848a8');

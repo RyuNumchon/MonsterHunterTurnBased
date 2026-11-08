@@ -65,7 +65,7 @@
     filter 0.6s;
 }
 #pBalls {
-  font-size:.75em
+  font-size: 0.75em;
 }
 .zzz {
   position: absolute;
@@ -529,4 +529,30 @@
 .back.wait {
   background: #4878d8;
   border-color: #a8c8f8;
+}
+.elem {
+  font-size: 0.75em;
+  padding: 0 0.35em;
+  border-radius: 0.2em;
+  color: #fff;
+  vertical-align: middle;
+}
+.e-fire {
+  background: #e04828;
+}
+.e-water {
+  background: #3878d8;
+}
+.e-thunder {
+  background: #d8b020;
+}
+.e-ice {
+  background: #58b8d8;
+}
+.e-dragon {
+  background: #7a3a9a;
+}
+.elem.sealed {
+  background: #777;
+  text-decoration: line-through;
 }

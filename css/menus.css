@@ -73,8 +73,15 @@
   border-top: 0.15em solid #c8d8f8;
   margin-top: 0.3em;
   padding-top: 0.5em;
-  height: 4.6em;
+  min-height: 4.6em;
+  height: auto;
   line-height: 1.7;
+}
+/* Menus grow downward to fit their text; width stays fixed */
+#fMenu,
+#fMenu .menu {
+  max-height: none;
+  overflow: visible;
 }
 /* Menus with a description box keep one width, however long the text */
 .menu.withdesc {

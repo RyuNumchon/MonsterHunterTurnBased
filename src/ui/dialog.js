@@ -86,8 +86,6 @@ export function renderMenu() {
   if (!s) { if (UI.count) renderCount(); else { el.className = 'hidden'; el.innerHTML = ''; } return; }
   el.className = s.yn ? 'yn' : '';
   const cur = s.opts[s.idx];
-  const md = el.querySelector('.mdesc');
-  if (md) fitText(md, md.children);
   const head = !s.title ? '' : s.paged
       ? `<div class="mh paged"><button class="pg" data-act="mpage" data-val="-1">◀</button><span>${s.title}</span><button class="pg" data-act="mpage" data-val="1">▶</button></div>`
       : `<div class="mh">${s.title}</div>`;

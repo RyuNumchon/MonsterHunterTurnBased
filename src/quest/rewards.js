@@ -18,19 +18,29 @@ import { boxAdd } from '../core/pouch.js';
 
 /** Ends the hunt. State is set synchronously, so callers may fire-and-forget this. */
 export async function finishQuest(outcome) {
-  const m = G.monster, L = LOOT[G.monsterKey], p = G.player;
-  const win = outcome === 'slay' || outcome === 'capture', cap = outcome === 'capture';
+  const p = G.player;
+  const win = outcome === 'slay' || outcome === 'capture';
   const sections = [];
   let zenny = 0, base = 0;
   if (win) {
-    const roll = (t, n) => Array.from({ length: n }, () => weighted(t));
-    sections.push({ title: 'MAIN REWARDS', items: roll(L.reward, cap ? CONFIG.CAPTURE_MAIN_REWARDS : CONFIG.MAIN_REWARDS) });
-    if (cap) sections.push({ title: 'CAPTURE BONUS', bonus: true, items: roll(L.capture, CONFIG.CAPTURE_BONUS) });
-    const broken = Object.keys(m.parts).filter(k => m.parts[k].broken);
-    if (broken.length) sections.push({ title: 'BREAK REWARDS', items: broken.map(k => weighted(L.breaks[k])) });
-    base = Math.round(L.zenny * (cap ? CONFIG.CAPTURE_ZENNY_MULT : 1));
+    const multi = G.hunted.length > 1;
+    for (const h of (outcome === 'slay' || outcome === 'capture') ? G.hunted : []) {
+      const m = h.m, key = m.key, o = h.outcome;
+      const L = LOOT[key], cap = o === 'capture';
+      const roll = (t, n) => Array.from({ length: n }, () => weighted(t));
+      const pfx = multi ? `${m.name} · ` : '';
+
+      sections.push({ title: pfx + 'MAIN REWARDS', items: roll(L.reward, cap ? CONFIG.CAPTURE_MAIN_REWARDS : CONFIG.MAIN_REWARDS) });
+      if (cap) sections.push({ title: pfx + 'CAPTURE BONUS', bonus: true, items: roll(L.capture, CONFIG.CAPTURE_BONUS) });
+      const broken = Object.keys(m.parts).filter(k => m.parts[k].broken);
+      if (broken.length) sections.push({ title: pfx + 'BREAK REWARDS', items: broken.map(k => weighted(L.breaks[k])) });
+      
+      base += Math.round(L.zenny * (cap ? CONFIG.CAPTURE_ZENNY_MULT : 1));
+    }
     zenny = Math.round(base * (1 - p.carts / CONFIG.MAX_CARTS));
-  } else Audio8.music('fail');
+  } else {
+    Audio8.music('fail');
+  }
 
   G.over = true; G.outcome = outcome; G.boxed = false;
   G.rewards = { sections, zenny, base };
@@ -77,7 +87,7 @@ export function renderRewards() {
        <button class="rbtn big" data-act="village">RETURN TO VILLAGE</button>`;
   $('rewardOv').innerHTML = `
     <div class="rhead ${win ? '' : 'fail'}"><h3>${heads[o]}</h3>
-      <span>${m.name} · ${G.turn} turns · CARTS ${p.carts}/${CONFIG.MAX_CARTS}</span></div>
+      <span>${(G.hunted.length ? G.hunted.map(h => h.m.name) : [m.name]).join(' + ')} · ${G.turn} turns · CARTS ${p.carts}/${CONFIG.MAX_CARTS}</span></div>
     <div class="rbody">${body}</div>
     <div class="rbtns">${btns}</div>`;
 }
@@ -101,7 +111,7 @@ export function renderStorage() {
     <div class="rbody">${items.length
       ? `<div class="rgrid">${items.map(([id, c], i) => slotHtml(id, c, i * .03))}</div>`
       : '<p class="ftxt">The box is empty. Go hunt something!</p>'}</div>
-    <div class="rbtns"><button class="rbtn" data-act="closebox">CLOSE</button><button class="rbtn alt" data-act="wipebox">RESET SAVE</button></div>`;
+    <div class="rbtns"><button class="rbtn" data-act="closebox">CLOSE</button></div>`;
 }
 
 /** Opens storage and resolves when closed (see closeStorage in ui/dialog.js). */

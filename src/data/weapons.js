@@ -11,13 +11,13 @@ export const ATTACK_TYPES = ['attack', 'release', 'counter', 'finisher'];
 export const isAttack = mv => ATTACK_TYPES.includes(mv.type);
 
 export const WEAPONS = {
-  greatsword: { name: 'GREAT SWORD', short: 'GS', cls: 'greatsword', speed: .85, dmgType: 'cut', element: null, elemPower: 0, elemChance: 0, blurb: 'Slow but massive. Charge up for huge hits and GUARD.', moves: [
+  greatsword: { name: 'GREAT SWORD', short: 'GS', cls: 'greatsword', speed: .85, dmgType: 'cut', crit: 0, element: null, elemPower: 0, elemChance: 0, blurb: 'Slow but massive. Charge up for huge hits and GUARD.', moves: [
     { id: 'gs_slash',   name: 'OVERHEAD SLASH', type: 'attack',  tag: 'SLASH',  power: 24, acc: 0,  sharp: 2, desc: 'A reliable, heavy downward slash.' },
     { id: 'gs_charge',  name: 'CHARGE',         type: 'charge',  tag: 'CHARGE', sharp: 0, desc: 'Spend the turn charging. Holds up to Lv2.' },
     { id: 'gs_release', name: 'CHARGED SLASH',  type: 'release', tag: 'SLASH',  power: 24, acc: -5, sharp: 3, desc: 'Release the charge. The longer the charge, the bigger the hit.' },
     { id: 'gs_guard', name: 'GUARD', type: 'guard', tag: 'DEFEND', sharp: 1, priority: 1, desc: 'Block with the blade to reduce damage. Always acts first.' }
   ]},
-  longsword:  { name: 'LONGSWORD', short: 'LS', cls: 'longsword', speed: 1.1, dmgType: 'cut', element: null, elemPower: 0, elemChance: 0, blurb: 'Fast and accurate. Builds SPIRIT for a big finisher.', moves: [
+  longsword:  { name: 'LONGSWORD', short: 'LS', cls: 'longsword', speed: 1.1, dmgType: 'cut', crit: 0, element: null, elemPower: 0, elemChance: 0, blurb: 'Fast and accurate. Builds SPIRIT for a big finisher.', moves: [
     { id: 'ls_thrust',    name: 'THRUST',       type: 'attack',   tag: 'PIERCE',  power: 13, acc: 15, sharp: 1, desc: 'Fast, very accurate poke.' },
     { id: 'ls_spirit',    name: 'SPIRIT SLASH', type: 'attack',   tag: 'SLASH',   power: 18, acc: 5,  sharp: 2, spirit: 1, desc: 'Builds the SPIRIT gauge.' },
     { id: 'ls_foresight', name: 'FORESIGHT', type: 'counter', tag: 'COUNTER', power: 14, acc: 0, sharp: 2, priority: 1, desc: 'Uses SPIRIT. Evades the monster attack this turn. Always acts first.' },
@@ -29,7 +29,7 @@ export const WEAPONS = {
 const forged = (cls, extra) => ({ ...WEAPONS[cls], cls, ...extra });
 
 WEAPONS.rathalos_gs = forged('greatsword', {
-  name: 'RATHALOS BLADE', short: 'GS', atk: 1.15,
+  name: 'RATHALOS BLADE', short: 'GS', crit: 15, atk: 1.15,
   element: 'fire', elemPower: 6, elemChance: .25,
   pal: { W: '#b82820' },
   blurb: 'A great sword of red Rathalos scale and black shell.<br>Burns with FIRE.',
@@ -37,9 +37,12 @@ WEAPONS.rathalos_gs = forged('greatsword', {
 });
 
 WEAPONS.tigrex_ls = forged('longsword', {
-  name: 'TIGREX SABER', short: 'LS', atk: 1.25, speed: 1.15,
+  name: 'TIGREX SABER', short: 'LS', crit: -10, atk: 1.25, speed: 1.15,
   element: null, elemPower: 0, elemChance: 0,
   pal: { W: '#e88a30' },
   blurb: 'A long sword of orange Tigrex fang bound in blue hide.<br>Fierce and quick.',
   cost: { z: 2400, mats: { 'TIGREX SCALE': 4, 'TIGREX SHELL': 2, 'TIGREX CLAW': 1 } }
 });
+
+/** Displayed ATTACK value (menus only). */
+export const attackOf = w => Math.round(100 * (w.atk || 1));

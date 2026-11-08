@@ -2,7 +2,7 @@
 import { CONFIG } from '../core/config.js';
 import { pick, randInt, rand } from '../core/utils.js';
 import { G } from '../core/state.js';
-import { SMALLS, SMALL_SPAWNS } from '../data/monsters.js';
+import { MONSTERS, SMALLS, SMALL_SPAWNS } from '../data/monsters.js';
 import { isTown, NPC_DEFS, CXT, CYT } from '../data/world.js';
 import { MAPS, findFree } from './mapgen.js';
 
@@ -81,4 +81,14 @@ export function buildEntities(reset) {
 /** Drops dead monsters and a boss that has left the area (after a battle). */
 export function refreshEntities() {
   G.ents = G.ents.filter(e => !e.dead && !(e.kind === 'boss' && (e.area !== G.f.area || e.captured)));
+}
+
+/** Next quest target from G.queue. Appears away from the hunter; paint and the camp mark reset. */
+export function spawnNextTarget() {
+  const key = G.queue.shift();
+  G.monsterKey = key;
+  G.monster = makeFoe(key, MONSTERS[key], true);
+  G.monster.area = pick([4, 5, 6, 7, 9].filter(a => a !== G.f.area));
+  G.paint = 0; G.flags.campMark = false;
+  return G.monster;
 }
