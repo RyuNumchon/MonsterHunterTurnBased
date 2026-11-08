@@ -3,7 +3,7 @@ import { BOX, saveBox } from '../core/save.js';
 import { boxCount, boxRemove } from '../core/pouch.js';
 import { equipWeapon, equipArmor } from '../core/gear.js';
 import { weaponStats, WEAPONS } from '../data/weapons.js';
-import { ARMOR, SETS, SLOT_NAME } from '../data/armor.js';
+import { ARMOR, armorStats, SETS, SLOT_NAME } from '../data/armor.js';
 import { ITEM_RAR } from '../data/items.js';
 import { LOOT } from '../data/monsters.js';
 import { DATA } from '../art/index.js';
@@ -82,7 +82,8 @@ async function armorList(set) {
   while (true) {
     const opts = ids.map(id => {
       const a = ARMOR[id];
-      return { label: a.name, right: BOX.armor.includes(id) ? 'OWNED' : a.cost.z + 'z', desc: `${a.desc}<br>${matsText(a.cost)}` };
+      return { label: a.name, right: BOX.armor.includes(id) ? 'OWNED' : a.cost.z + 'z',
+               desc: `${armorStats(a)}<br>${a.desc}<br>${matsText(a.cost)}` };
     });
     opts.push({ label: 'BACK', desc: '' });
     const i = await choose(`${SETS[set].label} ARMOR · ${BOX.zenny}z`, opts, { desc: true });

@@ -7,10 +7,11 @@ import { G } from '../core/state.js';
 import { WEAPONS } from '../data/weapons.js';
 import { isSlow } from './status.js';
 import { moodSpeed } from './mood.js'
+import {skillVal} from '../core/gear.js';
 
 export function speedOf(u) {
   const base = u === G.player ? CONFIG.HUNTER_SPEED * (WEAPONS[u.weapon].speed || 1) : (u.spd || 100);
-  return Math.round(base * (isSlow(u) ? CONFIG.SLOW_SPEED_MULT : 1) * moodSpeed(u));
+  return Math.round(base * (isSlow(u) ? CONFIG.SLOW_SPEED_MULT : 1) * moodSpeed(u) * (u === G.player ? skillVal('speed', 1) : 1));
 }
 
 /** Hit-chance shift: a faster attacker hits more, a faster defender dodges more. */

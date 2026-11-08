@@ -13,8 +13,8 @@ import { say, ask, choose, askCount, MENU_PREV, MENU_NEXT } from '../ui/dialog.j
 import { addLog } from '../ui/fx.js';
 import { showStorage } from '../quest/rewards.js';
 import { curable, cureStatuses } from '../battle/status.js';
-import { ARMOR, ARMOR_SLOTS, SLOT_NAME } from '../data/armor.js';
-import { equipWeapon, equipArmor } from '../core/gear.js';
+import { ARMOR, ARMOR_SLOTS, SLOT_NAME, armorStats } from '../data/armor.js';
+import { equipWeapon, equipArmor, hunterDef, skillSummary } from '../core/gear.js';
 
 /** Save outside quests only (quest progress is saved on returning to town). */
 const persist = () => { if (G.phase !== 'quest') saveBox(); };
@@ -141,21 +141,29 @@ async function weaponMenu() {
 
 async function armorMenu() {
   while (true) {
-    const opts = ARMOR_SLOTS.map(s => {
+    const sk = skillSummary();
+    const opts = [{ label: 'HUNTER STATUS', right: `DEF ${hunterDef()}`,
+                    desc: `DEFENSE ${hunterDef()}<br>SKILLS: ${sk.length ? sk.join('<br>') : 'NONE'}` }];
+    for (const s of ARMOR_SLOTS) {
       const a = ARMOR[BOX.equip[s]];
-      return { label: SLOT_NAME[s], right: a ? a.short : '-', desc: a ? `${a.name}<br>${a.desc}` : 'Nothing equipped.' };
-    });
+      opts.push({ label: SLOT_NAME[s], right: a ? a.short : '-', desc: a ? `${a.name}<br>${armorStats(a)}<br>${a.desc}` : 'Nothing equipped.' });
+    }
     opts.push({ label: 'DONE', desc: '' });
     const i = await choose('ARMOR', opts, { desc: true });
-    if (i < 0 || i === ARMOR_SLOTS.length) return;
-    await armorSlotMenu(ARMOR_SLOTS[i]);
+    if (i < 0 || i === opts.length - 1) return;
+    if (i === 0) continue;                         // info row
+    await armorSlotMenu(ARMOR_SLOTS[i - 1]);
   }
 }
 
 async function armorSlotMenu(slot) {
   const ids = BOX.armor.filter(id => ARMOR[id] && ARMOR[id].slot === slot);
-  if (!ids.length) { await say(`You don't own any ${SLOT_NAME[slot]} armor.\nThe BLACKSMITH can forge some!`, 'dim'); return; }
-  const opts = ids.map(id => ({ label: ARMOR[id].name, right: BOX.equip[slot] === id ? 'E' : '', desc: ARMOR[id].desc }));
+  if (!ids.length) {
+    await say(`You don't own any ${SLOT_NAME[slot]} armor.\nThe BLACKSMITH can forge some!`, 'dim');
+    return;
+  }
+  const opts = ids.map(id => ({ label: ARMOR[id].name, right: BOX.equip[slot] === id ? 'E' : '',
+    desc: `${armorStats(ARMOR[id])}<br>${ARMOR[id].desc}` }));
   opts.push({ label: 'REMOVE', desc: `Take off your ${SLOT_NAME[slot]} armor.` });
   const j = await choose(`${SLOT_NAME[slot]} ARMOR`, opts, { desc: true });
   if (j < 0) return;

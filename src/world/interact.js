@@ -20,6 +20,7 @@ import { finishQuest, showStorage } from "../quest/rewards.js";
 import { LOOT } from '../data/monsters.js';
 import { pouchAdd, pouchCount } from '../core/pouch.js';
 import { itemBoxMenu, pouchMenu, craftMenu, obtain } from './inventory.js';
+import { hunterDef } from '../core/gear.js';
 
 /** A button: act on whatever the hunter is facing. */
 export function interact() {
@@ -202,7 +203,7 @@ export function openStartMenu() {
         case 'POUCH': await pouchMenu(); break;
         case 'COMBINE': await craftMenu('pouch'); break;
         case 'MAP': await fieldMap(); break;
-        case 'HUNTER': await say(`HUNTER · ${WEAPONS[p.weapon].name}\nEDGE ${s.name} · CARTS ${p.carts}/${CONFIG.MAX_CARTS}`); break;
+        case 'HUNTER': await say(`HUNTER · ${WEAPONS[p.weapon].name}\nEDGE ${s.name} · DEF ${hunterDef()} · CARTS ${p.carts}/${CONFIG.MAX_CARTS}`); break;
         case 'QUEST':
           if (inQuest) await say(`QUEST: ${q.title}\nSlay or capture the ${G.monster.name}. TURN ${G.turn}`);
           else if (q) await say(`ACCEPTED: ${q.title}\nDepart through the GATE to the north.`);
