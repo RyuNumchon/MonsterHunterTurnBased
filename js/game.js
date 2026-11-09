@@ -5,12 +5,59 @@
 import { Audio8 } from "./audio.js";
 import { logAction } from "../src/ui/fx.js";
 import {
-  CONFIG, CHARGE_MULT, getSharp, isAttack, WEAPONS, MONSTERS, SMALLS, SMALL_SPAWNS,
-  PARTS, ITEMS, GATHER, LOOT, ITEM_RAR, AREAS, LINKS, NEST, neighbors, sideTo,
-  THEMES, SOLID, WATERS, MW, MH, CXT, CYT, DIRV, OPP, dirOf, SIDE_IN, CAMP_SPAWN,
-  rng32, weighted, hexRgb, rgbHex, mixRgb, lighten, darken, renderArt,
-  ITEM_ART, WEAPON_ART, GATHER_ART, ICON_ART, MON_ART, SKY, BGC, ART, DATA, hunterBackDef,
-  FONT35, pxText, genArea, MAPS, findFree
+  CONFIG,
+  CHARGE_MULT,
+  getSharp,
+  isAttack,
+  WEAPONS,
+  MONSTERS,
+  SMALLS,
+  SMALL_SPAWNS,
+  PARTS,
+  ITEMS,
+  GATHER,
+  LOOT,
+  ITEM_RAR,
+  AREAS,
+  LINKS,
+  NEST,
+  neighbors,
+  sideTo,
+  THEMES,
+  SOLID,
+  WATERS,
+  MW,
+  MH,
+  CXT,
+  CYT,
+  DIRV,
+  OPP,
+  dirOf,
+  SIDE_IN,
+  CAMP_SPAWN,
+  rng32,
+  weighted,
+  hexRgb,
+  rgbHex,
+  mixRgb,
+  lighten,
+  darken,
+  renderArt,
+  ITEM_ART,
+  WEAPON_ART,
+  GATHER_ART,
+  ICON_ART,
+  MON_ART,
+  SKY,
+  BGC,
+  ART,
+  DATA,
+  hunterBackDef,
+  FONT35,
+  pxText,
+  genArea,
+  MAPS,
+  findFree,
 } from "./data.js";
 
 const $ = (id) => document.getElementById(id);
@@ -21,14 +68,28 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const BOX_KEY = "mh_gen3_itembox_v3";
-const defaultBox = () => ({ items: {}, zenny: CONFIG.START_ZENNY, hunts: 0, weapon: "greatsword", muted: false });
+const defaultBox = () => ({
+  items: {},
+  zenny: CONFIG.START_ZENNY,
+  hunts: 0,
+  weapon: "greatsword",
+  muted: false,
+});
 
 function loadBox() {
-  try { return { ...defaultBox(), ...(JSON.parse(localStorage.getItem(BOX_KEY)) || {}) }; }
-  catch (e) { return defaultBox(); }
+  try {
+    return {
+      ...defaultBox(),
+      ...(JSON.parse(localStorage.getItem(BOX_KEY)) || {}),
+    };
+  } catch (e) {
+    return defaultBox();
+  }
 }
 function saveBox() {
-  try { localStorage.setItem(BOX_KEY, JSON.stringify(BOX)); } catch (e) {}
+  try {
+    localStorage.setItem(BOX_KEY, JSON.stringify(BOX));
+  } catch (e) {}
 }
 
 let BOX = loadBox();
@@ -36,24 +97,58 @@ Audio8.setMuted(BOX.muted);
 
 let G = null;
 const UI = { mode: "main", data: {} };
-let typing = false, skipType = false, advance = null;
+let typing = false,
+  skipType = false,
+  advance = null;
 
 const NPC_DEFS = [
   { id: "campcat", area: 0, at: [9, 6], name: "CAMP FELYNE" },
   { id: "veteran", area: 2, at: [8, 12], name: "VETERAN HUNTER" },
-  { id: "comrade", area: 3, at: [16, 13], name: "FELYNE COMRADE" }
+  { id: "comrade", area: 3, at: [16, 13], name: "FELYNE COMRADE" },
 ];
 
 function makeFoe(key, d, isBoss) {
   const parts = {};
-  for (const k in d.parts) parts[k] = { hp: d.parts[k], max: d.parts[k], broken: false };
+  for (const k in d.parts)
+    parts[k] = { hp: d.parts[k], max: d.parts[k], broken: false };
   return {
-    kind: isBoss ? "boss" : "small", key, isBoss, name: d.name, rank: d.rank, attacks: d.attacks,
-    hp: d.hp, maxHp: d.hp, parts, sleeping: false, sleepTurns: 0, flash: 0, skipNext: null,
-    atkMult: 1, armorCracked: false, trapped: 0, trapCount: 0, tranq: 0, turnsInArea: 0,
-    roamTimer: 0, restTurns: 0, fleeAt: randInt(CONFIG.FLEE_MIN, CONFIG.FLEE_MAX),
-    lowHpFled: false, warnedCap: false, roared: false, dead: false, captured: false,
-    area: null, posArea: null, x: 0, y: 0, hx: 0, hy: 0, mv: null, next: 0, dir: "left", alerted: false
+    kind: isBoss ? "boss" : "small",
+    key,
+    isBoss,
+    name: d.name,
+    rank: d.rank,
+    attacks: d.attacks,
+    hp: d.hp,
+    maxHp: d.hp,
+    parts,
+    sleeping: false,
+    sleepTurns: 0,
+    flash: 0,
+    skipNext: null,
+    atkMult: 1,
+    armorCracked: false,
+    trapped: 0,
+    trapCount: 0,
+    tranq: 0,
+    turnsInArea: 0,
+    roamTimer: 0,
+    restTurns: 0,
+    fleeAt: randInt(CONFIG.FLEE_MIN, CONFIG.FLEE_MAX),
+    lowHpFled: false,
+    warnedCap: false,
+    roared: false,
+    dead: false,
+    captured: false,
+    area: null,
+    posArea: null,
+    x: 0,
+    y: 0,
+    hx: 0,
+    hy: 0,
+    mv: null,
+    next: 0,
+    dir: "left",
+    alerted: false,
   };
 }
 
@@ -80,8 +175,16 @@ function initGame(targetBoss = "rathalos") {
     boss: makeFoe(targetBoss, MONSTERS[targetBoss], true),
     smalls: {},
     npcs: NPC_DEFS.map((n) => ({ ...n, x: n.at[0], y: n.at[1] })),
-    pouch: { potion: 5, whetstone: 1, might: 2, paintball: 3, flash: 2, shock: 1, tranq: 4 },
-    log: []
+    pouch: {
+      potion: 5,
+      whetstone: 1,
+      might: 2,
+      paintball: 3,
+      flash: 2,
+      shock: 1,
+      tranq: 4,
+    },
+    log: [],
   };
 
   G.boss.area = 5;
@@ -122,7 +225,9 @@ function logMsg(txt, cls = "") {
 function renderLog() {
   const el = $("log");
   if (!el) return;
-  el.innerHTML = G.log.map((l) => `<div class="${l.cls}">${l.txt}</div>`).join("");
+  el.innerHTML = G.log
+    .map((l) => `<div class="${l.cls}">${l.txt}</div>`)
+    .join("");
 }
 
 async function typeText(el, text, spd = CONFIG.TEXT_SPEED) {
@@ -145,7 +250,8 @@ function getFieldStatusMsg() {
   const aid = G.area;
   const A = AREAS[aid];
   let m = `You are in ${A.name} (${A.sub}).`;
-  if (aid === 0) m += " Safe base camp. Rest in the tent or check your item box.";
+  if (aid === 0)
+    m += " Safe base camp. Rest in the tent or check your item box.";
   if (G.boss.area === aid) m += ` ⚠️ ${G.boss.name} is roaming here!`;
   return m;
 }
@@ -190,7 +296,8 @@ function setUI(mode, data = {}) {
     const wpn = WEAPONS[G.weapon];
     let html = `<div class="movebox">`;
     wpn.moves.forEach((m) => {
-      let dis = false, sub = m.desc;
+      let dis = false,
+        sub = m.desc;
       if (m.type === "release" && G.charge === 0) dis = true;
       if (m.type === "finisher" && G.spirit <= 0) dis = true;
       if (m.type === "counter" && G.spirit <= 0) dis = true;
@@ -235,7 +342,13 @@ function drawField() {
   if (G.boss.area === G.area) {
     ctx.fillStyle = "#d9534f";
     ctx.beginPath();
-    ctx.arc(G.boss.x * tw + tw / 2, G.boss.y * th + th / 2, tw / 2, 0, Math.PI * 2);
+    ctx.arc(
+      G.boss.x * tw + tw / 2,
+      G.boss.y * th + th / 2,
+      tw / 2,
+      0,
+      Math.PI * 2,
+    );
     ctx.fill();
   }
 }
@@ -281,7 +394,8 @@ document.addEventListener("click", (e) => {
     Audio8.music("camp");
     setUI("main");
   }
-  if (act === "b_back") setUI("battle_root", { foe: G.boss, targetPart: "head" });
+  if (act === "b_back")
+    setUI("battle_root", { foe: G.boss, targetPart: "head" });
   if (act === "b_attack") setUI("battle_moves", { foe: G.boss });
 });
 

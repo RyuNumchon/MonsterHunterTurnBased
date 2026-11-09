@@ -7,10 +7,12 @@
 
 /** The current hunt (null before boot). Compare `G !== g` to detect a restart. */
 export let G = null;
-export function setG(v) { G = v; }
+export function setG(v) {
+  G = v;
+}
 
 /** Battle-panel mode + the open list menu (field START menu, shop, YES/NO...). */
-export const UI = { mode: 'main', data: {}, menu: null, count: null };
+export const UI = { mode: "main", data: {}, menu: null, count: null };
 
 /** Pending "wait for the player" promises: resolve functions, or null. */
 export const waits = { advance: null, map: null, carve: null, store: null };

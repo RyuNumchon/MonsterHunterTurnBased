@@ -1,53 +1,79 @@
 /* All input: mouse/touch clicks (event delegation on data-act), keyboard, on-screen D-pad.
    Audio is unlocked on the first user gesture (browser autoplay rules). */
-import { CONFIG } from './core/config.js';
-import { $ } from './core/utils.js';
-import { G, UI, waits, text, input } from './core/state.js';
-import { BOX, saveBox } from './core/save.js';
-import { ITEMS } from './data/items.js';
-import { DATA, pimg } from './art/index.js';
-import { Audio8 } from './audio/audio8.js';
-import { flow, doAdvance, pickMenu, moveMenu, cancelMenu, doCarve, closeStorage, pageMenu, stepCount, confirmCount, cancelCount, countAct } from './ui/dialog.js';
-import { setMode, moveInfo } from './ui/hud.js';
-import { openMap, closeMap } from './ui/map.js';
-import { canAct } from './world/field.js';
-import { fieldMap, interact, openStartMenu } from './world/interact.js';
-import { useItemBattle } from './battle/encounter.js';
-import { confirmCombine, findMove, pickMove, confirmAttack, confirmRun, confirmWait, goBack, runTurn } from './battle/turn.js';
-import { putAllInBox } from './quest/rewards.js';
-import { returnToVillage } from './game.js';
-import { fitText } from './ui/fx.js';
-import { pouchMenu } from './world/inventory.js';
-import { readKey, battleNav } from './ui/display.js';
+import { CONFIG } from "./core/config.js";
+import { $ } from "./core/utils.js";
+import { G, UI, waits, text, input } from "./core/state.js";
+import { BOX, saveBox } from "./core/save.js";
+import { ITEMS } from "./data/items.js";
+import { DATA, pimg } from "./art/index.js";
+import { Audio8 } from "./audio/audio8.js";
+import {
+  flow,
+  doAdvance,
+  pickMenu,
+  moveMenu,
+  cancelMenu,
+  doCarve,
+  closeStorage,
+  pageMenu,
+  stepCount,
+  confirmCount,
+  cancelCount,
+  countAct,
+} from "./ui/dialog.js";
+import { setMode, moveInfo } from "./ui/hud.js";
+import { openMap, closeMap } from "./ui/map.js";
+import { canAct } from "./world/field.js";
+import { fieldMap, interact, openStartMenu } from "./world/interact.js";
+import { useItemBattle } from "./battle/encounter.js";
+import {
+  confirmCombine,
+  findMove,
+  pickMove,
+  confirmAttack,
+  confirmRun,
+  confirmWait,
+  goBack,
+  runTurn,
+} from "./battle/turn.js";
+import { putAllInBox } from "./quest/rewards.js";
+import { returnToVillage } from "./game.js";
+import { fitText } from "./ui/fx.js";
+import { pouchMenu } from "./world/inventory.js";
+import { readKey, battleNav } from "./ui/display.js";
 
 function toggleMute() {
   Audio8.init();
   Audio8.setMuted(!Audio8.muted);
-  BOX.muted = Audio8.muted; saveBox();
+  BOX.muted = Audio8.muted;
+  saveBox();
 }
 
 function fieldAction(act) {
   switch (act) {
-    case 'fa':
+    case "fa":
       if (UI.count) confirmCount();
       else if (UI.menu) pickMenu(UI.menu.idx);
       else if (waits.map) closeMap();
       else if (waits.store) closeStorage();
       else if (canAct()) interact();
       break;
-    case 'fb':
-      cancelCount(); cancelMenu(); closeMap(); closeStorage();
+    case "fb":
+      cancelCount();
+      cancelMenu();
+      closeMap();
+      closeStorage();
       break;
-    case 'fstart':
-      if (UI.menu?.title === 'MENU') cancelMenu();
+    case "fstart":
+      if (UI.menu?.title === "MENU") cancelMenu();
       else if (canAct()) openStartMenu();
       break;
-    case 'fmap':
+    case "fmap":
       if (waits.map) closeMap();
       else if (canAct()) flow(fieldMap);
       break;
-    case 'fpouch':
-      if (UI.menu?.title?.startsWith('POUCH')) cancelMenu();
+    case "fpouch":
+      if (UI.menu?.title?.startsWith("POUCH")) cancelMenu();
       else if (canAct()) flow(pouchMenu);
       break;
   }
@@ -56,31 +82,63 @@ function fieldAction(act) {
 /* ---------- Clicks ---------- */
 function onClick(e) {
   // While text is showing, a tap anywhere on the game advances it (D-pad excluded)
-  if ((waits.advance || text.typing) && e.target.closest('#gb') && !e.target.closest('[data-dir]')) { doAdvance(); return; }
-  const t = e.target.closest('[data-act]');
+  if (
+    (waits.advance || text.typing) &&
+    e.target.closest("#gb") &&
+    !e.target.closest("[data-dir]")
+  ) {
+    doAdvance();
+    return;
+  }
+  const t = e.target.closest("[data-act]");
   if (!t || t.disabled) return;
-  const act = t.dataset.act, val = t.dataset.val;
+  const act = t.dataset.act,
+    val = t.dataset.val;
 
   // Always available
   switch (act) {
-    case 'village':  returnToVillage(); return;
-    case 'putall':   putAllInBox(); return;
-    case 'closebox': Audio8.sfx('back'); closeStorage(); return;
-    case 'advance':  doAdvance(); return;
-    case 'menu':     pickMenu(+val); return;
-    case 'closemap': closeMap(); return;
-    case 'carve':    doCarve(); return;
-    case 'wait':     confirmWait(); break;
-    case 'cnt':      countAct(val); return;
-    case 'mpage':    pageMenu(+val); return;
-
+    case "village":
+      returnToVillage();
+      return;
+    case "putall":
+      putAllInBox();
+      return;
+    case "closebox":
+      Audio8.sfx("back");
+      closeStorage();
+      return;
+    case "advance":
+      doAdvance();
+      return;
+    case "menu":
+      pickMenu(+val);
+      return;
+    case "closemap":
+      closeMap();
+      return;
+    case "carve":
+      doCarve();
+      return;
+    case "wait":
+      confirmWait();
+      break;
+    case "cnt":
+      countAct(val);
+      return;
+    case "mpage":
+      pageMenu(+val);
+      return;
   }
   if (!G || G.over) return;
 
   // Field
-  if (G.screen === 'field') {
+  if (G.screen === "field") {
     switch (act) {
-      case 'fa': case 'fb': case 'fstart': case 'fmap': case 'fpouch':
+      case "fa":
+      case "fb":
+      case "fstart":
+      case "fmap":
+      case "fpouch":
         fieldAction(act);
         break;
     }
@@ -90,54 +148,107 @@ function onClick(e) {
   // Battle
   if (G.busy) return;
   switch (act) {
-    case 'fight': Audio8.sfx('select'); setMode('fight'); break;
-    case 'pouch':   Audio8.sfx('select'); setMode('pouch'); break;
-    case 'bcombine': setMode('combine', { back: 'pouch', page: 0 }); return;
-    case 'bcpage':   setMode('combine', { ...UI.data, page: (UI.data.page || 0) + +val }); return;
-    case 'bcraft':   confirmCombine(+val); return;
-    case 'map':   flow(async () => { await openMap(); return 'main'; }); break;
-    case 'run':   confirmRun(); break;
-    case 'back':  goBack(); break;
-    case 'move':  pickMove(val); break;
-    case 'part':  confirmAttack(UI.data.moveId, val); break;
-    case 'item':  useItemBattle(val); break;              // instant, no confirmation
-    case 'yes':   Audio8.sfx('select'); runTurn(UI.data.action); break;
-    case 'no':    Audio8.sfx('back'); setMode(UI.data.back, UI.data.backData || {}); break;
+    case "fight":
+      Audio8.sfx("select");
+      setMode("fight");
+      break;
+    case "pouch":
+      Audio8.sfx("select");
+      setMode("pouch");
+      break;
+    case "bcombine":
+      setMode("combine", { back: "pouch", page: 0 });
+      return;
+    case "bcpage":
+      setMode("combine", { ...UI.data, page: (UI.data.page || 0) + +val });
+      return;
+    case "bcraft":
+      confirmCombine(+val);
+      return;
+    case "map":
+      flow(async () => {
+        await openMap();
+        return "main";
+      });
+      break;
+    case "run":
+      confirmRun();
+      break;
+    case "back":
+      goBack();
+      break;
+    case "move":
+      pickMove(val);
+      break;
+    case "part":
+      confirmAttack(UI.data.moveId, val);
+      break;
+    case "item":
+      useItemBattle(val);
+      break; // instant, no confirmation
+    case "yes":
+      Audio8.sfx("select");
+      runTurn(UI.data.action);
+      break;
+    case "no":
+      Audio8.sfx("back");
+      setMode(UI.data.back, UI.data.backData || {});
+      break;
   }
 }
 
 /* ---------- Hover info (FIGHT move details, POUCH descriptions) ---------- */
 function onHover(e) {
-  const t = e.target.closest('[data-info]');
+  const t = e.target.closest("[data-info]");
   if (!t || !G || !G.foe) return;
-  if (UI.mode === 'fight') {
+  if (UI.mode === "fight") {
     const mv = findMove(t.dataset.info);
-    if (mv && $('mInfo')) {
-      $('mInfo').innerHTML = moveInfo(mv);
-      fitText($('mInfo'));
+    if (mv && $("mInfo")) {
+      $("mInfo").innerHTML = moveInfo(mv);
+      fitText($("mInfo"));
     }
   }
-  if (UI.mode === 'pouch' && $('pouchInfo')) {
-    const k = t.dataset.info, it = ITEMS[k];
-    $('pouchInfo').innerHTML = `${pimg(DATA['item_' + k])} ${it.name}<br>${it.desc}<div class="sub">ITEMS USED ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN} THIS TURN</div>`;
-    fitText($('pouchInfo'));
+  if (UI.mode === "pouch" && $("pouchInfo")) {
+    const k = t.dataset.info,
+      it = ITEMS[k];
+    $("pouchInfo").innerHTML =
+      `${pimg(DATA["item_" + k])} ${it.name}<br>${it.desc}<div class="sub">ITEMS USED ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN} THIS TURN</div>`;
+    fitText($("pouchInfo"));
   }
 }
 
 /* ---------- Keyboard ---------- */
 function onKeyDown(e) {
   Audio8.init();
-  if (e.code === 'KeyN') { toggleMute(); return; }
+  if (e.code === "KeyN") {
+    toggleMute();
+    return;
+  }
   const k = readKey(e);
   if (!k) return;
   e.preventDefault();
-  if (G && G.screen === 'field') {
-    if (k.map && waits.map) { closeMap(); return; }
-    if (k.pouch && UI.menu?.title?.startsWith('POUCH')) { cancelMenu(); return; }
+  if (G && G.screen === "field") {
+    if (k.map && waits.map) {
+      closeMap();
+      return;
+    }
+    if (k.pouch && UI.menu?.title?.startsWith("POUCH")) {
+      cancelMenu();
+      return;
+    }
     if (canAct() && !waits.map && !waits.store) {
-      if (k.start) { fieldAction('fstart'); return; }
-      if (k.pouch) { fieldAction('fpouch'); return; }
-      if (k.map) { fieldAction('fmap'); return; }
+      if (k.start) {
+        fieldAction("fstart");
+        return;
+      }
+      if (k.pouch) {
+        fieldAction("fpouch");
+        return;
+      }
+      if (k.map) {
+        fieldAction("fmap");
+        return;
+      }
     }
   }
   if (battleNav(k)) return;
@@ -145,84 +256,116 @@ function onKeyDown(e) {
     if (k.map && waits.map) closeMap();
     return;
   }
-  const dir = k.dir || null, isA = !!k.a, isB = !!k.b, isEnter = false;
+  const dir = k.dir || null,
+    isA = !!k.a,
+    isB = !!k.b,
+    isEnter = false;
   if (!G) return;
 
-  if (waits.store) { if (isA || isB || isEnter) closeStorage(); return; }
-  if (!$('rewardOv').classList.contains('hidden')) {
+  if (waits.store) {
+    if (isA || isB || isEnter) closeStorage();
+    return;
+  }
+  if (!$("rewardOv").classList.contains("hidden")) {
     if ((isA || isEnter) && G.over) {
-      const won = G.outcome === 'slay' || G.outcome === 'capture';
-      if (won && !G.boxed) putAllInBox(); else returnToVillage();
+      const won = G.outcome === "slay" || G.outcome === "capture";
+      if (won && !G.boxed) putAllInBox();
+      else returnToVillage();
     }
     return;
   }
-  if (waits.map) { if (isA || isB || isEnter) closeMap(); return; }
+  if (waits.map) {
+    if (isA || isB || isEnter) closeMap();
+    return;
+  }
   if (UI.count) {
-    if (dir === 'up') stepCount(1);
-    else if (dir === 'down') stepCount(-1);
-    else if (dir === 'right') stepCount(10);
-    else if (dir === 'left') stepCount(-10);
+    if (dir === "up") stepCount(1);
+    else if (dir === "down") stepCount(-1);
+    else if (dir === "right") stepCount(10);
+    else if (dir === "left") stepCount(-10);
     else if (isA || isEnter) confirmCount();
     else if (isB) cancelCount();
     return;
   }
   if (UI.menu) {
-    if (UI.menu.paged && (dir === 'left' || dir === 'right')) pageMenu(dir === 'left' ? -1 : 1);
-    else if (dir === 'up' || dir === 'left') moveMenu(-1);
-    else if (dir === 'down' || dir === 'right') moveMenu(1);
+    if (UI.menu.paged && (dir === "left" || dir === "right"))
+      pageMenu(dir === "left" ? -1 : 1);
+    else if (dir === "up" || dir === "left") moveMenu(-1);
+    else if (dir === "down" || dir === "right") moveMenu(1);
     else if (isA || isEnter) pickMenu(UI.menu.idx);
     else if (isB) cancelMenu();
     return;
   }
-  if (dir && G.screen === 'field') {
-    if (!e.repeat) { input.dirs = input.dirs.filter(x => x !== dir); input.dirs.push(dir); }
+  if (dir && G.screen === "field") {
+    if (!e.repeat) {
+      input.dirs = input.dirs.filter((x) => x !== dir);
+      input.dirs.push(dir);
+    }
     return;
   }
-  if (text.typing || waits.advance) { if (isA || isEnter || isB) doAdvance(); return; }
-  if (UI.mode === 'carve' && waits.carve) { if (isA || isEnter) doCarve(); return; }
+  if (text.typing || waits.advance) {
+    if (isA || isEnter || isB) doAdvance();
+    return;
+  }
+  if (UI.mode === "carve" && waits.carve) {
+    if (isA || isEnter) doCarve();
+    return;
+  }
   if (G.over) return;
 
-  if (G.screen === 'field') {
+  if (G.screen === "field") {
     if (!canAct()) return;
-    if (isA) fieldAction('fa');
-    else if (k.start) fieldAction('fstart');
-    else if (isB) fieldAction('fb');
+    if (isA) fieldAction("fa");
+    else if (k.start) fieldAction("fstart");
+    else if (isB) fieldAction("fb");
   } else if (isB) goBack();
 }
 function onKeyUp(e) {
   const dir = readKey(e)?.dir;
-  if (dir) input.dirs = input.dirs.filter(x => x !== dir);
+  if (dir) input.dirs = input.dirs.filter((x) => x !== dir);
 }
 
 /* ---------- On-screen D-pad: hold to walk; also moves menu cursors ---------- */
 function onPointerDown(e) {
-  const b = e.target.closest('[data-dir]');
+  const b = e.target.closest("[data-dir]");
   if (!b) return;
   e.preventDefault();
-  input.held = b.dataset.dir; b.classList.add('on');
+  input.held = b.dataset.dir;
+  b.classList.add("on");
   const hd = input.held;
-  if (UI.count) { stepCount({ up: 1, down: -1, right: 10, left: -10 }[hd]); return; }
-  if (UI.menu) {
-    if (UI.menu.paged && (hd === 'left' || hd === 'right')) pageMenu(hd === 'left' ? -1 : 1);
-    else moveMenu(hd === 'up' || hd === 'left' ? -1 : 1);
+  if (UI.count) {
+    stepCount({ up: 1, down: -1, right: 10, left: -10 }[hd]);
     return;
   }
-  input.dirs = input.dirs.filter(x => x !== input.held); input.dirs.push(input.held);
+  if (UI.menu) {
+    if (UI.menu.paged && (hd === "left" || hd === "right"))
+      pageMenu(hd === "left" ? -1 : 1);
+    else moveMenu(hd === "up" || hd === "left" ? -1 : 1);
+    return;
+  }
+  input.dirs = input.dirs.filter((x) => x !== input.held);
+  input.dirs.push(input.held);
 }
 function releaseDir() {
   if (!input.held) return;
-  input.dirs = input.dirs.filter(x => x !== input.held); input.held = null;
-  document.querySelectorAll('.dpad .on').forEach(b => b.classList.remove('on'));
+  input.dirs = input.dirs.filter((x) => x !== input.held);
+  input.held = null;
+  document
+    .querySelectorAll(".dpad .on")
+    .forEach((b) => b.classList.remove("on"));
 }
 
 export function initInput() {
-  document.addEventListener('pointerdown', () => Audio8.init(), true);   // unlock audio
-  document.addEventListener('click', onClick);
-  $('panel').addEventListener('mouseover', onHover);
-  document.addEventListener('keydown', onKeyDown);
-  document.addEventListener('keyup', onKeyUp);
-  document.addEventListener('pointerdown', onPointerDown);
-  document.addEventListener('pointerup', releaseDir);
-  document.addEventListener('pointercancel', releaseDir);
-  window.addEventListener('blur', () => { input.dirs = []; releaseDir(); });
+  document.addEventListener("pointerdown", () => Audio8.init(), true); // unlock audio
+  document.addEventListener("click", onClick);
+  $("panel").addEventListener("mouseover", onHover);
+  document.addEventListener("keydown", onKeyDown);
+  document.addEventListener("keyup", onKeyUp);
+  document.addEventListener("pointerdown", onPointerDown);
+  document.addEventListener("pointerup", releaseDir);
+  document.addEventListener("pointercancel", releaseDir);
+  window.addEventListener("blur", () => {
+    input.dirs = [];
+    releaseDir();
+  });
 }
