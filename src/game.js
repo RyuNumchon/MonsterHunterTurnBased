@@ -66,7 +66,6 @@ export function newSession() {
   G.npcs = makeNpcs();
   UI.mode = 'main'; UI.data = {}; input.dirs = [];
   hideOverlays();
-  $('log').innerHTML = '';
   resetMini(); buildEntities(true);
   showScreen(); setPhase(0); renderPanel();
   showLocation(VILLAGE);
@@ -110,7 +109,6 @@ async function departQuest() {
   G.monsterKey = q.targets[0];
   G.smalls = makeSmalls(G.npcs);
   Object.assign(G.f, { area: 0, x: CAMP_SPAWN.x, y: CAMP_SPAWN.y, dir: CAMP_SPAWN.dir, mv: null });
-  $('log').innerHTML = '';
   addLog(`[quest ${q.id} · fee ${q.fee}z ·${G.monsters.map(m => `m.name@{m.area}`).join(', ')} · max HP ${p.maxHp}${G.feast ? ` (feast +${G.feast.hp})` : ''}]`, 'dim');
   resetMini(); buildEntities(true); renderPanel();
   Audio8.music('camp');

@@ -103,7 +103,7 @@ export function confirmAttack(moveId, part) {
   if (getSharp(p.sharp).bounce) notes.push('WARNING: your blade is dull and may BOUNCE!');
   if (mv.type === 'counter') notes.unshift("It only strikes if you time the monster's attack!");
   Audio8.sfx('select');
-  setMode('confirm', { q: m.isBoss ? `Use ${name}<br>on the ${PARTS[part].label}?` : `Use ${name}<br>on the ${m.name}?`,
+  setMode('confirm', { q: m.isBoss ? `Use ${mv.name}<br>on the ${PARTS[part].label}?` : `Use ${mv.name}<br>on the ${m.name}?`,
     sub: notes.join('<br>'),
     action: { kind: 'move', moveId, target: part },
     back: m.isBoss ? 'target' : 'fight', backData: m.isBoss ? { moveId } : {} });
@@ -216,7 +216,7 @@ async function playerActionPhase(action) {
     p.charge = 0;
     addLog(`[overcharge: ${oc.power} power (lv1 x${CONFIG.CHARGE_LV1_MULT} x ${CONFIG.OVERCHARGE_MULT}) · charge reset]`, 'dim');
     anim($('playerSprite'), 'a-lunge', 350); Audio8.sfx('swoosh'); renderBattle();
-    await say('The charge overflowed!\nHUNTER used OVERCHARGE SLASH!', 'warn');
+    await say(`HUNTER used ${move.name}!\nThe charge overflowed into a wild slash!`, 'warn');
     return { move: oc, power: oc.power, chargeMult: 1, target: action.target, sharpLv: getSharp(p.sharp) };
   }
   if (p.charge > 0 && move.type !== 'charge' && move.type !== 'release') {

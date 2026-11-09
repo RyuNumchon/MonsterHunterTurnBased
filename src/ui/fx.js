@@ -1,6 +1,8 @@
 /* Small visual helpers: CSS animations, floating numbers, log, phase pills, toasts. */
 import { $ } from '../core/utils.js';
 import { areaInfo } from '../data/world.js';
+import { CONFIG } from '../core/config.js';
+import { G } from '../core/state.js';
 
 /** Restart a CSS animation class on an element. */
 export function anim(el, cls, ms) {
@@ -19,13 +21,13 @@ export function pop(el, txt, cls = '') {
   setTimeout(() => d.remove(), 1400);
 }
 
-export function addLog(msg, cls = '') {
-  const d = document.createElement('div');
-  d.className = cls ? 'l-' + cls : '';
-  d.textContent = msg;
-  $('log').appendChild(d);
-  $('log').scrollTop = $('log').scrollHeight;
+const LOG_STYLE = { dim: 'color:#8a8a8a', good: 'color:#2a9a40', bad: 'color:#d03030', warn: 'color:#c07800' };
+export function addLog(msg, tone = '') {
+  if (!CONFIG.DEBUG_LOG) return;
+  const t = G && G.phase === 'quest' ? `T${G.turn} ` : '';
+  console.log(`%c${t}${msg}`, LOG_STYLE[tone] || '');
 }
+
 
 /** Highlights the active phase pill in the top bar (0 = none). */
 export function setPhase(n) {

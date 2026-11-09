@@ -10,6 +10,10 @@ import { updateField } from './world/field.js';
 import { initInput, updateMuteLabel } from './input.js';
 import { newSession } from './game.js';
 import './data/moves.js';
+import { initDisplay } from './ui/display.js';
+import { CONFIG } from './core/config.js';
+
+if (CONFIG.DEBUG_LOG) Object.defineProperty(window, 'MH', { get: () => ({ G, BOX }) });   // console helpers
 
 let lastT = performance.now();
 function loop(now) {
@@ -25,6 +29,7 @@ function loop(now) {
 
 initHud();
 initInput();
+initDisplay();
 Audio8.setMuted(BOX.muted);
 updateMuteLabel();
 await loadSprites();   // swap in the ./resources images before anything is drawn

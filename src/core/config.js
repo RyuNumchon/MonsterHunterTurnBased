@@ -75,6 +75,8 @@ export const CONFIG = {
   METER_LEAD_MS: 450, METER_PASSES: 4, METER_MAX_MS: 6000, METER_RESULT_MS: 380,
   GUARD_PERFECT_SHARP: .5,                        // perfect guard pays half the sharpness cost
   COUNTER_MULT: 1.5,                              // counter strike power
+
+  DEBUG_LOG: true,       // hidden numbers go to the browser console (F12); false = silent
 };
 
 // Great Sword: Charge, Charge, then Release on turn 3 = Lv3 (3×)
