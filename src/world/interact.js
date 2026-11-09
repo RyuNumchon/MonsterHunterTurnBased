@@ -19,7 +19,7 @@ import { startEncounter } from "../battle/encounter.js";
 import { finishQuest, showStorage } from "../quest/rewards.js";
 import { LOOT } from '../data/monsters.js';
 import { pouchAdd, pouchCount } from '../core/pouch.js';
-import { itemBoxMenu, pouchMenu, craftMenu, obtain } from './inventory.js';
+import { equipmentMenu, itemBoxMenu, pouchMenu, craftMenu, obtain } from './inventory.js';
 import { hunterDef } from '../core/gear.js';
 import { liveBosses } from './spawn.js';
 
@@ -198,13 +198,14 @@ export function openStartMenu() {
     while (true) {
       $('fDialog').classList.add('hidden');
       const inQuest = G.phase === 'quest';
-      const opts = ['POUCH', 'COMBINE', 'MAP', 'HUNTER', 'QUEST', ...(inQuest ? ['ABANDON QUEST'] : []), 'EXIT'];
+      const opts = ['POUCH', 'COMBINE', 'MAP', 'HUNTER',  'EQUIPMENT', 'QUEST', ...(inQuest ? ['ABANDON QUEST'] : []), 'EXIT'];
       const i = await choose('MENU', opts), p = G.player, s = getSharp(p.sharp), q = G.quest;
       switch (opts[i]) {
         case 'POUCH': await pouchMenu(); break;
         case 'COMBINE': await craftMenu('pouch'); break;
         case 'MAP': await fieldMap(); break;
         case 'HUNTER': await say(`HUNTER · ${WEAPONS[p.weapon].name}\nEDGE ${s.name} · DEF ${hunterDef()} · CARTS ${p.carts}/${CONFIG.MAX_CARTS}`); break;
+        case 'EQUIPMENT': await equipmentMenu(); break;
         case 'QUEST':
           if (inQuest) await say(`QUEST: ${q.title}\nTARGETS LEFT ${liveBosses().length}/${q.targets.length} · TURN ${G.turn}`);
           else if (q) await say(`ACCEPTED: ${q.title}\nDepart through the GATE to the north.`);

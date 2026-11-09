@@ -44,6 +44,12 @@ export function skillSummary() {
   });
 }
 
+/** Active skills: [{ k, S, lv, pts }]. */
+export function activeSkills() {
+  const pts = skillPoints();
+  return Object.keys(pts).filter(k => SKILLS[k] && skillLv(k) > 0).map(k => ({ k, S: SKILLS[k], lv: skillLv(k), pts: pts[k] }));
+}
+
 export function equipWeapon(k) {
   Object.assign(G.player, { weapon: k, charge: 0, spirit: 0 });
   BOX.weapon = k; saveBox(); applyLook();

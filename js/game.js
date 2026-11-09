@@ -3,6 +3,7 @@
    ===================================================================== */
 
 import { Audio8 } from "./audio.js";
+import { logAction } from "../src/ui/fx.js";
 import {
   CONFIG, CHARGE_MULT, getSharp, isAttack, WEAPONS, MONSTERS, SMALLS, SMALL_SPAWNS,
   PARTS, ITEMS, GATHER, LOOT, ITEM_RAR, AREAS, LINKS, NEST, neighbors, sideTo,
@@ -159,7 +160,6 @@ function setUI(mode, data = {}) {
     panel.innerHTML = `
       <div class="tb adv" data-act="advance">
         <div id="msg"></div>
-        <div class="sub" id="subMsg"></div>
         <span class="arrow show">▼</span>
       </div>
       <div class="cmds">
@@ -170,7 +170,7 @@ function setUI(mode, data = {}) {
       </div>
     `;
     typeText($("msg"), getFieldStatusMsg());
-    $("subMsg").textContent = "Arrow keys to move. Choose an action.";
+    logAction("Arrow keys to move. Choose an action.");
   } else if (mode === "battle_root") {
     const b = data.foe;
     panel.innerHTML = `
@@ -264,14 +264,6 @@ document.addEventListener("click", (e) => {
   const btn = e.target.closest("button, [data-act]");
   if (!btn) return;
   const act = btn.dataset.act;
-  if (act === "reset") { initGame("rathalos"); setUI("main"); }
-  if (act === "mute") {
-    const m = !Audio8.muted;
-    Audio8.setMuted(m);
-    BOX.muted = m;
-    saveBox();
-    $("muteBtn").textContent = `♪ MUSIC: ${m ? "OFF" : "ON"}`;
-  }
   if (act === "cmd_fight") {
     if (G.boss.area === G.area) {
       G.state = "battle";

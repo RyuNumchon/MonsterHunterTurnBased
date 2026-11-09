@@ -7,7 +7,7 @@ import { initHud, renderPanel, renderBattle } from './ui/hud.js';
 import { renderMini } from './ui/map.js';
 import { drawField } from './ui/fieldRender.js';
 import { updateField } from './world/field.js';
-import { initInput, updateMuteLabel } from './input.js';
+import { initInput } from './input.js';
 import { newSession } from './game.js';
 import './data/moves.js';
 import { initDisplay } from './ui/display.js';
@@ -31,7 +31,6 @@ initHud();
 initInput();
 initDisplay();
 Audio8.setMuted(BOX.muted);
-updateMuteLabel();
 await loadSprites();   // swap in the ./resources images before anything is drawn
 document.fonts?.ready.then(() => { renderPanel(); renderBattle(); });
 newSession();

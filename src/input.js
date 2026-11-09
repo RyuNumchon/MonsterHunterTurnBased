@@ -7,40 +7,25 @@ import { BOX, saveBox } from './core/save.js';
 import { ITEMS } from './data/items.js';
 import { DATA, pimg } from './art/index.js';
 import { Audio8 } from './audio/audio8.js';
-import {
-  flow,
-  doAdvance,
-  pickMenu,
-  moveMenu,
-  cancelMenu,
-  doCarve,
-  closeStorage,
-  pageMenu,
-  stepCount,
-  confirmCount,
-  cancelCount,
-  countAct
-} from './ui/dialog.js';
+import { flow, doAdvance, pickMenu, moveMenu, cancelMenu, doCarve, closeStorage, pageMenu, stepCount, confirmCount, cancelCount, countAct } from './ui/dialog.js';
 import { setMode, moveInfo } from './ui/hud.js';
 import { openMap, closeMap } from './ui/map.js';
 import { canAct } from './world/field.js';
 import { fieldMap, interact, openStartMenu } from './world/interact.js';
 import { useItemBattle } from './battle/encounter.js';
-import { findMove, pickMove, confirmAttack, confirmRun, confirmWait, goBack, runTurn } from './battle/turn.js';
+import { confirmCombine, findMove, pickMove, confirmAttack, confirmRun, confirmWait, goBack, runTurn } from './battle/turn.js';
 import { putAllInBox, renderStorage } from './quest/rewards.js';
-import { newSession, returnToVillage } from './game.js';
+import { returnToVillage } from './game.js';
 import { fitText } from './ui/fx.js';
 import { pouchMenu } from './world/inventory.js';
 import { readKey, battleNav } from './ui/display.js';
 
 const KEYDIR = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right' };
 
-export function updateMuteLabel() { $('muteBtn').textContent = `♪ MUSIC: ${Audio8.muted ? 'OFF' : 'ON'}`; }
 function toggleMute() {
   Audio8.init();
   Audio8.setMuted(!Audio8.muted);
   BOX.muted = Audio8.muted; saveBox();
-  updateMuteLabel();
 }
 
 function fieldAction(act) {
@@ -56,13 +41,16 @@ function fieldAction(act) {
       cancelCount(); cancelMenu(); closeMap(); closeStorage();
       break;
     case 'fstart':
-      if (canAct()) openStartMenu();
+      if (UI.menu?.title === 'MENU') cancelMenu();
+      else if (canAct()) openStartMenu();
       break;
     case 'fmap':
-      if (canAct()) flow(fieldMap);
+      if (waits.map) closeMap();
+      else if (canAct()) flow(fieldMap);
       break;
     case 'fpouch':
-      if (canAct()) flow(pouchMenu);
+      if (UI.menu?.title?.startsWith('POUCH')) cancelMenu();
+      else if (canAct()) flow(pouchMenu);
       break;
   }
 }
@@ -77,10 +65,7 @@ function onClick(e) {
 
   // Always available
   switch (act) {
-    case 'reset':    newSession(); return;
     case 'village':  returnToVillage(); return;
-    case 'mute':     toggleMute(); return;
-    case 'auto':     CONFIG.AUTO = !CONFIG.AUTO; $('autoBtn').textContent = `BATTLE TEXT: ${CONFIG.AUTO ? 'AUTO' : 'CLICK'}`; return;
     case 'putall':   putAllInBox(); return;
     case 'closebox': Audio8.sfx('back'); closeStorage(); return;
     case 'advance':  doAdvance(); return;
@@ -109,6 +94,9 @@ function onClick(e) {
   switch (act) {
     case 'fight': Audio8.sfx('select'); setMode('fight'); break;
     case 'pouch':   Audio8.sfx('select'); setMode('pouch'); break;
+    case 'bcombine': setMode('combine', { back: 'pouch', page: 0 }); return;
+    case 'bcpage':   setMode('combine', { ...UI.data, page: (UI.data.page || 0) + +val }); return;
+    case 'bcraft':   confirmCombine(+val); return;
     case 'map':   flow(async () => { await openMap(); return 'main'; }); break;
     case 'run':   confirmRun(); break;
     case 'back':  goBack(); break;
