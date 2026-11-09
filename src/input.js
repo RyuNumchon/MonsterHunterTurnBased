@@ -14,13 +14,11 @@ import { canAct } from './world/field.js';
 import { fieldMap, interact, openStartMenu } from './world/interact.js';
 import { useItemBattle } from './battle/encounter.js';
 import { confirmCombine, findMove, pickMove, confirmAttack, confirmRun, confirmWait, goBack, runTurn } from './battle/turn.js';
-import { putAllInBox, renderStorage } from './quest/rewards.js';
+import { putAllInBox } from './quest/rewards.js';
 import { returnToVillage } from './game.js';
 import { fitText } from './ui/fx.js';
 import { pouchMenu } from './world/inventory.js';
 import { readKey, battleNav } from './ui/display.js';
-
-const KEYDIR = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right' };
 
 function toggleMute() {
   Audio8.init();

@@ -1,4 +1,4 @@
-/* Small visual helpers: CSS animations, floating numbers, log, phase pills, toasts. */
+/* Small visual helpers: CSS animations, floating numbers, log, and toasts. */
 import { $ } from '../core/utils.js';
 import { areaInfo } from '../data/world.js';
 import { CONFIG } from '../core/config.js';
@@ -35,11 +35,6 @@ export function logAction(t) {
     lastAction = t;
     addLog(`[action] ${t}`, 'dim');
   }
-}
-
-/** Highlights the active phase pill in the top bar (0 = none). */
-export function setPhase(n) {
-  document.querySelectorAll('.ph').forEach(el => el.classList.toggle('on', +el.dataset.p === n));
 }
 
 let toastTimer = null, locTimer = null;

@@ -5,16 +5,15 @@ import { CONFIG } from '../core/config.js';
 import { $, clamp } from '../core/utils.js';
 import { G, UI } from '../core/state.js';
 import { WEAPONS, getSharp } from '../data/weapons.js';
-import { PARTS, MONSTERS } from '../data/monsters.js';
-import { FEASTS, ITEMS, BOSS_ONLY } from '../data/items.js';
+import { PARTS } from '../data/monsters.js';
+import { FEASTS, ITEMS } from '../data/items.js';
 import { areaInfo } from '../data/world.js';
 import { DATA, pimg, itemIcon } from '../art/index.js';
-import { addLog, setPhase, fitText } from './fx.js';
-import { hitChances, findMove, moveDisabled, runLock } from '../battle/turn.js';
+import { addLog, fitText } from './fx.js';
+import { findMove, moveDisabled, runLock } from '../battle/turn.js';
 import { curable, elementSealed, blockedBy, statusChips, stunChance } from '../battle/status.js';
 import { speedOf } from '../battle/speed.js';
 import { BOX } from '../core/save.js';
-import { armorDef } from '../core/gear.js';
 import { hunterDef, skillPoints } from '../core/gear.js';
 import { isEnraged, isTired } from '../battle/mood.js';
 import { pouchCount } from '../core/pouch.js';
@@ -24,7 +23,6 @@ import { itemName } from '../data/items.js';
 
 /* HP bars never change colour. */
 export const HP_COLOR = '#58d080';
-export const hpColor = () => HP_COLOR;
 /** Hunter HP bar length (%): shorter by default, longer after a feast. */
 const FULL_HP = CONFIG.PLAYER_MAX_HP + Math.max(...FEASTS.map(f => f.hp));
 export const hpLen = p => Math.min(100, p.maxHp / FULL_HP * 100);
@@ -132,12 +130,10 @@ export function renderBattle() {
   ps.classList.toggle('gone', p.down);
 }
 
-/** Switches the battle panel mode and lights the matching phase pill. */
+/** Switches the battle panel mode. */
 export function setMode(mode, data = {}) {
   UI.mode = mode; UI.data = data;
   if (G && G.screen === 'battle' && !G.over) {
-    if (mode === 'main' || mode === 'pouch') setPhase(1);
-    else if (['fight', 'target', 'confirm'].includes(mode)) setPhase(2);
     if (mode === 'main' && G.loggedTurn !== G.turn) { G.loggedTurn = G.turn; addLog(`━━ TURN ${G.turn} ━━`, 'turn'); logSnapshot(); }
   }
   renderPanel();
@@ -169,7 +165,6 @@ export function renderPanel() {
   syncPanelVisibility();
   const P = $('panel');
   P.classList.toggle('combine-panel', !!G && G.screen === 'battle' && UI.mode === 'combine' && !G.over);
-  P.classList.toggle('confirm-panel', !!G && G.screen === 'battle' && UI.mode === 'confirm' && !G.over);
   if (!G) { P.innerHTML = ''; return; }
   if (G.over) {
     const win = G.outcome === 'slay' || G.outcome === 'capture';

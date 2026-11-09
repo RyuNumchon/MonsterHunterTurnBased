@@ -9,7 +9,7 @@ import { SMALLS } from '../data/monsters.js';
 import { isTown, GATE, SOLID, DIRV, dirOf, CAMP_SPAWN, neighbors } from '../data/world.js';
 import { Audio8, fieldMusic } from '../audio/audio8.js';
 import { flow, pause } from '../ui/dialog.js';
-import { toast, showLocation, addLog } from '../ui/fx.js';
+import { toast, showLocation } from '../ui/fx.js';
 import { MAPS, findFree } from './mapgen.js';
 import { buildEntities, liveBosses } from './spawn.js';
 import { startEncounter } from '../battle/encounter.js';
