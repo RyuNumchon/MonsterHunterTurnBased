@@ -14,6 +14,7 @@ export const CONFIG = {
   CHARGE_LV1_MULT: 2,
   OVERCHARGE_MULT: 0.8,
   MOVE_SLOTS: 4,
+  GUARDABLE: ['stun', 'tremor', 'wind', 'roar'],   // blocked by a successful dodge/block/counter
 
   // Big monster: fleeing mid-battle, limping, sleeping, healing
   FLEE_MIN: 4, FLEE_MAX: 6, FLEE_CHANCE: 0.5, LOW_HP_FLEE: 0.25, LOW_HP_FLEE_CHANCE: 0.4,
@@ -32,12 +33,12 @@ export const CONFIG = {
   ENRAGE_COOLDOWN: 4, ENRAGE_COOLDOWN_LOW: 1,
   ENRAGE_ATK: 1.3, ENRAGE_SPD: 1.25, ENRAGE_HUNTER_ACC: -12,
   FATIGUE_TURNS: [4, 8], FATIGUE_MAX: 8, FATIGUE_SKIP: 0.15,
-  FATIGUE_SPD: 0.75, FATIGUE_DMG_TAKEN: 0.85, FATIGUE_HUNTER_ACC: 15,
+  FATIGUE_SPD: 0.75, FATIGUE_DMG_TAKEN: 1.2, FATIGUE_HUNTER_ACC: 15,
   // Fleeing: FLEE_MIN/FLEE_MAX (existing) now apply only when tired or at low HP
   FLEE_LONG_MIN: 10, FLEE_LONG_MAX: 15,
 
   // Traps & capture
-  CAPTURE_PCT: 0.25, TRAP_TURNS_FIRST: 3, TRAP_TURNS_AFTER: 2, TRAP_HIT_BONUS: 25, TRANQ_NEEDED: 2,
+  CAPTURE_PCT: 0.15, TRAP_TURNS_FIRST: 3, TRAP_TURNS_AFTER: 2, TRAP_HIT_BONUS: 25, TRANQ_NEEDED: 2,
 
   // Stun. Hunter: % added per consecutive hit taken, capped. Monsters: blunt weapons only (KO).
   STUN_BUILD: 6, STUN_BUILD_HEAVY: 12, STUN_CAP: 30,
@@ -65,16 +66,26 @@ export const CONFIG = {
 
   // Timing meter (monster attacks)
   METER: true,                                    // false = old hit-chance roll
-  METER_KEYS: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', METER_DECOYS: 2,
+  METER_KEYS: 'WASD',
   METER_SLOW_MS: 2600, METER_FAST_MS: 110,        // one sweep: very slow … impossible
   METER_SPEED_MED: .4, METER_SPEED_LEAN: .25,     // typical roll; how far a speed gap leans rolls
   METER_SPEED_SENS: 2.5, METER_SPEED_CUT: .6,     // speed gap → how much of the range is cut (max 60%)
   METER_MIN_ZONE: .004,                           // ≈ one pixel
   METER_ZONE_MED: .6, METER_ACC_SCALE: 30, METER_ACC_W: .25, METER_DANGER_W: .5,
   METER_FLASH_BONUS: .2, METER_STUCK_PENALTY: .3,
-  METER_LEAD_MS: 450, METER_PASSES: 4, METER_MAX_MS: 6000, METER_RESULT_MS: 380,
+  METER_LEAD_MS: 450, METER_RESULT_MS: 380,
   GUARD_PERFECT_SHARP: .5,                        // perfect guard pays half the sharpness cost
   COUNTER_MULT: 1.5,                              // counter strike power
+  METER_ROAR_DANGER: .5,
+  WAKE_METER_SPEED_MAX: .35,       // wake-up meter: slow pointer…
+  WAKE_METER_ZONE_MED: .65,        // …and a big zone
+  // Meter difficulty by monster size: speedMax = fastest part of the range allowed,
+  // danger = how much move danger counts, zone = zone-size bonus
+  METER_SMALL: { speedMax: .70, danger: .70, zone: .08 },
+  METER_LARGE: { speedMax: .85, danger: .85, zone: .04 },
+  NEST_SLEEP_TURNS: 3, NEST_HEAL: .2,        // NEST_AREA: your nest area id, if monsters have no m.nest
+  PAINT_DMG: 1,
+  BATTLE_COMBINE_PAGE: 6,
 
   DEBUG_LOG: true,       // hidden numbers go to the browser console (F12); false = silent
 };

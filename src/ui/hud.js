@@ -18,6 +18,9 @@ import { armorDef } from '../core/gear.js';
 import { hunterDef, skillPoints } from '../core/gear.js';
 import { isEnraged, isTired } from '../battle/mood.js';
 import { pouchCount } from '../core/pouch.js';
+import { RECIPES, needOf } from '../data/recipes.js';
+import { canCraft } from '../world/inventory.js';
+import { itemName } from '../data/items.js';
 
 /* HP bars never change colour. */
 export const HP_COLOR = '#58d080';
@@ -35,7 +38,22 @@ export const pips = (n, max) => Array.from({ length: max }, (_, i) => `<span cla
 export const cartsUsed = used => `${used}/${CONFIG.MAX_CARTS}`;
 const PART_HINT = { head: 'WEAK SPOT', body: 'EASY TARGET', legs: 'CAN TRIP IT', tail: 'CAN BE CUT' };
 
-export function showScreen() { $('battle').classList.toggle('hidden', !G || G.screen !== 'battle'); }
+function syncPanelVisibility() {
+  $('screen').classList.toggle('battle-active', !!G && G.screen === 'battle' && !G.over);
+}
+export function showScreen() {
+  $('battle').classList.toggle('hidden', !G || G.screen !== 'battle');
+  syncPanelVisibility();
+}
+
+/** Keeps the battle HP track inside a full-width slot, so its length is a % of the full bar (same as the map). */
+function hpSlot(track) {
+  if (!track.parentElement.classList.contains('hpslot')) {
+    const s = document.createElement('div'); s.className = 'hpslot';
+    track.replaceWith(s); s.appendChild(track);
+  }
+  return track;
+}
 
 /** Builds the four part bars and the sharpness zone markers once at boot. */
 export function initHud() {
@@ -87,8 +105,7 @@ export function renderBattle() {
   // --- Player box ---
   $('pWpn').innerHTML = `${WEAPONS[p.weapon].short} ${elemTag(p)}`;
   $('pBalls').textContent = 'CARTS ' + cartsUsed(p.carts);
-  const track = $('pHp').parentElement;
-  track.style.width = hpLen(p) + '%'; track.style.flex = 'none';
+  hpSlot($('pHp').parentElement).style.width = hpLen(p) + '%';
   setBar($('pHp'), p.hp / p.maxHp * 100, HP_COLOR);
   const s = getSharp(p.sharp);
   setBar($('pSharp'), p.sharp / CONFIG.SHARP_MAX * 100, s.color);
@@ -149,7 +166,10 @@ export function fitPanel() {
 }
 
 export function renderPanel() {
+  syncPanelVisibility();
   const P = $('panel');
+  P.classList.toggle('combine-panel', !!G && G.screen === 'battle' && UI.mode === 'combine' && !G.over);
+  P.classList.toggle('confirm-panel', !!G && G.screen === 'battle' && UI.mode === 'confirm' && !G.over);
   if (!G) { P.innerHTML = ''; return; }
   if (G.over) {
     const win = G.outcome === 'slay' || G.outcome === 'capture';
@@ -169,7 +189,7 @@ export function renderPanel() {
     case 'fight':
       h = `<div class="movebox">${w.moves.map(mv =>
           `<button class="mv" data-act="move" data-val="${mv.id}" data-info="${mv.id}" ${moveDisabled(mv) ? 'disabled' : ''}>${mv.name}<small>${moveSub(mv)}</small></button>`).join('')}</div>
-        <div class="minfo"><div id="mInfo">${moveInfo(w.moves[0])}</div>
+          <div class="minfo"><div id="mInfo">${moveInfo(w.moves[0])}</div>
           <button class="cmd back wait" data-act="wait">WAIT</button><button class="cmd back" data-act="back">BACK</button></div>`;
       break;
     case 'target': {
@@ -196,10 +216,25 @@ export function renderPanel() {
           <div class="sub">ITEMS USED ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN} THIS TURN · no turn cost</div></div>
         <div class="pouchlist">${usable.map(s => {
           const deo = s.id === 'deodorant' && curable(p, 'deodorant');
-          const dis = (!!itemLock && !deo) || left <= 0 || (BOSS_ONLY.includes(s.id) && !m.isBoss);
+          const dis = (!!itemLock && !deo) || left <= 0;
           return `<button class="it" data-act="item" data-val="${s.id}" data-info="${s.id}" ${dis ? 'disabled' : ''}>
             ${pimg(itemIcon(s.id))}${ITEMS[s.id].name}<span class="q">x${s.n}</span></button>`;
-        }).join('')}<button class="cmd back" data-act="back">BACK</button></div>`;
+        }).join('')}<button class="cmd back wait" data-act="bcombine" ${itemLock ? 'disabled' : ''}>COMBINE</button>
+          <button class="cmd back" data-act="back">BACK</button></div>`;
+      break;
+    }
+    case 'combine': {
+      const lock = blockedBy(p, 'item'), size = CONFIG.BATTLE_COMBINE_PAGE;
+      const pages = Math.max(1, Math.ceil(RECIPES.length / size));
+      const pg = (((UI.data.page || 0) % pages) + pages) % pages;
+      UI.data.page = pg;
+      const list = RECIPES.slice(pg * size, pg * size + size).map((r, j) => {
+        const i = pg * size + j, why = lock ? 'LOCKED' : canCraft(r);
+        const need = Object.entries(needOf(r)).map(([id, n]) => `${itemName(id)}${n > 1 ? ' x' + n : ''} (${pouchCount(id)})`).join(' + ');
+        return `<button data-act="bcraft" data-val="${i}" ${why ? 'disabled' : ''}>${pimg(itemIcon(r.out))}<span>${itemName(r.out)}<small>${why ? why + ' · ' : ''}${need}</small></span></button>`;
+      }).join('');
+      h = `<div class="bpage"><button data-act="bcpage" data-val="-1">◀</button><span>COMBINE ${pg + 1}/${pages}</span><button data-act="bcpage" data-val="1">▶</button></div>`
+          + `<div class="blist">${list}</div><button class="combine-back" data-act="back">BACK</button>`;
       break;
     }
     case 'carve':
@@ -234,7 +269,7 @@ export function renderFieldPanel(P) {
     <div class="fmid">
       <div class="fstat">
         <div class="srow"><b>AREA</b>${areaInfo(f.area).name} · ${areaInfo(f.area).sub}</div>
-        <div class="srow"><b>HP</b><span class="mbar" style="flex:none;width:${(hpLen(p) * .09).toFixed(2)}em"><i style="width:${hp}%;background:${HP_COLOR}"></i></span></div>
+        <div class="srow"><b>HP</b><span class="hpslot"><span class="mbar" style="width:${hpLen(p)}%"><i style="width:${hp}%;background:${HP_COLOR}"></i></span></span></div>
         <div class="srow"><b>EDGE</b><span class="mbar"><i style="width:${p.sharp / CONFIG.SHARP_MAX * 100}%;background:${s.color}"></i></span>${s.name}</div>
         <div class="srow"><b>COND</b>${G.feast ? chip('FEAST', 'c-mgt') : ''}${statusChips(p) || (G.feast ? '' : 'NORMAL')}</div>
         <div class="srow"><b>GEAR</b>${pimg(DATA['wpn_' + p.weapon])}${WEAPONS[p.weapon].name} ${elemTag(p)} · CARTS ${cartsUsed(p.carts)}</div>

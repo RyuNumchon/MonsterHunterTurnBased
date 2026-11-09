@@ -16,6 +16,7 @@ import { startEncounter } from '../battle/encounter.js';
 import { tickStatuses } from '../battle/status.js';
 import { stepMs } from '../battle/speed.js';
 import { atGate, lockedOut } from '../game.js';
+import { nestCheck, nestTick } from './nest.js';
 
 const DIRS4 = Object.values(DIRV);
 
@@ -275,27 +276,12 @@ export function worldTick() {
   return msgs.concat(liveBosses().filter(m => m !== G.foe).flatMap(m => bossOffscreenTurn(m)));
 }
 
-/* Every turn the hunter spends OUTSIDE the boss's area (world turns and battle turns):
-   limping -> falls asleep after SLEEP_AFTER_TURNS unfound turns;
-   asleep -> heals REST_HEAL_PCT per turn, wakes after WAKE_AFTER turns. Finding it resets the count. */
+/* Field or battle turn for an offscreen boss; nesting handles sleep and recovery. */
 export function bossOffscreenTurn(m) {
-  const msgs = []
-  if (!m || m.dead || m.captured) return msgs;
-  if (m.area === G.f.area) { m.searched = 0; return msgs; }
-  if (m.sleeping) {
-    const before = m.hp;
-    m.hp = Math.min(m.maxHp, m.hp + Math.round(m.maxHp * CONFIG.REST_HEAL_PCT));
-    addLog(`[${m.name} asleep: +${m.hp - before} → HP ${m.hp}/${m.maxHp} · slept ${m.sleepTurns + 1}/${CONFIG.WAKE_AFTER}]`, 'dim');
-    if (++m.sleepTurns >= CONFIG.WAKE_AFTER) {
-      m.sleeping = false; m.limping = false;
-      if (m.paint > 0) msgs.push(`The ${m.name} woke up.`);
-    }
-  } else if (m.limping) {
-    addLog(`[${m.name} limping, unfound ${++m.searched}/${CONFIG.SLEEP_AFTER_TURNS} turns]`, 'dim');
-    if (m.searched >= CONFIG.SLEEP_AFTER_TURNS) {
-      m.sleeping = true; m.sleepTurns = 0;
-      msgs.push(m.paint > 0 ? `PAINTBALL: the ${m.name} fell ASLEEP in AREA ${m.area}!` : 'The mountain has gone quiet...');
-    }
-  }
-  return msgs;
+  if (!m || m.dead || m.captured) return [];
+  if (nestCheck(m)) return [];                       // just fell asleep
+  const woke = nestTick(m);
+  if (woke) return G.f.area === m.area ? [woke] : [];
+  if (m.sleeping) return [];                         // asleep: no roaming
+  return [];
 }

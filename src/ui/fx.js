@@ -28,6 +28,14 @@ export function addLog(msg, tone = '') {
   console.log(`%c${t}${msg}`, LOG_STYLE[tone] || '');
 }
 
+let lastAction = '';
+/** Former on-screen action indicator → console (only when it changes). */
+export function logAction(t) {
+  if (t && t !== lastAction) {
+    lastAction = t;
+    addLog(`[action] ${t}`, 'dim');
+  }
+}
 
 /** Highlights the active phase pill in the top bar (0 = none). */
 export function setPhase(n) {

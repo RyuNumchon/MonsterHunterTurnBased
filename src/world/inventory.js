@@ -14,9 +14,9 @@ import { addLog } from '../ui/fx.js';
 import { showStorage } from '../quest/rewards.js';
 import { curable, cureStatuses } from '../battle/status.js';
 import { ARMOR, ARMOR_SLOTS, SLOT_NAME, armorStats } from '../data/armor.js';
-import { equipWeapon, equipArmor, hunterDef, skillSummary } from '../core/gear.js';
+import { activeSkills, equipWeapon, equipArmor, hunterDef, skillSummary } from '../core/gear.js';
 import { MOVES, MOVE_CLASSES, movesetOf, lockedBy, dependents, isAttackMove } from '../data/moves.js';
-
+import { SKILLS } from '../data/skills.js';
 /** Save outside quests only (quest progress is saved on returning to town). */
 const persist = () => { if (G.phase !== 'quest') saveBox(); };
 const slotsLabel = () => `${BOX.pouch.length}/${pouchSlots()}`;
@@ -79,19 +79,24 @@ export async function pouchMenu() {
   }
 }
 
+const CURES = ['nullberry', 'antidote', 'deodorant'];
+const noEffect = it => !it.field
+  ? (/TRAP/.test(it.name) ? `HUNTER set the ${it.name}...\nNothing came along, and it fell apart.`
+                          : `HUNTER threw the ${it.name}...\nThere was nothing to hit.`)
+  : `HUNTER used the ${it.name}.\nBut it had no effect.`;
+
 async function useInField(id) {
   const it = ITEMS[id], p = G.player;
   if (!it) { await say(`${itemName(id)} is a material.\nCOMBINE it, or store it in the ITEM BOX.`, 'dim'); return; }
-  if (!it.field) { await say(`There's no target here.\nUse the ${it.name} in battle!`, 'dim'); return; }
-  if (it.heal && p.hp >= p.maxHp) { await say("It won't have any effect.", 'dim'); return; }
-  if (id === 'whetstone' && p.sharp >= CONFIG.SHARP_MAX) { await say('Your blade is already sharp.', 'dim'); return; }
-  if (['nullberry', 'antidote', 'deodorant'].includes(id) && !curable(p, id)) { await say("It won't have any effect.", 'dim'); return; }
+  const none = !it.field || (it.heal && p.hp >= p.maxHp) || (id === 'whetstone' && p.sharp >= CONFIG.SHARP_MAX)
+            || (CURES.includes(id) && !curable(p, id));
   pouchRemove(id); persist();
+  if (none) { addLog(`[${id} used in field: no effect]`, 'dim'); Audio8.sfx('item'); await say(noEffect(it), 'dim'); return; }
   if (it.heal) {
     const b = p.hp; p.hp = Math.min(p.maxHp, p.hp + it.heal);
     addLog(`[${id} +${p.hp - b} → HP ${p.hp}/${p.maxHp}]`, 'dim');
     Audio8.sfx('heal'); await say(`HUNTER used a ${it.name}.\nHP was restored!`, 'good');
-    } else if (id === 'whetstone') {
+  } else if (id === 'whetstone') {
     const b = p.sharp; p.sharp = Math.min(CONFIG.SHARP_MAX, p.sharp + CONFIG.WHETSTONE_SHARP);
     addLog(`[whetstone +${p.sharp - b} → EDGE ${p.sharp}/${CONFIG.SHARP_MAX}]`, 'dim');
     Audio8.sfx('sharpen'); await say('HUNTER sharpened the blade.', 'good');
@@ -263,6 +268,14 @@ async function craft(r, fromBox) {
   await say(`Combined a ${itemName(r.out)}!${fromBox ? '\nIt was put in the ITEM BOX.' : ''}`, 'good');
 }
 
+/** '' if it can be combined from the POUCH now, else 'NEED' / 'FULL'. */
+export function canCraft(r) {
+  const need = needOf(r);
+  if (!Object.entries(need).every(([id, n]) => pouchCount(id) >= n)) return 'NEED';
+  return roomAfter(r) < r.n ? 'FULL' : '';
+}
+export const craftInBattle = r => craft(r, false);
+
 /* ---------- HUNTING MOVESET: weapon type → slot → move ---------- */
 const moveDesc = m => `${m.requires ? `NEEDS ${MOVES[m.requires].name}<br>` : ''}${m.desc || ''}`;
 
@@ -320,4 +333,33 @@ async function replaceMove(cls, slot) {
   if (!next.some(id => id && isAttackMove(MOVES[id]))) { await say('Keep at least one attack move!', 'dim'); return; }
   set[slot] = pick; saveBox(); Audio8.sfx(pick ? 'sharpen' : 'back');
   await say(pick ? `SLOT ${slot + 1}: ${MOVES[pick].name}!` : `SLOT ${slot + 1} is now empty.`, pick ? 'good' : undefined);
+}
+
+/* ---------- START → EQUIPMENT: page 1 gear, page 2 active skills (◀▶ / A D) ---------- */
+export async function equipmentMenu() {
+  let page = 0;
+  while (true) {
+    const p = G.player, w = WEAPONS[p.weapon], opts = [];
+    if (page === 0) {
+      opts.push({ icon: DATA['wpn_' + p.weapon], label: w.name, right: 'WEAPON', desc: `${weaponStats(w)}<br>${w.blurb}` });
+      for (const s of ARMOR_SLOTS) {
+        const a = ARMOR[BOX.equip[s]];
+        opts.push({ label: a ? a.name : '- none -', right: SLOT_NAME[s],
+                    desc: a ? `${armorStats(a)}<br>${a.desc}` : `No ${SLOT_NAME[s]} armor equipped.` });
+      }
+      opts.push({ label: 'TOTAL DEFENSE', right: `${hunterDef()}`, desc: 'Base defense + armor + skills.' });
+    } else {
+      const act = activeSkills();
+      if (!act.length) opts.push({ label: '- no active skills -', desc: 'Equip armor with enough matching skill points.' });
+      for (const { S, lv, pts } of act) {
+        const next = S.pts[lv];
+        opts.push({ label: S.name + (S.pts.length > 1 ? ` Lv${lv}` : ''), right: `${pts}pt`,
+                    desc: `${S.desc}${next ? `<br>Next level at ${next} points.` : S.pts.length > 1 ? '<br>MAX LEVEL' : ''}` });
+      }
+    }
+    opts.push({ label: 'CLOSE', desc: '' });
+    const i = await choose(`${page === 0 ? 'EQUIPMENT' : 'ACTIVE SKILLS'} ${page + 1}/2`, opts, { desc: true, paged: true });
+    if (i === MENU_PREV || i === MENU_NEXT) { page = 1 - page; continue; }
+    if (i < 0 || i === opts.length - 1) return;
+  }
 }

@@ -109,10 +109,18 @@ canvas {
 }
 #screen {
   position: relative;
-  aspect-ratio: 3/2;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   font-size: clamp(7px, 1.75cqw, 16px);
   background: #101418;
+}
+#scene {
+  position: relative;
+  aspect-ratio: 3/2;
+  overflow: hidden;
+  background: #101418;
+  flex: none;
 }
 #fieldCv {
   position: absolute;
@@ -150,6 +158,27 @@ canvas {
   background: linear-gradient(#3a4450, #283038);
   font-size: clamp(9px, 1.7cqw, 15px);
   border-top: 0.3em solid #1a1f26;
+}
+.desktop #scene {
+  flex: 1;
+  min-height: 0;
+  aspect-ratio: auto;
+}
+.desktop #screen {
+  --battle-panel-height: clamp(155px, 24cqw, 150px);
+}
+.desktop #panel {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: none;
+  height: var(--battle-panel-height);
+  padding: 1cqw 1.4cqw;
+}
+.desktop #screen.battle-active #panel {
+  display: flex;
 }
 .tb {
   flex: 1;
@@ -433,10 +462,49 @@ canvas {
 .desktop #game {
   user-select: none;
 }
-
+/* Desktop: only the game view, 16:9, filling the browser */
+.desktop .dz-off {
+  display: none !important;
+}
+.desktop .dz-fill {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
 /* Keyboard focus on battle buttons */
 .desktop #battle button.kfocus {
   outline: 0.15em solid #f0c040;
   outline-offset: -0.15em;
   filter: brightness(1.08);
+}
+/* No frame: the game is just the screen */
+#game {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+}
+html,
+body {
+  margin: 0;
+  background: #000;
+}
+.desktop,
+.desktop body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+/* HP bars: length is a % of the full-length slot */
+.hpslot {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+.hpslot > * {
+  flex: none;
 }

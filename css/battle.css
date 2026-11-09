@@ -102,6 +102,36 @@
   width: 46%;
   border-radius: 1.4em 0.3em 1.4em 0.3em;
 }
+.desktop #battle {
+  bottom: var(--battle-panel-height);
+  background-size: 100% 100%;
+}
+.desktop #enemySprite {
+  bottom: 52%;
+  height: 48%;
+}
+.desktop #enemySprite.small {
+  height: 30%;
+}
+.desktop #playerSprite {
+  left: 5%;
+  bottom: -30%;
+  width: 25%;
+}
+.desktop #enemyBox,
+.desktop #playerBox {
+  width: 39%;
+  padding: 0.45em 0.7em;
+  font-size: 0.84em;
+}
+.desktop #enemyBox {
+  left: 2.5%;
+  top: 3%;
+}
+.desktop #playerBox {
+  right: 2%;
+  bottom: 2%;
+}
 .nm {
   display: flex;
   justify-content: space-between;
@@ -651,4 +681,87 @@
 .meter.bad {
   border-color: #e04040;
   animation: a-shake 0.3s;
+}
+.st-wake .mt-zone {
+  background: #c080f0;
+}
+.mt-btns {
+  display: grid;
+  grid-template-columns: repeat(4, 2.4em);
+  justify-content: center;
+  gap: 0.4em;
+}
+/* Battle COMBINE page */
+#panel .bpage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4em;
+  font-size: 0.75em;
+  grid-column: 1/-1;
+}
+#panel .bpage button {
+  min-width: 2em;
+}
+#panel .blist {
+  display: contents;
+}
+
+.desktop #screen.battle-active #panel.combine-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.45em 0.8em;
+  align-items: stretch;
+}
+.desktop #panel.combine-panel .bpage {
+  grid-column: 1/-1;
+}
+.desktop #panel.combine-panel .blist {
+  grid-column: 1;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 0.4em;
+  min-width: 0;
+  min-height: 0;
+}
+.desktop #panel.combine-panel .blist button {
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.25em 0.45em;
+  border: 0.22em solid #b08838;
+  border-radius: 0.45em;
+  background: #f8f0d8;
+  color: #383838;
+  font-size: 0.65em;
+  text-align: left;
+}
+.desktop #panel.combine-panel .blist button img {
+  width: 2em;
+  height: 2em;
+  flex: none;
+}
+.desktop #panel.combine-panel .blist button span {
+  min-width: 0;
+  overflow: hidden;
+}
+.desktop #panel.combine-panel .blist button small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.desktop #panel.combine-panel .blist button:disabled {
+  opacity: 0.45;
+}
+.desktop #panel.combine-panel .combine-back {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: end;
+  min-width: 5.5em;
 }

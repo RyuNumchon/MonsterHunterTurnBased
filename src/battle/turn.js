@@ -17,11 +17,16 @@ import { checkFaint, foeDefeated, returnToField } from './endings.js';
 import { applyStatus, blockedBy, defMult, atkMult, accMod, elementSealed, stunOnHit, tickStatuses } from './status.js';
 import { speedOf, speedHitMod, firstChance } from './speed.js';
 import { bossOffscreenTurn } from '../world/field.js';
+import { nestCheck } from '../world/nest.js';
 import { liveBosses } from '../world/spawn.js';
 import { hunterDef, armorMult, skillVal, immuneTo } from '../core/gear.js';
 import { tryEnrage, tickMood, isEnraged, isTired, isLow, moodAtk, moodDef, moodAcc } from './mood.js';
 import { timingMeter } from './meter.js';
 import { overchargeMove } from '../data/moves.js';
+import { RECIPES } from '../data/recipes.js';
+import { craftInBattle } from '../world/inventory.js';
+import { itemName } from '../data/items.js';
+import { nestTick } from '../world/nest.js';
 
 /* ---------- Moves ---------- */
 export function findMove(id) { return G ? WEAPONS[G.player.weapon].moves.find(m => m.id === id) || null : null; }
@@ -39,7 +44,7 @@ export function moveDisabled(mv) {
 const foeHeld = m => m.trapped > 0 || m.sleeping || !!m.skipNext || !!blockedBy(m, 'act');
 
 /** Anything that stops moving or item use also stops running. */
-export const runLock = p => blockedBy(p, 'act') || blockedBy(p, 'move') || blockedBy(p, 'item');
+export const runLock = p => blockedBy(p, 'act') || blockedBy(p, 'move');
 
 /* HUNTER HIT CHANCES (hidden; logged)
    acc     = move.acc + sharp.hit + statuses (water −20) + speed mod (±15) + (trapped ? 25 : 0)
@@ -128,9 +133,17 @@ export function confirmWait() {
     sub: 'The monster still takes its turn.', action: { kind: 'wait' }, back: UI.mode === 'fight' ? 'fight' : 'main' });
 }
 
+export function confirmCombine(i) {
+  const r = RECIPES[i];
+  Audio8.sfx('select');
+  setMode('confirm', { q: `Combine a<br>${itemName(r.out)}?`, sub: 'Uses your turn. Combining in the POUCH may FAIL.',
+    action: { kind: 'combine', idx: i }, back: 'combine', backData: { back: 'pouch', page: UI.data.page || 0 } });
+}
+
+
 export function goBack() {
   if (!G || G.busy || G.screen !== 'battle') return;
-  const backs = { fight: 'main', target: 'fight', pouch: 'main' };
+  const backs = { fight: 'main', target: 'fight', pouch: 'main', combine: 'pouch' };
   if (UI.mode === 'confirm') { Audio8.sfx('back'); setMode(UI.data.back, UI.data.backData || {}); }
   else if (backs[UI.mode]) { Audio8.sfx('back'); setMode(backs[UI.mode]); }
 }
@@ -187,7 +200,10 @@ export function runTurn(action) {
 async function hunterTurn(action) {
   const p = G.player;
   setPhase(2);
-  if (action.kind === 'wait') {
+  if (action.kind === 'combine') {
+    await craftInBattle(RECIPES[action.idx]);
+    renderBattle();
+  } else if (action.kind === 'wait') {
     const why = blockedBy(p, 'act');
     await say(why ? `HUNTER can't move! (${why.name})` : 'HUNTER waits and watches...', 'dim');
   } else {
@@ -260,9 +276,14 @@ async function playerActionPhase(action) {
    CRIT: |weapon.crit|% chance. Positive → ×1.5, negative → ×0.5.
    Small monsters are one body: no part multiplier, no drift, no part HP. */
 async function hitCalculationPhase(intent) {
-  const p = G.player, m = G.foe, w = WEAPONS[p.weapon], { target, sharpLv } = intent, wake = m.sleeping;
+  const p = G.player, m = G.foe, w = WEAPONS[p.weapon], { target, sharpLv } = intent, asleep = m.sleeping;
+  let wake = false;
+  if (asleep && !intent.sure) {
+    wake = CONFIG.METER ? await timingMeter(m, p, intent.move, 'wake') : true;
+    if (!wake) await say('HUNTER fumbled the wake-up blow!', 'warn');
+  }
   let hitPart = null, drifted = false;
-    if (wake || intent.sure) { hitPart = target; addLog(wake ? '[sleeping target: guaranteed hit]' : '[counter: guaranteed hit]', 'dim'); }
+  if (wake || intent.sure) { hitPart = target; addLog(wake ? '[wake-up blow: guaranteed hit]' : '[counter: guaranteed hit]', 'dim'); }
   else {
     const c = hitChances(intent.move, target, sharpLv), roll = Math.random() * 100;
     addLog(`[roll ${roll.toFixed(1)} | hit <${c.target} | drift <${c.overall} | miss >=${c.overall}]`, 'dim');
@@ -321,7 +342,7 @@ async function hitCalculationPhase(intent) {
     anim($('playerSprite'), 'a-shake', 400); renderBattle();
     await say('The dull blade BOUNCED off!\nHUNTER was jolted by the recoil!', 'bad');
   }
-  if (wake && m.hp > 0) {
+  if (asleep && m.sleeping && m.hp > 0) {
     m.sleeping = false; m.limping = false; renderBattle(); Audio8.sfx('roar');
     await say(`The ${m.name} woke up in a rage!`, 'warn');
   }
@@ -364,10 +385,14 @@ function pickAttack(m) {
 }
 
 /** Applies an attack's `inflict` list. missed=true: only area effects (aoe) still land. */
-async function inflictAll(atk, src, target, missed) {
+async function inflictAll(atk, src, target, missed, blocked = []) {
+  const held = [];
+  if (held.length) await say(`HUNTER held firm!\n(${held.join(', ')} blocked)`, 'good');
+
   for (const f of atk.inflict || []) {
     if (missed && !f.aoe) continue;
     if (Math.random() >= (f.chance ?? 1)) continue;
+    if (blocked.includes(f.id)) { addLog(`[${f.id} blocked by timing]`, 'dim'); held.push(STATUS[f.id]?.name || f.id); continue; }
     const msg = applyStatus(target, f.id, src);
     if (msg) { Audio8.sfx(STATUS[f.id].sfx || 'tranq'); renderBattle(); await say(msg, immuneTo(f.id) ? 'good' : 'bad'); }
   }
@@ -414,6 +439,12 @@ async function monsterActionPhase() {
     Audio8.sfx('roar'); anim($('enemySprite'), 'a-shake', 400);
     await say(`The ${m.name} let out a deafening ROAR!`, 'warn');
     if (p.foresight) { p.foresight = false; await say('HUNTER read it and braced through the roar!', 'good'); return noHit(); }
+    const rs = p.guarding ? 'guard' : 'evade';
+    if (CONFIG.METER && await timingMeter(m, p, atk, rs)) {
+      Audio8.sfx('clang');
+      await say(rs === 'guard' ? 'HUNTER guarded against the roar!' : 'HUNTER covered up in time!', 'good');
+      return noHit();
+    }
     const msg = applyStatus(p, 'roar', m);
     if (msg) { renderBattle(); await say(msg, immuneTo('roar') ? 'good' : 'bad'); }
     return noHit();
@@ -443,7 +474,7 @@ async function monsterActionPhase() {
       Audio8.sfx('miss');
       await say(m.flash > 0 ? `The blinded ${m.name} missed wildly!` : 'HUNTER dodged the attack!', 'good');
     }
-    await inflictAll(atk, m, p, true);           // area effects still land
+    await inflictAll(atk, m, p, true, CONFIG.GUARDABLE,);   // area effects land, except the guardable ones
     return noHit();
   }
   if (stance === 'counter') { p.foresight = false; await say('The counter was mistimed!', 'bad'); }
@@ -489,6 +520,7 @@ async function monsterFlee(limping) {
     roamMs: rand(CONFIG.ROAM_MIN_MS, CONFIG.ROAM_MAX_MS), fleeAt: randInt(CONFIG.FLEE_MIN, CONFIG.FLEE_MAX),
     fleeLong: randInt(CONFIG.FLEE_LONG_MIN, CONFIG.FLEE_LONG_MAX)
   });
+  nestCheck(m);
   await say(m.paint > 0
     ? `The ${m.name} fled to AREA ${dest}!\nThe paintball marks its trail.`
     : `The ${m.name} fled!\nWithout a paintball you'll have to search...`, 'warn');
@@ -525,6 +557,8 @@ async function endOfTurnTicks() {
   if (m.hp > 0 && !m.captured) {
     const mood = tickMood(m);
     if (mood) { renderBattle(); await say(mood.msg, mood.tone); }
+    const woke = nestTick(m);
+    if (woke) { Audio8.sfx('roar'); renderBattle(); await say(woke, 'warn'); }
   }
   for (const msg of bossOffscreenTurn()) await say(msg, 'dim');   // battle turns count for the sleep timer
   const fadedPaint = [];

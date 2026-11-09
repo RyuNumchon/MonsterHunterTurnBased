@@ -1,16 +1,18 @@
-/* Desktop vs mobile layout, desktop keyboard/mouse mapping, full-window scaling,
-   and keyboard focus for battle buttons. Mobile keeps the on-screen controls. */
+/* Desktop vs mobile layout. Desktop: only the game view is shown, at an exact 16:9 ratio,
+   scaled to fill the browser. Mobile: unchanged, with on-screen controls.
+   Also: desktop key mapping, right-click = back, keyboard focus for battle buttons. */
 import { G, UI } from '../core/state.js';
 import { meterActive } from '../battle/meter.js';
 
-const ROOT = '#game';                                   // element holding the whole game screen
-const IGNORE = 'button, [data-act], input, select, a, .meter';   // clicks here are not "confirm"
+const SCREEN = '#screen';                     // the game view: map canvas + menus, battle, text box
+const KEEP = ['#fMenu', '#battle', '#panel', '#fDialog'];  // must stay visible (should be inside SCREEN)
+const TEXTBOX = '#fDialog, #panel .tb.adv';               // left-clicking text advances it (null = off)
+const ASPECT = 16 / 9;
 const html = document.documentElement;
 const touchQuery = matchMedia('(hover: none) and (pointer: coarse)');
 
 export const isDesktop = () => html.classList.contains('desktop');
 
-/** Desktop key → { dir } | { a } | { b, start } | { pouch } | { map }, or null. Uses physical keys (e.code). */
 const DIRS = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down',
                ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right' };
 export function readKey(e) {
@@ -25,16 +27,35 @@ export function readKey(e) {
 }
 
 /* ---------- Layout ---------- */
-function fit() {
-  const el = document.querySelector(ROOT);
-  if (!el) return;
+let natW = 0;
+
+/** Hide everything that isn't the game view (or a KEEP element), and log what was hidden. */
+function isolate(el) {
+  const keep = KEEP.map(s => document.querySelector(s)).filter(Boolean);
+  for (const k of keep) if (!el.contains(k))
+    console.warn(`[display] ${k.id ? '#' + k.id : k.className} is outside ${SCREEN}: move it inside so it scales with the game`);
+  const hidden = [];
+  for (let n = el; n.parentElement && n !== document.body; n = n.parentElement)
+    for (const sib of n.parentElement.children)
+      if (sib !== n && !['SCRIPT', 'STYLE', 'LINK'].includes(sib.tagName) && !keep.some(k => sib === k || sib.contains(k))) {
+        sib.classList.add('dz-off'); hidden.push(sib);
+      }
+  if (hidden.length) console.info('[display] hidden on desktop:', hidden);
+}
+
+function layout() {
+  const el = document.querySelector(SCREEN);
+  if (!el) { console.warn(`[display] ${SCREEN} not found: set SCREEN in display.js`); return; }
   el.dataset.css0 ??= el.style.cssText;
-  el.style.cssText = el.dataset.css0;                   // natural size first
+  el.style.cssText = el.dataset.css0;
+  document.querySelectorAll('.dz-off').forEach(x => x.classList.remove('dz-off'));
+  el.querySelectorAll('#fieldCv').forEach(c => c.classList.toggle('dz-fill', isDesktop()));
   if (!isDesktop()) return;
-  const w = el.offsetWidth, h = el.offsetHeight;
-  if (!w || !h) return;
-  const s = Math.min(innerWidth / w, innerHeight / h);
-  Object.assign(el.style, { position: 'fixed', left: '50%', top: '50%', margin: '0',
+  isolate(el);
+  natW ||= el.offsetWidth;                                   // design width; height is set to 16:9
+  const W = natW, H = Math.round(W / ASPECT), s = Math.min(innerWidth / W, innerHeight / H);
+  Object.assign(el.style, { position: 'fixed', left: '50%', top: '50%', width: W + 'px', height: H + 'px',
+    margin: '0', border: '0', borderRadius: '0', boxSizing: 'border-box', overflow: 'hidden',
     transformOrigin: 'center center', transform: `translate(-50%,-50%) scale(${s})` });
 }
 
@@ -43,10 +64,9 @@ function applyMode() {
   const mobile = forced ? forced === 'mobile' : touchQuery.matches;
   html.classList.toggle('mobile', mobile);
   html.classList.toggle('desktop', !mobile);
-  requestAnimationFrame(fit);
+  requestAnimationFrame(layout);
 }
 
-/* ---------- Mouse: left click = confirm, right click = back ---------- */
 const virtual = key => ['keydown', 'keyup'].forEach(t => document.dispatchEvent(new KeyboardEvent(t, { key, bubbles: true })));
 
 /* ---------- Battle buttons: keyboard focus ---------- */
@@ -72,7 +92,6 @@ function nearest(from, list, dir) {
   return best;
 }
 
-/** Keyboard control of the battle command buttons. Returns true if the key was used. */
 export function battleNav(k) {
   if (!isDesktop() || !G || G.screen !== 'battle' || G.busy || UI.menu || UI.count || meterActive()) return false;
   const btns = battleBtns();
@@ -88,10 +107,10 @@ export function battleNav(k) {
 export function initDisplay() {
   applyMode();
   touchQuery.addEventListener('change', applyMode);
-  addEventListener('resize', () => requestAnimationFrame(fit));
+  addEventListener('resize', () => requestAnimationFrame(layout));
 
   addEventListener('click', e => {
-    if (isDesktop() && e.button === 0 && !meterActive() && !e.target.closest(IGNORE)) virtual('MouseConfirm');
+    if (TEXTBOX && isDesktop() && e.button === 0 && !meterActive() && e.target.closest?.(TEXTBOX)) virtual('MouseConfirm');
   });
   addEventListener('contextmenu', e => {
     if (!isDesktop()) return;
@@ -103,7 +122,7 @@ export function initDisplay() {
     if (b && isDesktop() && battleBtns().includes(b)) setFocus(b);
   });
   const battle = document.getElementById('battle');
-  if (battle) new MutationObserver(() => {             // panel re-rendered: highlight its first button
+  if (battle) new MutationObserver(() => {
     if (isDesktop() && !(focus && focus.isConnected && battleBtns().includes(focus))) setFocus(battleBtns()[0]);
   }).observe(battle, { childList: true, subtree: true });
 }
