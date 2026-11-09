@@ -46,55 +46,6 @@ canvas {
   height: 2.4em;
 }
 
-/* Top bar */
-#topbar {
-  width: min(100%, 900px);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-}
-#topbar h1 {
-  font-size: 11px;
-  color: #f8c040;
-  margin: 0 6px 0 0;
-  line-height: 0;
-}
-#logo {
-  height: 34px;
-  width: auto;
-  display: block;
-  image-rendering: auto;
-}
-.tbtn {
-  background: #2c343e;
-  color: #fff;
-  border: 2px solid #4a5666;
-  border-radius: 6px;
-  padding: 6px 9px;
-  font-size: 9px;
-}
-.tbtn:hover {
-  border-color: #f8c040;
-}
-#phases {
-  margin-left: auto;
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-.ph {
-  padding: 4px 6px;
-  border-radius: 4px;
-  background: #2c343e;
-  color: #7a8696;
-  font-size: 8px;
-}
-.ph.on {
-  background: #f8c040;
-  color: #222;
-}
-
 /* Game box (cqw = 1% of game width) */
 #gb {
   width: min(100%, 900px);
@@ -214,44 +165,6 @@ canvas {
 }
 .arrow.show {
   opacity: 1;
-}
-
-/* Debug battle log */
-#logWrap {
-  width: min(100%, 900px);
-  font-size: 9px;
-}
-#logWrap summary {
-  cursor: pointer;
-  padding: 8px;
-  background: #2c343e;
-  border-radius: 6px;
-}
-#log {
-  max-height: 240px;
-  overflow: auto;
-  font-family: Consolas, monospace;
-  font-size: 12px;
-  padding: 8px;
-  background: #11151a;
-  line-height: 1.5;
-}
-.l-good {
-  color: #80e090;
-}
-.l-bad {
-  color: #ff8a78;
-}
-.l-warn {
-  color: #f0c060;
-}
-.l-dim {
-  color: #7a8696;
-}
-.l-turn {
-  color: #f8c040;
-  font-weight: bold;
-  margin-top: 6px;
 }
 
 /* Shared animations */

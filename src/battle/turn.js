@@ -12,7 +12,7 @@ import { NEST, neighbors } from '../data/world.js';
 import { Audio8 } from '../audio/audio8.js';
 import { flow, say, pause } from '../ui/dialog.js';
 import { renderBattle, setMode } from '../ui/hud.js';
-import { anim, addLog, setPhase } from '../ui/fx.js';
+import { anim, addLog } from '../ui/fx.js';
 import { checkFaint, foeDefeated, returnToField } from './endings.js';
 import { applyStatus, blockedBy, defMult, atkMult, accMod, elementSealed, stunOnHit, tickStatuses } from './status.js';
 import { speedOf, speedHitMod, firstChance } from './speed.js';
@@ -165,7 +165,6 @@ export function runTurn(action) {
     addLog(`[order: ${first ? 'HUNTER' : m.name} first · SPD ${speedOf(p)} vs ${speedOf(m)}]`, 'dim');
 
     if (!first) {
-      setPhase(4);
       await say(`The ${m.name} is quicker!`, 'warn');
       await monsterTurn(m);
       if (ended()) return;
@@ -173,7 +172,6 @@ export function runTurn(action) {
     }
 
     if (action.kind === 'run') {
-      setPhase(2);
       if (await tryEscape()) return;
       p.acted = true;
     } else {
@@ -183,7 +181,6 @@ export function runTurn(action) {
     }
 
     if (first) {
-      setPhase(4);
       await monsterTurn(m);
       if (ended()) return;
       if (m.hp <= 0) { await foeDefeated(); return; }     // a counter can finish it
@@ -199,7 +196,6 @@ export function runTurn(action) {
 /** The hunter's half of the turn. Re-checks locks: a faster monster may have stunned or toppled the hunter. */
 async function hunterTurn(action) {
   const p = G.player;
-  setPhase(2);
   if (action.kind === 'combine') {
     await craftInBattle(RECIPES[action.idx]);
     renderBattle();
@@ -212,7 +208,6 @@ async function hunterTurn(action) {
     if (lock) await say(`HUNTER can't ${(lock.blocks || []).includes('act') ? 'move' : 'attack'}! (${lock.name})`, 'bad');
     else {
       const intent = await playerActionPhase(action);
-      setPhase(3);
       if (intent) await hitCalculationPhase(intent);
     }
   }

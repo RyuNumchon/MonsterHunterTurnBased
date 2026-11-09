@@ -150,14 +150,9 @@ html.mobile .ss button {
 html.mobile .keys {
   display: none;
 }
-html.mobile #panel.confirm-panel {
-  flex-direction: row;
-  align-items: stretch;
-}
-html.mobile #panel.confirm-panel > .yn {
-  flex: 0 0 30%;
-  width: 30%;
-  flex-direction: column;
-  min-height: 0;
-  align-self: stretch;
+html.mobile #fMenu.yn {
+  left: auto;
+  right: 3%;
+  width: auto;
+  max-width: 90%;
 }

@@ -173,11 +173,6 @@
     background-color 0.3s;
   box-shadow: inset 0 0.15em 0 #fff6;
 }
-.hpnum {
-  text-align: right;
-  font-size: 1em;
-  margin: 0.35em 0.2em 0.25em;
-}
 .parts {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -236,18 +231,6 @@
 }
 .pip.on {
   background: #f8a020;
-}
-.ball {
-  display: inline-block;
-  width: 0.8em;
-  height: 0.8em;
-  border-radius: 50%;
-  border: 0.1em solid #303030;
-  background: linear-gradient(#e83838 0 44%, #303030 44% 56%, #f8f8f8 56%);
-}
-.ball.used {
-  background: #9a9a9a;
-  opacity: 0.55;
 }
 /* Fixed-size boxes; text shrinks to fit (ui/fx.js fitText) instead of being cut off */
 .chips {

@@ -1,17 +1,15 @@
 /* Session flow: town (village / farm / hub) -> accept quest -> that area's gate -> quest map
    -> rewards -> back to the area you departed from. G persists for the whole session. */
 import { CONFIG } from './core/config.js';
-import { $, pick } from './core/utils.js';
+import { $ } from './core/utils.js';
 import { G, setG, UI, input } from './core/state.js';
 import { BOX, saveBox } from './core/save.js';
 import { WEAPONS } from './data/weapons.js';
-import { MONSTERS } from './data/monsters.js';
-import { ITEMS } from './data/items.js';
 import { CAMP_SPAWN, VILLAGE, HUB, TOWN_SPAWN, DIRV, OPP } from './data/world.js';
 import { Audio8 } from './audio/audio8.js';
 import { flow, say, ask, pause, releaseWaits } from './ui/dialog.js';
 import { showScreen, renderPanel } from './ui/hud.js';
-import { setPhase, showLocation, addLog } from './ui/fx.js';
+import { showLocation, addLog } from './ui/fx.js';
 import { resetMini } from './ui/map.js';
 import { makeNpcs, makeSmalls, buildEntities, spawnTargets, installMonsterAlias } from './world/spawn.js';
 import { putAllInBox } from './quest/rewards.js';
@@ -67,7 +65,7 @@ export function newSession() {
   UI.mode = 'main'; UI.data = {}; input.dirs = [];
   hideOverlays();
   resetMini(); buildEntities(true);
-  showScreen(); setPhase(0); renderPanel();
+  showScreen(); renderPanel();
   showLocation(VILLAGE);
   Audio8.music('village');
   flow(async () => {
@@ -141,7 +139,7 @@ export function returnToVillage() {
     Object.assign(G.f, { area: home, ...TOWN_SPAWN[home], mv: null });
     UI.mode = 'main'; UI.data = {};
     hideOverlays(); resetMini(); buildEntities(true);
-    showScreen(); setPhase(0); renderPanel();
+    showScreen(); renderPanel();
     Audio8.music('village');
     tr.className = 'fadeOut'; showLocation(home);
     await pause(300); tr.className = '';

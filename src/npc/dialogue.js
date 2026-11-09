@@ -5,7 +5,6 @@ import { pick } from '../core/utils.js';
 import { G } from '../core/state.js';
 import { BOX, saveBox } from '../core/save.js';
 import { ITEMS, FEASTS, itemName, itemRar } from '../data/items.js';
-import { MONSTERS, LOOT } from '../data/monsters.js';
 import { questTargets, questReward, QUEST_BOARDS } from '../data/quests.js';
 import { DATA, itemIcon } from '../art/index.js';
 import { Audio8 } from '../audio/audio8.js';

@@ -7,7 +7,7 @@ import { CAMP_SPAWN } from '../data/world.js';
 import { Audio8, fieldMusic } from '../audio/audio8.js';
 import { say, pause } from '../ui/dialog.js';
 import { showScreen, renderBattle, setMode } from '../ui/hud.js';
-import { addLog, anim, pop, setPhase, toast, showLocation } from '../ui/fx.js';
+import { addLog, anim, pop, toast, showLocation } from '../ui/fx.js';
 import { buildEntities, refreshEntities, liveBosses } from '../world/spawn.js';
 import { MAPS, findFree } from '../world/mapgen.js';
 import { worldTick } from '../world/field.js';
@@ -38,7 +38,7 @@ export async function returnToField(graceMs) {
   const now = performance.now();
   G.grace = now + graceMs;
   G.ents.forEach(e => { e.alerted = false; e.bang = 0; e.mv = null; e.goal = null; e.next = now + 500; });
-  showScreen(); setPhase(0); Audio8.music(fieldMusic());
+  showScreen(); Audio8.music(fieldMusic());
   tr.className = 'fadeOut'; await pause(260); tr.className = '';
   const t = G.tailDrop;
   if (t && t.placed && !t.carved && !t.told && t.area === G.f.area) {
@@ -78,7 +78,7 @@ export async function checkFaint() {
   buildEntities(true);
   G.grace = performance.now() + CONFIG.GRACE_MS;
   ps.classList.remove('a-faint');
-  showScreen(); setPhase(0); showLocation(0); Audio8.music('camp');
+  showScreen(); showLocation(0); Audio8.music('camp');
   tr.className = 'fadeOut'; await pause(300); tr.className = '';
   if (msgs.length) toast(msgs.join('\n'));
   return true;
@@ -86,7 +86,6 @@ export async function checkFaint() {
 
 async function waitCarve(i, n, what = 'BODY') {
   const g = G;
-  setPhase(0);
   setMode('carve', { i, n, what });
   await new Promise(res => { waits.carve = res; });
   if (G !== g) throw new Abort();

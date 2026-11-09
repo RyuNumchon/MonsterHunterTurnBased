@@ -7,12 +7,12 @@ import { CONFIG } from '../core/config.js';
 import { $, weighted, Abort } from '../core/utils.js';
 import { G, waits } from '../core/state.js';
 import { BOX, saveBox } from '../core/save.js';
-import { LOOT, MONSTERS } from '../data/monsters.js';
+import { LOOT } from '../data/monsters.js';
 import { itemName, itemRar, isConsumable } from '../data/items.js';
 import { itemIcon, pimg } from '../art/index.js';
 import { Audio8 } from '../audio/audio8.js';
 import { pause } from '../ui/dialog.js';
-import { addLog, setPhase } from '../ui/fx.js';
+import { addLog } from '../ui/fx.js';
 import { resetMini } from '../ui/map.js';
 import { boxAdd } from '../core/pouch.js';
 
@@ -44,7 +44,7 @@ export async function finishQuest(outcome) {
 
   G.over = true; G.outcome = outcome; G.boxed = false;
   G.rewards = { sections, zenny, base };
-  setPhase(0); resetMini();
+  resetMini();
 
   const tr = $('trans');
   try {
