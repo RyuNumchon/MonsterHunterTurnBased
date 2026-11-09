@@ -1,154 +1,226 @@
 /* Battle HUD + bottom panel.
    The player never sees numbers (HP, damage, hit %, speed, sharpness, durations): only bars and words.
    Exact values go to the debug BATTLE LOG (logSnapshot at the start of every turn). */
-import { CONFIG } from '../core/config.js';
-import { $, clamp } from '../core/utils.js';
-import { G, UI } from '../core/state.js';
-import { WEAPONS, getSharp } from '../data/weapons.js';
-import { PARTS } from '../data/monsters.js';
-import { FEASTS, ITEMS } from '../data/items.js';
-import { areaInfo } from '../data/world.js';
-import { DATA, pimg, itemIcon } from '../art/index.js';
-import { addLog, fitText } from './fx.js';
-import { findMove, moveDisabled, runLock } from '../battle/turn.js';
-import { curable, elementSealed, blockedBy, statusChips, stunChance } from '../battle/status.js';
-import { speedOf } from '../battle/speed.js';
-import { BOX } from '../core/save.js';
-import { hunterDef, skillPoints } from '../core/gear.js';
-import { isEnraged, isTired } from '../battle/mood.js';
-import { pouchCount } from '../core/pouch.js';
-import { RECIPES, needOf } from '../data/recipes.js';
-import { canCraft } from '../world/inventory.js';
-import { itemName } from '../data/items.js';
+import { CONFIG } from "../core/config.js";
+import { $, clamp } from "../core/utils.js";
+import { G, UI } from "../core/state.js";
+import { WEAPONS, getSharp } from "../data/weapons.js";
+import { PARTS } from "../data/monsters.js";
+import { FEASTS, ITEMS } from "../data/items.js";
+import { areaInfo } from "../data/world.js";
+import { DATA, pimg, itemIcon } from "../art/index.js";
+import { addLog, fitText } from "./fx.js";
+import { findMove, moveDisabled, runLock } from "../battle/turn.js";
+import {
+  curable,
+  elementSealed,
+  blockedBy,
+  statusChips,
+  stunChance,
+} from "../battle/status.js";
+import { speedOf } from "../battle/speed.js";
+import { BOX } from "../core/save.js";
+import { hunterDef, skillPoints } from "../core/gear.js";
+import { isEnraged, isTired } from "../battle/mood.js";
+import { pouchCount } from "../core/pouch.js";
+import { RECIPES, needOf } from "../data/recipes.js";
+import { canCraft } from "../world/inventory.js";
+import { itemName } from "../data/items.js";
 
 /* HP bars never change colour. */
-export const HP_COLOR = '#58d080';
+export const HP_COLOR = "#58d080";
 /** Hunter HP bar length (%): shorter by default, longer after a feast. */
-const FULL_HP = CONFIG.PLAYER_MAX_HP + Math.max(...FEASTS.map(f => f.hp));
-export const hpLen = p => Math.min(100, p.maxHp / FULL_HP * 100);
-export const elemTag = p => {
+const FULL_HP = CONFIG.PLAYER_MAX_HP + Math.max(...FEASTS.map((f) => f.hp));
+export const hpLen = (p) => Math.min(100, (p.maxHp / FULL_HP) * 100);
+export const elemTag = (p) => {
   const w = WEAPONS[p.weapon];
-  return w.element ? `<span class="elem e-${w.element}${elementSealed(p) ? ' sealed' : ''}">${w.element.toUpperCase()}</span>` : '';
+  return w.element
+    ? `<span class="elem e-${w.element}${elementSealed(p) ? " sealed" : ""}">${w.element.toUpperCase()}</span>`
+    : "";
 };
 export const chip = (t, c) => `<span class="chip ${c}">${t}</span>`;
-export function setBar(el, pct, color) { el.style.width = clamp(pct, 0, 100) + '%'; el.style.backgroundColor = color; }
-export const pips = (n, max) => Array.from({ length: max }, (_, i) => `<span class="pip ${i < n ? 'on' : ''}"></span>`).join('');
-export const cartsUsed = used => `${used}/${CONFIG.MAX_CARTS}`;
-const PART_HINT = { head: 'WEAK SPOT', body: 'EASY TARGET', legs: 'CAN TRIP IT', tail: 'CAN BE CUT' };
+export function setBar(el, pct, color) {
+  el.style.width = clamp(pct, 0, 100) + "%";
+  el.style.backgroundColor = color;
+}
+export const pips = (n, max) =>
+  Array.from(
+    { length: max },
+    (_, i) => `<span class="pip ${i < n ? "on" : ""}"></span>`,
+  ).join("");
+export const cartsUsed = (used) => `${used}/${CONFIG.MAX_CARTS}`;
+const PART_HINT = {
+  head: "WEAK SPOT",
+  body: "EASY TARGET",
+  legs: "CAN TRIP IT",
+  tail: "CAN BE CUT",
+};
 
 function syncPanelVisibility() {
-  $('screen').classList.toggle('battle-active', !!G && G.screen === 'battle' && !G.over);
+  $("screen").classList.toggle(
+    "battle-active",
+    !!G && G.screen === "battle" && !G.over,
+  );
 }
 export function showScreen() {
-  $('battle').classList.toggle('hidden', !G || G.screen !== 'battle');
+  $("battle").classList.toggle("hidden", !G || G.screen !== "battle");
   syncPanelVisibility();
 }
 
 /** Keeps the battle HP track inside a full-width slot, so its length is a % of the full bar (same as the map). */
 function hpSlot(track) {
-  if (!track.parentElement.classList.contains('hpslot')) {
-    const s = document.createElement('div'); s.className = 'hpslot';
-    track.replaceWith(s); s.appendChild(track);
+  if (!track.parentElement.classList.contains("hpslot")) {
+    const s = document.createElement("div");
+    s.className = "hpslot";
+    track.replaceWith(s);
+    s.appendChild(track);
   }
   return track;
 }
 
 /** Builds the four part bars and the sharpness zone markers once at boot. */
 export function initHud() {
-  $('eParts').innerHTML = Object.keys(PARTS).map(k =>
-    `<div class="pt" id="pb-${k}"><span>${PARTS[k].label}</span><div class="trk"><div class="fill"></div></div></div>`).join('');
-  const marks = $('pSharp').parentElement.querySelectorAll('i');
-  marks[0].style.left = (CONFIG.SHARP_YELLOW / CONFIG.SHARP_MAX * 100) + '%';
-  marks[1].style.left = (CONFIG.SHARP_GREEN / CONFIG.SHARP_MAX * 100) + '%';
+  $("eParts").innerHTML = Object.keys(PARTS)
+    .map(
+      (k) =>
+        `<div class="pt" id="pb-${k}"><span>${PARTS[k].label}</span><div class="trk"><div class="fill"></div></div></div>`,
+    )
+    .join("");
+  const marks = $("pSharp").parentElement.querySelectorAll("i");
+  marks[0].style.left = (CONFIG.SHARP_YELLOW / CONFIG.SHARP_MAX) * 100 + "%";
+  marks[1].style.left = (CONFIG.SHARP_GREEN / CONFIG.SHARP_MAX) * 100 + "%";
 }
 
 /** Debug: every hidden number, logged once per turn. */
 export function logSnapshot() {
-  const p = G.player, m = G.foe;
-  const st = u => Object.entries(u.status || {}).map(([k, s]) => `${k}:${s.turns}t`).join(' ') || '-';
-  addLog(`[HUNTER HP ${p.hp}/${p.maxHp} · EDGE ${p.sharp}/${CONFIG.SHARP_MAX} · SPD ${speedOf(p)} · stun ${stunChance(p)}% · might ${p.buffs.might}t · status ${st(p)}]`, 'dim');
-  if (m) addLog(`[${m.name} HP ${m.hp}/${m.maxHp} · ${Object.entries(m.parts).map(([k, v]) => `${k} ${v.hp}/${v.max}`).join(', ')} · SPD ${speedOf(m)} · trap ${m.trapped}t · tranq ${m.tranq}/${CONFIG.TRANQ_NEEDED} · blind ${m.flash}t · status ${st(m)}  · mood ${m.mood || 'calm'} ${m.moodTurns || 0}t · cd ${m.calmTurns || 0}t]`, 'dim');
-  addLog(`[paint ${G.foe?.paint || 0}t · items ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN}]`, 'dim');
-  addLog(`[GEAR ${p.weapon} (atk x${WEAPONS[p.weapon].atk || 1}${WEAPONS[p.weapon].element ? ' · ' + WEAPONS[p.weapon].element : ''}) · DEF ${hunterDef()} · skill pts ${JSON.stringify(skillPoints())}]`, 'dim');
+  const p = G.player,
+    m = G.foe;
+  const st = (u) =>
+    Object.entries(u.status || {})
+      .map(([k, s]) => `${k}:${s.turns}t`)
+      .join(" ") || "-";
+  addLog(
+    `[HUNTER HP ${p.hp}/${p.maxHp} · EDGE ${p.sharp}/${CONFIG.SHARP_MAX} · SPD ${speedOf(p)} · stun ${stunChance(p)}% · might ${p.buffs.might}t · status ${st(p)}]`,
+    "dim",
+  );
+  if (m)
+    addLog(
+      `[${m.name} HP ${m.hp}/${m.maxHp} · ${Object.entries(m.parts)
+        .map(([k, v]) => `${k} ${v.hp}/${v.max}`)
+        .join(
+          ", ",
+        )} · SPD ${speedOf(m)} · trap ${m.trapped}t · tranq ${m.tranq}/${CONFIG.TRANQ_NEEDED} · blind ${m.flash}t · status ${st(m)}  · mood ${m.mood || "calm"} ${m.moodTurns || 0}t · cd ${m.calmTurns || 0}t]`,
+      "dim",
+    );
+  addLog(
+    `[paint ${G.foe?.paint || 0}t · items ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN}]`,
+    "dim",
+  );
+  addLog(
+    `[GEAR ${p.weapon} (atk x${WEAPONS[p.weapon].atk || 1}${WEAPONS[p.weapon].element ? " · " + WEAPONS[p.weapon].element : ""}) · DEF ${hunterDef()} · skill pts ${JSON.stringify(skillPoints())}]`,
+    "dim",
+  );
 }
 
 export function renderBattle() {
   if (!G || !G.foe) return;
-  const p = G.player, m = G.foe;
+  const p = G.player,
+    m = G.foe;
   // --- Enemy box ---
-  $('eName').textContent = m.name;
-  $('eRank').textContent = m.isBoss ? `★${m.rank}` : `Lv${m.rank}`;
-  setBar($('eHp'), m.hp / m.maxHp * 100, HP_COLOR);
-  $('eParts').classList.toggle('hidden', !m.isBoss);          // small monsters: one body
-  if (m.isBoss) for (const k in PARTS) {
-    const pt = m.parts[k], el = $('pb-' + k);
-    el.classList.toggle('brk', pt.broken);
-    setBar(el.querySelector('.fill'), pt.hp / pt.max * 100, pt.broken ? '#8a8a8a' : '#e09030');
-  }
+  $("eName").textContent = m.name;
+  $("eRank").textContent = m.isBoss ? `★${m.rank}` : `Lv${m.rank}`;
+  setBar($("eHp"), (m.hp / m.maxHp) * 100, HP_COLOR);
+  $("eParts").classList.toggle("hidden", !m.isBoss); // small monsters: one body
+  if (m.isBoss)
+    for (const k in PARTS) {
+      const pt = m.parts[k],
+        el = $("pb-" + k);
+      el.classList.toggle("brk", pt.broken);
+      setBar(
+        el.querySelector(".fill"),
+        (pt.hp / pt.max) * 100,
+        pt.broken ? "#8a8a8a" : "#e09030",
+      );
+    }
   const ec = [];
-  if (m.captured) ec.push(chip('CAPTURED', 'c-cap'));
-  if (isEnraged(m)) ec.push(chip('ENRAGED', 'c-rage'));
-  if (isTired(m)) ec.push(chip('TIRED', 'c-tired'));
-  if (m.sleeping && !m.captured) ec.push(chip('SLP', 'c-slp'));
-  if (m.trapped > 0) ec.push(chip('TRAP', 'c-trap'));
-  if (m.tranq > 0 && !m.captured) ec.push(chip('DROWSY', 'c-tq'));
-  if (m.flash > 0) ec.push(chip('BLIND', 'c-bln'));
-  if (m.isBoss && m.paint > 0) ec.push(chip('PAINT', 'c-pnt'));
-  if (m.skipNext) ec.push(chip('STAGGER', 'c-stun'));
-  if (m.isBoss && m.parts.tail.broken) ec.push(chip('ATK↓', 'c-cut'));
-  if (m.armorCracked) ec.push(chip('DEF↓', 'c-crk'));
-  $('eChips').innerHTML = ec.join('') + statusChips(m);
-  fitText($('eChips'), $('eChips').children);
+  if (m.captured) ec.push(chip("CAPTURED", "c-cap"));
+  if (isEnraged(m)) ec.push(chip("ENRAGED", "c-rage"));
+  if (isTired(m)) ec.push(chip("TIRED", "c-tired"));
+  if (m.sleeping && !m.captured) ec.push(chip("SLP", "c-slp"));
+  if (m.trapped > 0) ec.push(chip("TRAP", "c-trap"));
+  if (m.tranq > 0 && !m.captured) ec.push(chip("DROWSY", "c-tq"));
+  if (m.flash > 0) ec.push(chip("BLIND", "c-bln"));
+  if (m.isBoss && m.paint > 0) ec.push(chip("PAINT", "c-pnt"));
+  if (m.skipNext) ec.push(chip("STAGGER", "c-stun"));
+  if (m.isBoss && m.parts.tail.broken) ec.push(chip("ATK↓", "c-cut"));
+  if (m.armorCracked) ec.push(chip("DEF↓", "c-crk"));
+  $("eChips").innerHTML = ec.join("") + statusChips(m);
+  fitText($("eChips"), $("eChips").children);
 
   // --- Player box ---
-  $('pWpn').innerHTML = `${WEAPONS[p.weapon].short} ${elemTag(p)}`;
-  $('pBalls').textContent = 'CARTS ' + cartsUsed(p.carts);
-  hpSlot($('pHp').parentElement).style.width = hpLen(p) + '%';
-  setBar($('pHp'), p.hp / p.maxHp * 100, HP_COLOR);
+  $("pWpn").innerHTML = `${WEAPONS[p.weapon].short} ${elemTag(p)}`;
+  $("pBalls").textContent = "CARTS " + cartsUsed(p.carts);
+  hpSlot($("pHp").parentElement).style.width = hpLen(p) + "%";
+  setBar($("pHp"), (p.hp / p.maxHp) * 100, HP_COLOR);
   const s = getSharp(p.sharp);
-  setBar($('pSharp'), p.sharp / CONFIG.SHARP_MAX * 100, s.color);
-  $('pSharpLbl').innerHTML = `<span style="color:${s.text}">${s.name}</span>`;
-  $('pGauge').innerHTML = WEAPONS[p.weapon].cls === 'greatsword' ? `CHG${pips(p.charge, 2)}` : `SPR${pips(p.spirit, 3)}`;
+  setBar($("pSharp"), (p.sharp / CONFIG.SHARP_MAX) * 100, s.color);
+  $("pSharpLbl").innerHTML = `<span style="color:${s.text}">${s.name}</span>`;
+  $("pGauge").innerHTML =
+    WEAPONS[p.weapon].cls === "greatsword"
+      ? `CHG${pips(p.charge, 2)}`
+      : `SPR${pips(p.spirit, 3)}`;
   const pc = [];
-  if (p.buffs.might > 0) pc.push(chip('MIGHT', 'c-mgt'));
-  if (p.guarding) pc.push(chip('GUARD', 'c-grd'));
-  if (p.foresight) pc.push(chip('FORESIGHT', 'c-fs'));
-  if (s.bounce) pc.push(chip('DULL!', 'c-crk'));
-  $('pChips').innerHTML = pc.join('') + statusChips(p);
-  fitText($('pChips'), $('pChips').children);
+  if (p.buffs.might > 0) pc.push(chip("MIGHT", "c-mgt"));
+  if (p.guarding) pc.push(chip("GUARD", "c-grd"));
+  if (p.foresight) pc.push(chip("FORESIGHT", "c-fs"));
+  if (s.bounce) pc.push(chip("DULL!", "c-crk"));
+  $("pChips").innerHTML = pc.join("") + statusChips(p);
+  fitText($("pChips"), $("pChips").children);
 
   // --- Sprite state classes ---
-  const es = $('enemySprite');
-  es.querySelector('.zzz').classList.toggle('hidden', !m.sleeping);
-  es.classList.toggle('small', !m.isBoss);
-  es.classList.toggle('enraged', isEnraged(m));
-  es.classList.toggle('trapped', m.trapped > 0);
-  const ps = $('playerSprite');
-  ps.classList.toggle('chg1', p.charge === 1);
-  ps.classList.toggle('chg2', p.charge >= 2);
-  ps.classList.toggle('guard', p.guarding);
-  ps.classList.toggle('gone', p.down);
+  const es = $("enemySprite");
+  es.querySelector(".zzz").classList.toggle("hidden", !m.sleeping);
+  es.classList.toggle("small", !m.isBoss);
+  es.classList.toggle("enraged", isEnraged(m));
+  es.classList.toggle("trapped", m.trapped > 0);
+  const ps = $("playerSprite");
+  ps.classList.toggle("chg1", p.charge === 1);
+  ps.classList.toggle("chg2", p.charge >= 2);
+  ps.classList.toggle("guard", p.guarding);
+  ps.classList.toggle("gone", p.down);
 }
 
 /** Switches the battle panel mode. */
 export function setMode(mode, data = {}) {
-  UI.mode = mode; UI.data = data;
-  if (G && G.screen === 'battle' && !G.over) {
-    if (mode === 'main' && G.loggedTurn !== G.turn) { G.loggedTurn = G.turn; addLog(`━━ TURN ${G.turn} ━━`, 'turn'); logSnapshot(); }
+  UI.mode = mode;
+  UI.data = data;
+  if (G && G.screen === "battle" && !G.over) {
+    if (mode === "main" && G.loggedTurn !== G.turn) {
+      G.loggedTurn = G.turn;
+      addLog(`━━ TURN ${G.turn} ━━`, "turn");
+      logSnapshot();
+    }
   }
   renderPanel();
 }
 
 export function moveSub(mv) {
-  if (mv.type === 'charge' && mv.charge >= CONFIG.CHARGE_MAX) return 'OVERCHARGE';
+  if (mv.type === "charge" && mv.charge >= CONFIG.CHARGE_MAX)
+    return "OVERCHARGE";
   const p = G.player;
   switch (mv.type) {
-    case 'release':  return `CHARGE Lv${p.charge + 1}`;
-    case 'charge':   return `HELD Lv${p.charge}`;
-    case 'guard':    return 'BLOCK · FIRST';
-    case 'counter':  return p.spirit < 1 ? 'NEED SPIRIT' : 'COUNTER · FIRST';
-    case 'finisher': return p.spirit < 1 ? 'NEED SPIRIT' : 'FINISHER';
-    default:         return mv.tag;
+    case "release":
+      return `CHARGE Lv${p.charge + 1}`;
+    case "charge":
+      return `HELD Lv${p.charge}`;
+    case "guard":
+      return "BLOCK · FIRST";
+    case "counter":
+      return p.spirit < 1 ? "NEED SPIRIT" : "COUNTER · FIRST";
+    case "finisher":
+      return p.spirit < 1 ? "NEED SPIRIT" : "FINISHER";
+    default:
+      return mv.tag;
   }
 }
 export function moveInfo(mv) {
@@ -158,97 +230,154 @@ export function moveInfo(mv) {
 
 /** Shrinks any panel text that would overflow its box. */
 export function fitPanel() {
-  $('panel').querySelectorAll('.tb, #mInfo, .pouchlist, .cmds, .movebox, .fstat').forEach(el => fitText(el));
+  $("panel")
+    .querySelectorAll(".tb, #mInfo, .pouchlist, .cmds, .movebox, .fstat")
+    .forEach((el) => fitText(el));
 }
 
 export function renderPanel() {
   syncPanelVisibility();
-  const P = $('panel');
-  P.classList.toggle('combine-panel', !!G && G.screen === 'battle' && UI.mode === 'combine' && !G.over);
-  if (!G) { P.innerHTML = ''; return; }
+  const P = $("panel");
+  P.classList.toggle(
+    "combine-panel",
+    !!G && G.screen === "battle" && UI.mode === "combine" && !G.over,
+  );
+  if (!G) {
+    P.innerHTML = "";
+    return;
+  }
   if (G.over) {
-    const win = G.outcome === 'slay' || G.outcome === 'capture';
-    P.innerHTML = `<div class="tb">${win ? 'Great hunting!' : 'The hunt is over.'}<br>Check the reward screen above.</div>
+    const win = G.outcome === "slay" || G.outcome === "capture";
+    P.innerHTML = `<div class="tb">${win ? "Great hunting!" : "The hunt is over."}<br>Check the reward screen above.</div>
       <div class="cmds"><button class="cmd k-map" style="grid-column:1/-1" data-act="village">RETURN TO VILLAGE</button></div>`;
     fitPanel();
     return;
   }
-  if (G.screen === 'field') { renderFieldPanel(P); fitPanel(); return; }
+  if (G.screen === "field") {
+    renderFieldPanel(P);
+    fitPanel();
+    return;
+  }
 
-  const mode = UI.mode, d = UI.data, p = G.player, m = G.foe, w = WEAPONS[p.weapon];
-  let h = '';
+  const mode = UI.mode,
+    d = UI.data,
+    p = G.player,
+    m = G.foe,
+    w = WEAPONS[p.weapon];
+  let h = "";
   switch (mode) {
-    case 'message':
+    case "message":
       h = `<div class="tb adv" data-act="advance"><span id="msg"></span><span id="arrow" class="arrow">▼</span></div>`;
       break;
-    case 'fight':
-      h = `<div class="movebox">${w.moves.map(mv =>
-          `<button class="mv" data-act="move" data-val="${mv.id}" data-info="${mv.id}" ${moveDisabled(mv) ? 'disabled' : ''}>${mv.name}<small>${moveSub(mv)}</small></button>`).join('')}</div>
+    case "fight":
+      h = `<div class="movebox">${w.moves
+        .map(
+          (mv) =>
+            `<button class="mv" data-act="move" data-val="${mv.id}" data-info="${mv.id}" ${moveDisabled(mv) ? "disabled" : ""}>${mv.name}<small>${moveSub(mv)}</small></button>`,
+        )
+        .join("")}</div>
           <div class="minfo"><div id="mInfo">${moveInfo(w.moves[0])}</div>
           <button class="cmd back wait" data-act="wait">WAIT</button><button class="cmd back" data-act="back">BACK</button></div>`;
       break;
-    case 'target': {
+    case "target": {
       const mv = findMove(d.moveId);
       h = `<div class="tb">Aim ${mv.name}<br>at which part?
-          <div class="sub">${m.sleeping ? "It's asleep: it can't dodge!" : 'A near-miss may strike another part.'}</div></div>
-        <div class="cmds">${Object.keys(PARTS).map(k => {
-          const pt = m.parts[k];
-          const hint = pt.broken ? (k === 'tail' ? 'SEVERED' : 'BROKEN') : (k === 'tail' && !m.isBoss ? '' : PART_HINT[k]);
-          return `<button class="cmd k-${k}" data-act="part" data-val="${k}">${PARTS[k].label}<small>${hint}</small></button>`;
-        }).join('')}<button class="cmd back" data-act="back">BACK</button></div>`;
+          <div class="sub">${m.sleeping ? "It's asleep: it can't dodge!" : "A near-miss may strike another part."}</div></div>
+        <div class="cmds">${Object.keys(PARTS)
+          .map((k) => {
+            const pt = m.parts[k];
+            const hint = pt.broken
+              ? k === "tail"
+                ? "SEVERED"
+                : "BROKEN"
+              : k === "tail" && !m.isBoss
+                ? ""
+                : PART_HINT[k];
+            return `<button class="cmd k-${k}" data-act="part" data-val="${k}">${PARTS[k].label}<small>${hint}</small></button>`;
+          })
+          .join(
+            "",
+          )}<button class="cmd back" data-act="back">BACK</button></div>`;
       break;
     }
-    case 'confirm':
-      h = `<div class="tb">${d.q}<div class="sub">${d.sub || ''}</div></div>
+    case "confirm":
+      h = `<div class="tb">${d.q}<div class="sub">${d.sub || ""}</div></div>
         <div class="yn"><button data-act="yes">YES</button><button data-act="no">NO</button></div>`;
       break;
-    case 'pouch': {
-      const left = CONFIG.MAX_ITEMS_PER_TURN - G.itemsUsed, itemLock = blockedBy(p, 'item');
-      const usable = BOX.pouch.filter(s => ITEMS[s.id]);
-      h = `<div class="tb" id="pouchInfo">${itemLock ? `Can't use items! (${itemLock.name})`
-            : !usable.length ? 'No usable items in the POUCH!'
-            : left > 0 ? 'Choose an item.<br>It takes effect immediately.' : 'No more items this turn!'}
+    case "pouch": {
+      const left = CONFIG.MAX_ITEMS_PER_TURN - G.itemsUsed,
+        itemLock = blockedBy(p, "item");
+      const usable = BOX.pouch.filter((s) => ITEMS[s.id]);
+      h = `<div class="tb" id="pouchInfo">${
+        itemLock
+          ? `Can't use items! (${itemLock.name})`
+          : !usable.length
+            ? "No usable items in the POUCH!"
+            : left > 0
+              ? "Choose an item.<br>It takes effect immediately."
+              : "No more items this turn!"
+      }
           <div class="sub">ITEMS USED ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN} THIS TURN · no turn cost</div></div>
-        <div class="pouchlist">${usable.map(s => {
-          const deo = s.id === 'deodorant' && curable(p, 'deodorant');
-          const dis = (!!itemLock && !deo) || left <= 0;
-          return `<button class="it" data-act="item" data-val="${s.id}" data-info="${s.id}" ${dis ? 'disabled' : ''}>
+        <div class="pouchlist">${usable
+          .map((s) => {
+            const deo = s.id === "deodorant" && curable(p, "deodorant");
+            const dis = (!!itemLock && !deo) || left <= 0;
+            return `<button class="it" data-act="item" data-val="${s.id}" data-info="${s.id}" ${dis ? "disabled" : ""}>
             ${pimg(itemIcon(s.id))}${ITEMS[s.id].name}<span class="q">x${s.n}</span></button>`;
-        }).join('')}<button class="cmd back wait" data-act="bcombine" ${itemLock ? 'disabled' : ''}>COMBINE</button>
+          })
+          .join(
+            "",
+          )}<button class="cmd back wait" data-act="bcombine" ${itemLock ? "disabled" : ""}>COMBINE</button>
           <button class="cmd back" data-act="back">BACK</button></div>`;
       break;
     }
-    case 'combine': {
-      const lock = blockedBy(p, 'item'), size = CONFIG.BATTLE_COMBINE_PAGE;
+    case "combine": {
+      const lock = blockedBy(p, "item"),
+        size = CONFIG.BATTLE_COMBINE_PAGE;
       const pages = Math.max(1, Math.ceil(RECIPES.length / size));
       const pg = (((UI.data.page || 0) % pages) + pages) % pages;
       UI.data.page = pg;
-      const list = RECIPES.slice(pg * size, pg * size + size).map((r, j) => {
-        const i = pg * size + j, why = lock ? 'LOCKED' : canCraft(r);
-        const need = Object.entries(needOf(r)).map(([id, n]) => `${itemName(id)}${n > 1 ? ' x' + n : ''} (${pouchCount(id)})`).join(' + ');
-        return `<button data-act="bcraft" data-val="${i}" ${why ? 'disabled' : ''}>${pimg(itemIcon(r.out))}<span>${itemName(r.out)}<small>${why ? why + ' · ' : ''}${need}</small></span></button>`;
-      }).join('');
-      h = `<div class="bpage"><button data-act="bcpage" data-val="-1">◀</button><span>COMBINE ${pg + 1}/${pages}</span><button data-act="bcpage" data-val="1">▶</button></div>`
-          + `<div class="blist">${list}</div><button class="combine-back" data-act="back">BACK</button>`;
+      const list = RECIPES.slice(pg * size, pg * size + size)
+        .map((r, j) => {
+          const i = pg * size + j,
+            why = lock ? "LOCKED" : canCraft(r);
+          const need = Object.entries(needOf(r))
+            .map(
+              ([id, n]) =>
+                `${itemName(id)}${n > 1 ? " x" + n : ""} (${pouchCount(id)})`,
+            )
+            .join(" + ");
+          return `<button data-act="bcraft" data-val="${i}" ${why ? "disabled" : ""}>${pimg(itemIcon(r.out))}<span>${itemName(r.out)}<small>${why ? why + " · " : ""}${need}</small></span></button>`;
+        })
+        .join("");
+      h =
+        `<div class="bpage"><button data-act="bcpage" data-val="-1">◀</button><span>COMBINE ${pg + 1}/${pages}</span><button data-act="bcpage" data-val="1">▶</button></div>` +
+        `<div class="blist">${list}</div><button class="combine-back" data-act="back">BACK</button>`;
       break;
     }
-    case 'carve':
-      h = `<div class="tb">${d.what === 'TAIL' ? `The severed ${m.name} TAIL...` : `The ${m.name} lies still...`}<br>Carve it for materials! (${d.i + 1}/${d.n})
+    case "carve":
+      h = `<div class="tb">${d.what === "TAIL" ? `The severed ${m.name} TAIL...` : `The ${m.name} lies still...`}<br>Carve it for materials! (${d.i + 1}/${d.n})
           <div class="sub">Press CARVE or Z for each carve.</div></div>
         <div class="cmds"><button class="cmd k-fight carvebtn" data-act="carve">CARVE</button></div>`;
       break;
-    default: { // 'main'
-      const run = runLock(p), deoOk = pouchCount('deodorant') > 0 && curable(p, 'deodorant');
-      const act = blockedBy(p, 'act'), itemLock = blockedBy(p, 'item');
+    default: {
+      // 'main'
+      const run = runLock(p),
+        deoOk = pouchCount("deodorant") > 0 && curable(p, "deodorant");
+      const act = blockedBy(p, "act"),
+        itemLock = blockedBy(p, "item");
       const left = CONFIG.MAX_ITEMS_PER_TURN - G.itemsUsed;
-      h = `<div class="tb">${act ? `HUNTER can't move!<br>(${act.name})` : 'What will<br>HUNTER do?'}
+      h = `<div class="tb">${act ? `HUNTER can't move!<br>(${act.name})` : "What will<br>HUNTER do?"}
           <div class="sub">TURN ${G.turn} · ITEMS ${G.itemsUsed}/${CONFIG.MAX_ITEMS_PER_TURN} · items don't end your turn</div></div>
         <div class="cmds">
-          ${act ? `<button class="cmd k-fight" data-act="wait">WAIT<small>${act.name}</small></button>`
-                : `<button class="cmd k-fight" data-act="fight">FIGHT</button>`}
-          <button class="cmd k-pouch" data-act="pouch" ${itemLock && !deoOk ? 'disabled' : ''}>POUCH<small>${itemLock ? itemLock.name : left + ' LEFT'}</small></button>
+          ${
+            act
+              ? `<button class="cmd k-fight" data-act="wait">WAIT<small>${act.name}</small></button>`
+              : `<button class="cmd k-fight" data-act="fight">FIGHT</button>`
+          }
+          <button class="cmd k-pouch" data-act="pouch" ${itemLock && !deoOk ? "disabled" : ""}>POUCH<small>${itemLock ? itemLock.name : left + " LEFT"}</small></button>
           <button class="cmd k-map" data-act="map">MAP</button>
-          <button class="cmd k-run" data-act="run" ${run ? 'disabled' : ''}>RUN${run ? `${run.name}` : ''}</button>
+          <button class="cmd k-run" data-act="run" ${run ? "disabled" : ""}>RUN${run ? `${run.name}` : ""}</button>
         </div>`;
     }
   }
@@ -257,7 +386,10 @@ export function renderPanel() {
 }
 
 export function renderFieldPanel(P) {
-  const p = G.player, s = getSharp(p.sharp), f = G.f, hp = p.hp / p.maxHp * 100;
+  const p = G.player,
+    s = getSharp(p.sharp),
+    f = G.f,
+    hp = (p.hp / p.maxHp) * 100;
   P.innerHTML = `<div id="fpad" class="touch-only">
     <div class="dpad"><button data-dir="up">▲</button><button data-dir="left">◀</button><span class="dc"></span>
       <button data-dir="right">▶</button><button data-dir="down">▼</button></div>
@@ -265,9 +397,9 @@ export function renderFieldPanel(P) {
       <div class="fstat">
         <div class="srow"><b>AREA</b>${areaInfo(f.area).name} · ${areaInfo(f.area).sub}</div>
         <div class="srow"><b>HP</b><span class="hpslot"><span class="mbar" style="width:${hpLen(p)}%"><i style="width:${hp}%;background:${HP_COLOR}"></i></span></span></div>
-        <div class="srow"><b>EDGE</b><span class="mbar"><i style="width:${p.sharp / CONFIG.SHARP_MAX * 100}%;background:${s.color}"></i></span>${s.name}</div>
-        <div class="srow"><b>COND</b>${G.feast ? chip('FEAST', 'c-mgt') : ''}${statusChips(p) || (G.feast ? '' : 'NORMAL')}</div>
-        <div class="srow"><b>GEAR</b>${pimg(DATA['wpn_' + p.weapon])}${WEAPONS[p.weapon].name} ${elemTag(p)} · CARTS ${cartsUsed(p.carts)}</div>
+        <div class="srow"><b>EDGE</b><span class="mbar"><i style="width:${(p.sharp / CONFIG.SHARP_MAX) * 100}%;background:${s.color}"></i></span>${s.name}</div>
+        <div class="srow"><b>COND</b>${G.feast ? chip("FEAST", "c-mgt") : ""}${statusChips(p) || (G.feast ? "" : "NORMAL")}</div>
+        <div class="srow"><b>GEAR</b>${pimg(DATA["wpn_" + p.weapon])}${WEAPONS[p.weapon].name} ${elemTag(p)} · CARTS ${cartsUsed(p.carts)}</div>
       </div>
       <div class="ss"><button data-act="fstart">START</button><button data-act="fmap">MAP</button><button class="touch-only" data-act="fpouch">POUCH</button></div>
       <div class="keys">ARROWS/WASD move · Z talk/A · X back · ENTER menu · M map · N music</div>

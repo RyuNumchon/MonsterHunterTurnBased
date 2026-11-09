@@ -5,22 +5,28 @@ import { $, weighted } from "../core/utils.js";
 import { G } from "../core/state.js";
 import { BOX } from "../core/save.js";
 import { WEAPONS, getSharp } from "../data/weapons.js";
-import { GATHER, itemName } from '../data/items.js';
+import { GATHER, itemName } from "../data/items.js";
 import { AREAS, DIRV, OPP, isTown } from "../data/world.js";
 import { Audio8 } from "../audio/audio8.js";
 import { say, ask, choose, flow, pause } from "../ui/dialog.js";
-import { toast, addLog } from '../ui/fx.js';
+import { toast, addLog } from "../ui/fx.js";
 import { openMap } from "../ui/map.js";
 import { MAPS } from "./mapgen.js";
-import { entAt, worldTick, tailAt } from './field.js';
+import { entAt, worldTick, tailAt } from "./field.js";
 import { NPC_TALK } from "../npc/dialogue.js";
 import { startEncounter } from "../battle/encounter.js";
 import { finishQuest } from "../quest/rewards.js";
-import { LOOT } from '../data/monsters.js';
-import { pouchAdd } from '../core/pouch.js';
-import { equipmentMenu, itemBoxMenu, pouchMenu, craftMenu, obtain } from './inventory.js';
-import { hunterDef } from '../core/gear.js';
-import { liveBosses } from './spawn.js';
+import { LOOT } from "../data/monsters.js";
+import { pouchAdd } from "../core/pouch.js";
+import {
+  equipmentMenu,
+  itemBoxMenu,
+  pouchMenu,
+  craftMenu,
+  obtain,
+} from "./inventory.js";
+import { hunterDef } from "../core/gear.js";
+import { liveBosses } from "./spawn.js";
 
 /** A button: act on whatever the hunter is facing. */
 export function interact() {
@@ -39,7 +45,10 @@ export function interact() {
       startEncounter(e, e.kind === "boss" && e.sleeping ? "sneak" : "engage");
     return;
   }
-  if (tailAt(tx, ty)) { flow(carveTailField); return; }
+  if (tailAt(tx, ty)) {
+    flow(carveTailField);
+    return;
+  }
   const obj = M.objects.find(
     (o) => tx >= o.x && tx < o.x + o.w && ty >= o.y && ty < o.y + o.h,
   );
@@ -62,12 +71,15 @@ export function interact() {
 
 /** Severed tail on the map: carve once (CONFIG.TAIL_CARVES). Paid out with the quest rewards. */
 async function carveTailField() {
-  if (G.tailDrop.carved) { await say('Only bare bone is left. Nothing more to carve.', 'dim'); return; }
+  if (G.tailDrop.carved) {
+    await say("Only bare bone is left. Nothing more to carve.", "dim");
+    return;
+  }
   const t = G.tailDrop;
   await say(`The severed ${t.name} TAIL is lying here.`);
-  if (!(await ask('Carve the tail?'))) return;
+  if (!(await ask("Carve the tail?"))) return;
   for (let i = 0; i < CONFIG.TAIL_CARVES; i++) {
-    Audio8.sfx('carve');
+    Audio8.sfx("carve");
     const name = weighted(LOOT[t.key].breaks.tail).name;
     await obtain(name, `HUNTER carved ${name}!`);
   }
@@ -77,23 +89,36 @@ async function carveTailField() {
 /** True when a gathering spot is used up (farm: FARM_USES, regrows after a quest; quest map: GATHER_USES). */
 export function gatherSpent(area, gp) {
   const town = isTown(area);
-  return ((town ? G.townUses : G.gatherUses)[`${area},${gp.x},${gp.y}`] || 0) >= (town ? CONFIG.FARM_USES : CONFIG.GATHER_USES);
+  return (
+    ((town ? G.townUses : G.gatherUses)[`${area},${gp.x},${gp.y}`] || 0) >=
+    (town ? CONFIG.FARM_USES : CONFIG.GATHER_USES)
+  );
 }
 
 async function gatherAt(gp) {
-  const area = G.f.area, town = isTown(area), uses = town ? G.townUses : G.gatherUses;
+  const area = G.f.area,
+    town = isTown(area),
+    uses = town ? G.townUses : G.gatherUses;
   const max = town ? CONFIG.FARM_USES : CONFIG.GATHER_USES;
-  const key = `${area},${gp.x},${gp.y}`, used = uses[key] || 0, def = GATHER[gp.type];
+  const key = `${area},${gp.x},${gp.y}`,
+    used = uses[key] || 0,
+    def = GATHER[gp.type];
   if (used >= max) {
-    await say(town ? `This ${def.label} spot is bare.\nIt will regrow after your next quest.` : `This ${def.label} spot is exhausted.`, 'dim');
+    await say(
+      town
+        ? `This ${def.label} spot is bare.\nIt will regrow after your next quest.`
+        : `This ${def.label} spot is exhausted.`,
+      "dim",
+    );
     return;
   }
   uses[key] = used + 1;
-  addLog(`[${gp.type} spot ${used + 1}/${max} used]`, 'dim');
-  Audio8.sfx('carve');
+  addLog(`[${gp.type} spot ${used + 1}/${max} used]`, "dim");
+  Audio8.sfx("carve");
   await say(def.verb);
-  const r = weighted(def.loot), id = r.name.startsWith('@') ? r.name.slice(1) : r.name;
-  Audio8.sfx('gather');
+  const r = weighted(def.loot),
+    id = r.name.startsWith("@") ? r.name.slice(1) : r.name;
+  Audio8.sfx("gather");
   await obtain(id, `HUNTER obtained ${itemName(id)}!`);
 }
 
@@ -135,7 +160,11 @@ async function useObject(o) {
         "Got POTION x3, PAINTBALL x2, FLASH BOMB x1, SHOCK TRAP x1,\nTRANQ BOMB x2, NULL-BERRY x2 and ANTIDOTE x2!",
         "good",
       );
-      if (left) await say("Some supplies didn't fit in the POUCH\nand were left behind.", 'dim');
+      if (left)
+        await say(
+          "Some supplies didn't fit in the POUCH\nand were left behind.",
+          "dim",
+        );
       return;
     }
     case "itembox":
@@ -160,31 +189,55 @@ async function useObject(o) {
     case "tent":
       await say("The Guild's tent. Your BED is right beside it.");
       return;
-    case 'sign': await say(o.text || signText(G.f.area)); return;
-    case 'counter': {
+    case "sign":
+      await say(o.text || signText(G.f.area));
+      return;
+    case "counter": {
       const f = G.f;
-      if (o.needSeat && !M.objects.some(c => c.type === 'chair' && c.x === f.x && c.y === f.y)) { await say(o.seatMsg); return; }
-      const npc = G.ents.find(e => e.id === o.npc);
-      if (npc) npc.dir = 'down';
+      if (
+        o.needSeat &&
+        !M.objects.some((c) => c.type === "chair" && c.x === f.x && c.y === f.y)
+      ) {
+        await say(o.seatMsg);
+        return;
+      }
+      const npc = G.ents.find((e) => e.id === o.npc);
+      if (npc) npc.dir = "down";
       await NPC_TALK[o.npc](npc);
       return;
     }
-    case 'chair': await say('A wooden stool. Sit on it and face\nthe counter to order a meal.'); return;
-    case 'table': await say('A long dining table. It smells of\ngrilled meat and spices.'); return;
-    case 'house': await say(o.label); return;
-    case 'anvil': await say("The anvil is still hot.\nTalk to the BLACKSMITH to forge gear."); return;
-    case 'gate': await say(
-      G.quest
-      ? 'The GATE to the hunting grounds.\nWalk through it to depart!'
-      : 'The GATE to the hunting grounds.\nAccept a quest from the CHIEF first.'
-    );
-    return;
+    case "chair":
+      await say(
+        "A wooden stool. Sit on it and face\nthe counter to order a meal.",
+      );
+      return;
+    case "table":
+      await say("A long dining table. It smells of\ngrilled meat and spices.");
+      return;
+    case "house":
+      await say(o.label);
+      return;
+    case "anvil":
+      await say(
+        "The anvil is still hot.\nTalk to the BLACKSMITH to forge gear.",
+      );
+      return;
+    case "gate":
+      await say(
+        G.quest
+          ? "The GATE to the hunting grounds.\nWalk through it to depart!"
+          : "The GATE to the hunting grounds.\nAccept a quest from the CHIEF first.",
+      );
+      return;
   }
 }
 
 export async function fieldMap() {
-  if (G.phase !== 'quest') {
-    await say('You know THEPARAK VILLAGE by heart.\nThe MAP is for the hunting grounds.', 'dim');
+  if (G.phase !== "quest") {
+    await say(
+      "You know THEPARAK VILLAGE by heart.\nThe MAP is for the hunting grounds.",
+      "dim",
+    );
     return;
   }
   await openMap();
@@ -192,28 +245,64 @@ export async function fieldMap() {
 
 /** START menu (Enter / Esc / START button). */
 export function openStartMenu() {
-  Audio8.sfx('select');
+  Audio8.sfx("select");
   flow(async () => {
     while (true) {
-      $('fDialog').classList.add('hidden');
-      const inQuest = G.phase === 'quest';
-      const opts = ['POUCH', 'COMBINE', 'MAP', 'HUNTER',  'EQUIPMENT', 'QUEST', ...(inQuest ? ['ABANDON QUEST'] : []), 'EXIT'];
-      const i = await choose('MENU', opts), p = G.player, s = getSharp(p.sharp), q = G.quest;
+      $("fDialog").classList.add("hidden");
+      const inQuest = G.phase === "quest";
+      const opts = [
+        "POUCH",
+        "COMBINE",
+        "MAP",
+        "HUNTER",
+        "EQUIPMENT",
+        "QUEST",
+        ...(inQuest ? ["ABANDON QUEST"] : []),
+        "EXIT",
+      ];
+      const i = await choose("MENU", opts),
+        p = G.player,
+        s = getSharp(p.sharp),
+        q = G.quest;
       switch (opts[i]) {
-        case 'POUCH': await pouchMenu(); break;
-        case 'COMBINE': await craftMenu('pouch'); break;
-        case 'MAP': await fieldMap(); break;
-        case 'HUNTER': await say(`HUNTER · ${WEAPONS[p.weapon].name}\nEDGE ${s.name} · DEF ${hunterDef()} · CARTS ${p.carts}/${CONFIG.MAX_CARTS}`); break;
-        case 'EQUIPMENT': await equipmentMenu(); break;
-        case 'QUEST':
-          if (inQuest) await say(`QUEST: ${q.title}\nTARGETS LEFT ${liveBosses().length}/${q.targets.length} · TURN ${G.turn}`);
-          else if (q) await say(`ACCEPTED: ${q.title}\nDepart through the GATE to the north.`);
-          else await say('No quest accepted.\nVisit the VILLAGE CHIEF.', 'dim');
+        case "POUCH":
+          await pouchMenu();
           break;
-        case 'ABANDON QUEST':
-          if (await ask('Abandon the quest?\nAll monster rewards will be lost.')) { finishQuest('abandon'); return; }
+        case "COMBINE":
+          await craftMenu("pouch");
           break;
-        default: return;
+        case "MAP":
+          await fieldMap();
+          break;
+        case "HUNTER":
+          await say(
+            `HUNTER · ${WEAPONS[p.weapon].name}\nEDGE ${s.name} · DEF ${hunterDef()} · CARTS ${p.carts}/${CONFIG.MAX_CARTS}`,
+          );
+          break;
+        case "EQUIPMENT":
+          await equipmentMenu();
+          break;
+        case "QUEST":
+          if (inQuest)
+            await say(
+              `QUEST: ${q.title}\nTARGETS LEFT ${liveBosses().length}/${q.targets.length} · TURN ${G.turn}`,
+            );
+          else if (q)
+            await say(
+              `ACCEPTED: ${q.title}\nDepart through the GATE to the north.`,
+            );
+          else await say("No quest accepted.\nVisit the VILLAGE CHIEF.", "dim");
+          break;
+        case "ABANDON QUEST":
+          if (
+            await ask("Abandon the quest?\nAll monster rewards will be lost.")
+          ) {
+            finishQuest("abandon");
+            return;
+          }
+          break;
+        default:
+          return;
       }
     }
   });

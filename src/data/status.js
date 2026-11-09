@@ -148,13 +148,14 @@ export const STATUS = {
     onMsg: "The ground shakes!\n{u} lost its footing and can't move!",
   },
   blast: {
-    name: 'BLASTBLIGHT',
-    short: 'BLAST',
-    color: '#e8a020',
+    name: "BLASTBLIGHT",
+    short: "BLAST",
+    color: "#e8a020",
     turns: 3,
-    blast: .4,
-    sfx: 'flash',
-    onMsg: 'HUNTER is covered in BLASTBLIGHT!\nCure it with a DEODORANT, fast!' },
+    blast: 0.4,
+    sfx: "flash",
+    onMsg: "HUNTER is covered in BLASTBLIGHT!\nCure it with a DEODORANT, fast!",
+  },
 
   mud: {
     name: "MUD",
