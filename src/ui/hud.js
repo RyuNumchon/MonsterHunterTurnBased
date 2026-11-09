@@ -228,7 +228,7 @@ export function renderPanel() {
 
 export function renderFieldPanel(P) {
   const p = G.player, s = getSharp(p.sharp), f = G.f, hp = p.hp / p.maxHp * 100;
-  P.innerHTML = `<div id="fpad">
+  P.innerHTML = `<div id="fpad" class="touch-only">
     <div class="dpad"><button data-dir="up">▲</button><button data-dir="left">◀</button><span class="dc"></span>
       <button data-dir="right">▶</button><button data-dir="down">▼</button></div>
     <div class="fmid">
@@ -239,7 +239,7 @@ export function renderFieldPanel(P) {
         <div class="srow"><b>COND</b>${G.feast ? chip('FEAST', 'c-mgt') : ''}${statusChips(p) || (G.feast ? '' : 'NORMAL')}</div>
         <div class="srow"><b>GEAR</b>${pimg(DATA['wpn_' + p.weapon])}${WEAPONS[p.weapon].name} ${elemTag(p)} · CARTS ${cartsUsed(p.carts)}</div>
       </div>
-      <div class="ss"><button data-act="fstart">START</button><button data-act="fmap">MAP</button><button data-act="fpouch">POUCH</button></div>
+      <div class="ss"><button data-act="fstart">START</button><button data-act="fmap">MAP</button><button class="touch-only" data-act="fpouch">POUCH</button></div>
       <div class="keys">ARROWS/WASD move · Z talk/A · X back · ENTER menu · M map · N music</div>
     </div>
     <div class="abtns"><button class="ab b" data-act="fb">B</button><button class="ab" data-act="fa">A</button></div>

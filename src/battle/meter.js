@@ -74,7 +74,7 @@ export function timingMeter(m, p, atk, stance = 'evade') {
     el.innerHTML = `<div class="mt-title">${TITLE[stance]}</div>
       <div class="mt-key">${P.key}</div>
       <div class="mt-bar"><div class="mt-zone" style="left:${P.start * 100}%;width:${P.zone * 100}%"></div><div class="mt-ptr"></div></div>
-      <div class="mt-btns">${shuffle([P.key, ...decoys(P.key, C.METER_DECOYS)]).map(k => `<button class="mt-b" data-k="${k}">${k}</button>`).join('')}</div>`;
+      <div class="mt-btns">${shuffle([P.key, ...decoys(P.key, C.METER_DECOYS)]).map(k => `<button class="mt-btns touch-only" data-k="${k}">${k}</button>`).join('')}</div>`;
     $('battle').appendChild(el);
     const bar = el.querySelector('.mt-bar'), ptr = el.querySelector('.mt-ptr');
     const limit = Math.max(P.sweep * 1.2, Math.min(P.sweep * C.METER_PASSES, C.METER_MAX_MS));

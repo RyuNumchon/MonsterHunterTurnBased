@@ -31,6 +31,7 @@ import { putAllInBox, renderStorage } from './quest/rewards.js';
 import { newSession, returnToVillage } from './game.js';
 import { fitText } from './ui/fx.js';
 import { pouchMenu } from './world/inventory.js';
+import { readKey, battleNav } from './ui/display.js';
 
 const KEYDIR = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right' };
 
@@ -40,6 +41,30 @@ function toggleMute() {
   Audio8.setMuted(!Audio8.muted);
   BOX.muted = Audio8.muted; saveBox();
   updateMuteLabel();
+}
+
+function fieldAction(act) {
+  switch (act) {
+    case 'fa':
+      if (UI.count) confirmCount();
+      else if (UI.menu) pickMenu(UI.menu.idx);
+      else if (waits.map) closeMap();
+      else if (waits.store) closeStorage();
+      else if (canAct()) interact();
+      break;
+    case 'fb':
+      cancelCount(); cancelMenu(); closeMap(); closeStorage();
+      break;
+    case 'fstart':
+      if (canAct()) openStartMenu();
+      break;
+    case 'fmap':
+      if (canAct()) flow(fieldMap);
+      break;
+    case 'fpouch':
+      if (canAct()) flow(pouchMenu);
+      break;
+  }
 }
 
 /* ---------- Clicks ---------- */
@@ -72,17 +97,9 @@ function onClick(e) {
   // Field
   if (G.screen === 'field') {
     switch (act) {
-      case 'fa':
-        if (UI.count) confirmCount();
-        else if (UI.menu) pickMenu(UI.menu.idx);
-        else if (waits.map) closeMap();
-        else if (waits.store) closeStorage();
-        else if (canAct()) interact();
+      case 'fa': case 'fb': case 'fstart': case 'fmap': case 'fpouch':
+        fieldAction(act);
         break;
-      case 'fb': cancelCount(); cancelMenu(); closeMap(); closeStorage(); break;
-      case 'fstart': if (canAct()) openStartMenu(); break;
-      case 'fmap': if (canAct()) flow(fieldMap); break;
-      case 'fpouch': if (canAct()) flow(pouchMenu); break;
     }
     return;
   }
@@ -124,10 +141,25 @@ function onHover(e) {
 /* ---------- Keyboard ---------- */
 function onKeyDown(e) {
   Audio8.init();
-  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-  const dir = KEYDIR[k], isA = k === 'z' || k === ' ', isEnter = k === 'Enter', isB = k === 'x' || k === 'Escape';
-  if (dir || k === ' ') e.preventDefault();
-  if (k === 'n') { toggleMute(); return; }
+  if (e.code === 'KeyN') { toggleMute(); return; }
+  const k = readKey(e);
+  if (!k) return;
+  e.preventDefault();
+  if (G && G.screen === 'field') {
+    if (k.map && waits.map) { closeMap(); return; }
+    if (k.pouch && UI.menu?.title?.startsWith('POUCH')) { cancelMenu(); return; }
+    if (canAct() && !waits.map && !waits.store) {
+      if (k.start) { fieldAction('fstart'); return; }
+      if (k.pouch) { fieldAction('fpouch'); return; }
+      if (k.map) { fieldAction('fmap'); return; }
+    }
+  }
+  if (battleNav(k)) return;
+  if (k.pouch || k.map) {
+    if (k.map && waits.map) closeMap();
+    return;
+  }
+  const dir = k.dir || null, isA = !!k.a, isB = !!k.b, isEnter = false;
   if (!G) return;
 
   if (waits.store) { if (isA || isB || isEnter) closeStorage(); return; }
@@ -138,7 +170,7 @@ function onKeyDown(e) {
     }
     return;
   }
-  if (waits.map) { if (isA || isB || isEnter || k === 'm') closeMap(); return; }
+  if (waits.map) { if (isA || isB || isEnter) closeMap(); return; }
   if (UI.count) {
     if (dir === 'up') stepCount(1);
     else if (dir === 'down') stepCount(-1);
@@ -166,13 +198,13 @@ function onKeyDown(e) {
 
   if (G.screen === 'field') {
     if (!canAct()) return;
-    if (isA) interact();
-    else if (isEnter || k === 'Escape') openStartMenu();
-    else if (k === 'm') flow(fieldMap);
+    if (isA) fieldAction('fa');
+    else if (k.start) fieldAction('fstart');
+    else if (isB) fieldAction('fb');
   } else if (isB) goBack();
 }
 function onKeyUp(e) {
-  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key, dir = KEYDIR[k];
+  const dir = readKey(e)?.dir;
   if (dir) input.dirs = input.dirs.filter(x => x !== dir);
 }
 
