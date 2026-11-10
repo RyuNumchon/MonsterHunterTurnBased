@@ -132,7 +132,7 @@ html.mobile .ab {
   font-size: clamp(14px, 4vw, 22px);
 }
 html.mobile .ab:not(.b) {
-  transform: translateY(-30px);
+  transform: translateY(-10px);
 }
 html.mobile .ab:not(.b):active {
   transform: translateY(calc(-8px + 0.1em));
