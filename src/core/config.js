@@ -146,8 +146,15 @@ export const CONFIG = {
   METER_LARGE: { speedMax: 0.85, danger: 0.85, zone: 0.04 },
   NEST_SLEEP_TURNS: 3,
   NEST_HEAL: 0.2, // NEST_AREA: your nest area id, if monsters have no m.nest
-  PAINT_DMG: 1,
   BATTLE_COMBINE_PAGE: 6,
+  PAINT_TURNS: 12, // keep your old value if you had one
+  THROW_DMG: 1,
+  TRAP_CHANCE: 0.75,
+  NO_REACT: ["stun", "tremor"], // no meter at all (plus anything that blocks 'act')
+  RESIST_CHANCE_STEP: 0.75,
+  RESIST_TURN_STEP: 0.85,
+  RESIST_FLOOR: 0.2,
+  FISH_METER: { speedMax: 0.55, zoneMed: 0.45 },
 
   DEBUG_LOG: true, // hidden numbers go to the browser console (F12); false = silent
 };

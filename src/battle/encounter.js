@@ -21,7 +21,8 @@ import {
 import { pouchCount, pouchRemove } from "../core/pouch.js";
 import { hunterBack } from "../art/look.js";
 import { immuneTo } from "../core/gear.js";
-import { paintHit, setTrap } from "./throwables.js";
+import { chipHit, paintMark, setTrap } from "./throwables.js";
+import { resistRoll, resistTurns, noteResist } from "./resist.js";
 
 export function startEncounter(e, how) {
   if (!G || G.busy || G.screen !== "field" || G.over) return;
@@ -133,6 +134,8 @@ export function useItemBattle(key) {
     } else {
       Audio8.sfx("item");
       await say(`HUNTER used a ${it.name}!`);
+      const THROWN = ["paintball", "flash", "tranq"]; // your thrown item ids
+      if (!none && THROWN.includes(key)) chipHit(m, it);
       switch (key) {
         case "herb":
         case "potion":
@@ -170,10 +173,16 @@ export function useItemBattle(key) {
           break;
         }
         case "paintball":
-          await paintHit(m);
+          await paintMark(m);
           break;
         case "flash":
-          m.flash = 2;
+          if (m.isBoss && !resistRoll(m, "flash")) {
+            renderBattle();
+            await say(`The ${m.name} shielded its eyes!`, "warn");
+            break;
+          }
+          m.flash = resistTurns(m, "flash", 3);
+          noteResist(m, "flash");
           Audio8.sfx("flash");
           anim($("flashFx"), "flashing", 700);
           renderBattle();

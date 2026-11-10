@@ -10,6 +10,7 @@ import { BOX } from "../core/save.js";
 import { pouchRemove } from "../core/pouch.js";
 import { addLog } from "../ui/fx.js";
 import { immuneSkill } from "../core/gear.js";
+import { resistTurns, noteResist } from "./resist.js";
 
 export const uname = (u) =>
   !u ? "Something" : u === G.player ? "HUNTER" : `The ${u.name}`;
@@ -61,6 +62,10 @@ export function applyStatus(u, id, source = null) {
   const cur = u.status[id];
   if (cur) cur.turns = Math.max(cur.turns, d.turns);
   else u.status[id] = { turns: d.turns, age: 0, fresh: !!u.acted };
+  if (u.isBoss) {
+    u.status[id].turns = resistTurns(u, id, u.status[id].turns);
+    noteResist(u, id);
+  }
   addLog(`[${uname(u)} +${id} ${u.status[id].turns} turns]`, "dim");
   return fmt(d.onMsg, u);
 }

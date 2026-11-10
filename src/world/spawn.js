@@ -5,6 +5,7 @@ import { G } from "../core/state.js";
 import { MONSTERS, SMALLS, SMALL_SPAWNS } from "../data/monsters.js";
 import { isTown, NPC_DEFS, CXT, CYT } from "../data/world.js";
 import { MAPS, findFree } from "./mapgen.js";
+import { addLog } from "../ui/fx.js";
 
 /** Shared shape for every combatant (boss or small). It is also its own overworld entity. */
 export function makeFoe(key, d, isBoss) {
@@ -219,5 +220,22 @@ export function installMonsterAlias(g) {
       return g.foe?.isBoss ? g.foe : liveBosses()[0] || null;
     },
     set() {},
+  });
+}
+
+/** Entering an area: killed small monsters in that area are revived. */
+export function respawnSmalls(area) {
+  const list = G.smalls[area] || [];
+  list.forEach((s) => {
+    if (s.dead || s.hp <= 0) {
+      s.dead = false;
+      s.hp = s.maxHp;
+      s.x = s.hx;
+      s.y = s.hy;
+      s.mv = null;
+      s.alerted = false;
+      s.goal = null;
+      addLog(`[respawn ${s.key} @ area ${area}]`, "dim");
+    }
   });
 }

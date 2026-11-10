@@ -7,6 +7,7 @@ export const MONSTERS = {
     spd: 110,
     hp: 650,
     parts: { head: 160, body: 260, legs: 150, tail: 140 },
+    elemDef: { fire: 50, water: 0, thunder: -20, ice: -10, dragon: -40 },
     attacks: [
       { name: "FIREBALL", power: 20, inflict: [{ id: "fire", chance: 0.6 }] },
       { name: "TAIL WHIP", power: 16 },
@@ -31,6 +32,7 @@ export const MONSTERS = {
     spd: 120,
     hp: 700,
     parts: { head: 180, body: 280, legs: 150, tail: 120 },
+    elemDef: { fire: -10, water: 0, thunder: -30, ice: 10, dragon: -20 },
     attacks: [
       { name: "BITE", power: 18 },
       { name: "ROCK THROW", power: 16 },

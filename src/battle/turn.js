@@ -23,6 +23,7 @@ import {
   elementSealed,
   stunOnHit,
   tickStatuses,
+  hasStatus,
 } from "./status.js";
 import { speedOf, speedHitMod, firstChance } from "./speed.js";
 import { bossOffscreenTurn } from "../world/field.js";
@@ -45,6 +46,7 @@ import { RECIPES } from "../data/recipes.js";
 import { craftInBattle } from "../world/inventory.js";
 import { itemName } from "../data/items.js";
 import { nestTick } from "../world/nest.js";
+import { elemMult, resistChance } from "./resist.js";
 
 /* ---------- Moves ---------- */
 export function findMove(id) {
@@ -69,6 +71,12 @@ const foeHeld = (m) =>
 
 /** Anything that stops moving or item use also stops running. */
 export const runLock = (p) => blockedBy(p, "act") || blockedBy(p, "move");
+
+/** Stunned/trembling etc.: no meter, the attack lands. */
+const frozenBy = (p) =>
+  blockedBy(p, "act") ||
+  CONFIG.NO_REACT.filter((id) => hasStatus(p, id)).map((id) => STATUS[id])[0] ||
+  null;
 
 /* HUNTER HIT CHANCES (hidden; logged)
    acc     = move.acc + sharp.hit + statuses (water −20) + speed mod (±15) + (trapped ? 25 : 0)
@@ -506,7 +514,8 @@ async function hitCalculationPhase(intent) {
     defM = defMult(m) * moodDef(m),
     variance = rand(0.9, 1.1);
   const elem = w.element && !elementSealed(p) ? w.element : null;
-  const elemDmg = elem ? w.elemPower || 0 : 0;
+  const eMult = elem ? elemMult(m, elem) : 1;
+  const elemDmg = elem ? Math.round((w.elemPower || 0) * eMult) : 0;
   const dmg = Math.max(
     1,
     Math.round(
@@ -528,7 +537,7 @@ async function hitCalculationPhase(intent) {
   );
   addLog(`[crit ${crit}% · roll ${critRoll.toFixed(1)} → x${critM}]`, "dim");
   addLog(
-    `[DMG ${intent.power} x wpn ${wAtk} x skill ${skillAtk} x part ${partM} x sharp ${sharpLv.dmg} x might ${mightM} x charge ${intent.chargeMult} x wake ${wakeM} x crack ${crackM} x crit ${critM} x var ${variance.toFixed(2)} x atk ${atkM.toFixed(2)} x def ${defM.toFixed(2)} + elem ${elemDmg} = ${dmg}]`,
+    `[DMG ${intent.power} x wpn ${wAtk} x skill ${skillAtk} x part ${partM} x sharp ${sharpLv.dmg} x might ${mightM} x charge ${intent.chargeMult} x wake ${wakeM} x crack ${crackM} x crit ${critM} x var ${variance.toFixed(2)} x atk ${atkM.toFixed(2)} x def ${defM.toFixed(2)} + elem ${elemDmg} (x${eMult.toFixed(2)}) = ${dmg}]`,
     "dim",
   );
 
@@ -565,13 +574,34 @@ async function hitCalculationPhase(intent) {
       `Dragonblight sealed the ${STATUS[w.element].name} element!`,
       "warn",
     );
-
-  if (elem && m.hp > 0 && Math.random() < (w.elemChance || 0)) {
-    const msg = applyStatus(m, elem, p);
-    if (msg) {
-      renderBattle();
-      await say(msg, "good");
+  if (elem && m.hp > 0) {
+    const ch = (w.elemChance || 0) * eMult * resistChance(m, elem),
+      r = Math.random();
+    addLog(
+      `[${elem} status roll ${(r * 100).toFixed(1)} vs ${(ch * 100).toFixed(1)}% (base ${(w.elemChance || 0) * 100} x elem ${eMult.toFixed(2)} x resist ${resistChance(m, elem).toFixed(2)})]`,
+      "dim",
+    );
+    if (r < ch) {
+      const msg = applyStatus(m, elem, p);
+      if (msg) {
+        renderBattle();
+        await say(msg, "good");
+      }
     }
+  }
+  if (
+    elem &&
+    m.isBoss &&
+    Math.abs(eMult - 1) >= 0.3 &&
+    !(m.elemHint ??= {})[elem]
+  ) {
+    m.elemHint[elem] = true;
+    await say(
+      eMult > 1
+        ? `${elem.toUpperCase()} seems to hurt it badly!`
+        : `${elem.toUpperCase()} barely affects it...`,
+      eMult > 1 ? "good" : "dim",
+    );
   }
   // Stun (KO) on monsters: BLUNT weapons only (none in the demo yet)
   if (m.hp > 0 && w.dmgType === "blunt") {
@@ -784,7 +814,7 @@ async function monsterActionPhase() {
       return noHit();
     }
     const rs = p.guarding ? "guard" : "evade";
-    if (CONFIG.METER && (await timingMeter(m, p, atk, rs))) {
+    if (CONFIG.METER && !frozenBy(p) && (await timingMeter(m, p, atk, rs))) {
       Audio8.sfx("clang");
       await say(
         rs === "guard"
@@ -809,9 +839,15 @@ async function monsterActionPhase() {
   // TIMING METER: dodge / block / counter
   const stance = p.foresight ? "counter" : p.guarding ? "guard" : "evade",
     guard = p.guarding;
-  const ok = CONFIG.METER
-    ? await timingMeter(m, p, atk, stance)
-    : Math.random() * 100 >= monsterHitChance(m, p);
+  const frozen = frozenBy(p);
+  let ok = false;
+  if (frozen) {
+    addLog(`[no reaction: ${frozen.name}]`, "dim");
+    await say(`HUNTER can't react!\n(${frozen.name})`, "bad");
+  } else
+    ok = CONFIG.METER
+      ? await timingMeter(m, p, atk, stance)
+      : Math.random() * 100 >= monsterHitChance(m, p);
   if (ok) {
     if (stance === "counter") {
       const c = p.foresight;
