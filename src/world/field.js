@@ -19,7 +19,7 @@ import { Audio8, fieldMusic } from "../audio/audio8.js";
 import { flow, pause } from "../ui/dialog.js";
 import { toast, showLocation } from "../ui/fx.js";
 import { MAPS, findFree } from "./mapgen.js";
-import { buildEntities, liveBosses } from "./spawn.js";
+import { buildEntities, liveBosses, respawnSmalls } from "./spawn.js";
 import { startEncounter } from "../battle/encounter.js";
 import { tickStatuses } from "../battle/status.js";
 import { stepMs } from "../battle/speed.js";
@@ -161,9 +161,28 @@ function walkStep(e, M, now, ms, exitOk) {
 
 /* ---------- Per-frame update ---------- */
 export function updateField(dt, now) {
-  if (!canAct()) return;
-  const f = G.f;
+  if (!G || G.screen !== "field" || G.over) return;
+
+  // NPC wandering, roamClock for each liveBosses(), small-monster movement: always run
   for (const m of liveBosses()) roamClock(m, dt);
+
+  for (const e of [...G.ents]) {
+    if (G.busy) return; // an encounter just started
+    if (e.mv) {
+      e.mv.t += dt / e.mv.dur;
+      if (e.mv.t >= 1) {
+        e.x = e.mv.tx;
+        e.y = e.mv.ty;
+        e.mv = null;
+      }
+    } else if (now >= e.next) aiStep(e, now);
+  }
+
+  // Menu / text / map / meter open: the hunter waits
+  if (!canAct() || waits.map) return;
+
+  // Hunter movement, then touch checks that start battles
+  const f = G.f;
   if (f.mv) {
     f.mv.t += dt / stepMs(G.player, CONFIG.MOVE_MS);
     if (f.mv.t >= 1) {
@@ -200,18 +219,6 @@ export function updateField(dt, now) {
       }
     }
   }
-  // --- Entities ---
-  for (const e of [...G.ents]) {
-    if (G.busy) return; // an encounter just started
-    if (e.mv) {
-      e.mv.t += dt / e.mv.dur;
-      if (e.mv.t >= 1) {
-        e.x = e.mv.tx;
-        e.y = e.mv.ty;
-        e.mv = null;
-      }
-    } else if (now >= e.next) aiStep(e, now);
-  }
 }
 
 /** Returns true if the step triggered an area change. */
@@ -234,6 +241,7 @@ function aiStep(e, now) {
   const f = G.f,
     M = MAPS[f.area];
   if (e.kind === "npc") {
+    if (e.hold) return;
     if (e.wander && Math.random() < 0.5) {
       const [dn, [sx, sy]] = pick(Object.entries(DIRV)),
         tx = e.x + sx,
@@ -418,7 +426,10 @@ export function changeArea(to) {
     const from = G.f.area,
       sp = spawnFor(to, from);
     Object.assign(G.f, { area: to, x: sp.x, y: sp.y, dir: sp.dir, mv: null });
-    const msgs = worldTick; // moving between areas = 1 turn
+    // 1. Respawn small monsters belonging to the new area
+    respawnSmalls(to);
+    // 2. Rebuild entities for the new area
+    const msgs = worldTick(); // moving between areas = 1 turn
     buildEntities(true);
     G.grace = performance.now() + 1200; // a short beat before anything charges
     Audio8.music(fieldMusic());

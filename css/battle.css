@@ -748,3 +748,43 @@
   align-self: end;
   min-width: 5.5em;
 }
+.st-fish .mt-zone {
+  background: #58c8e8;
+}
+.mt-host {
+  position: relative;
+}
+.mt-pad {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 0.35em;
+  z-index: 31;
+}
+.mt-host > .mt-pad {
+  position: absolute;
+  inset: 0;
+  padding: 0.3em;
+  background: #202430;
+}
+.meter > .mt-pad {
+  margin-top: 0.5em;
+  height: 7em;
+}
+.mt-pad .mt-b {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3em;
+  color: #383838;
+  background: #f8f8f8;
+  border: 0.15em solid #383838;
+  border-radius: 0.3em;
+  box-shadow: inset 0 -0.15em 0 #0002;
+  min-height: 2.6em;
+  cursor: pointer;
+}
+.mt-pad .mt-b:active {
+  transform: translateY(0.1em);
+  box-shadow: none;
+}

@@ -27,6 +27,18 @@ import {
 } from "./inventory.js";
 import { hunterDef } from "../core/gear.js";
 import { liveBosses } from "./spawn.js";
+import { fishingMeter } from "../battle/meter.js";
+
+const isFishSpot = (pt) => pt.kind === "fish" || pt.type === "fish";
+
+/** Returns true on a catch. The spot's quantity is used either way. */
+async function castLine(pt) {
+  Audio8.sfx("swoosh");
+  await say("HUNTER cast the line...\nSomething is biting!");
+  const ok = await fishingMeter(pt.difficulty || 0);
+  if (!ok) await say("The fish got away...", "bad");
+  return ok;
+}
 
 /** A button: act on whatever the hunter is facing. */
 export function interact() {
@@ -40,7 +52,14 @@ export function interact() {
     if (e.kind === "npc") {
       e.dir = OPP[f.dir];
       Audio8.sfx("blip");
-      flow(() => NPC_TALK[e.id](e));
+      e.hold = true;
+      flow(async () => {
+        try {
+          await NPC_TALK[e.id](e);
+        } finally {
+          e.hold = false;
+        }
+      });
     } else
       startEncounter(e, e.kind === "boss" && e.sleeping ? "sneak" : "engage");
     return;
@@ -114,6 +133,9 @@ async function gatherAt(gp) {
   }
   uses[key] = used + 1;
   addLog(`[${gp.type} spot ${used + 1}/${max} used]`, "dim");
+
+  if (isFishSpot(gp) && !(await castLine(gp))) return;
+
   Audio8.sfx("carve");
   await say(def.verb);
   const r = weighted(def.loot),
@@ -201,9 +223,16 @@ async function useObject(o) {
         await say(o.seatMsg);
         return;
       }
-      const npc = G.ents.find((e) => e.id === o.npc);
-      if (npc) npc.dir = "down";
-      await NPC_TALK[o.npc](npc);
+      const n = G.ents.find((e) => e.id === o.npc);
+      if (n) {
+        n.dir = "down";
+        n.hold = true;
+        try {
+          await NPC_TALK[n.id](n);
+        } finally {
+          n.hold = false;
+        }
+      }
       return;
     }
     case "chair":
