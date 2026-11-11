@@ -26,12 +26,15 @@ import { pouchCount } from "../core/pouch.js";
 import { RECIPES, needOf } from "../data/recipes.js";
 import { canCraft } from "../world/inventory.js";
 import { itemName } from "../data/items.js";
+import { inTown, maxStamina } from "../world/stamina.js";
 
 /* HP bars never change colour. */
 export const HP_COLOR = "#58d080";
 /** Hunter HP bar length (%): shorter by default, longer after a feast. */
 const FULL_HP = CONFIG.PLAYER_MAX_HP + Math.max(...FEASTS.map((f) => f.hp));
-export const hpLen = (p) => Math.min(100, (p.maxHp / FULL_HP) * 100);
+const FULL_ST = CONFIG.STAMINA_MAX + Math.max(...FEASTS.map((f) => f.st));
+export const hpLen = (p) => Math.min(100, (((p?.maxHp ?? CONFIG.PLAYER_MAX_HP) / FULL_HP) * 100));
+export const stLen = (p) => Math.min(100, ((maxStamina(p) / FULL_ST) * 100));
 export const elemTag = (p) => {
   const w = WEAPONS[p.weapon];
   return w.element
@@ -86,9 +89,6 @@ export function initHud() {
         `<div class="pt" id="pb-${k}"><span>${PARTS[k].label}</span><div class="trk"><div class="fill"></div></div></div>`,
     )
     .join("");
-  const marks = $("pSharp").parentElement.querySelectorAll("i");
-  marks[0].style.left = (CONFIG.SHARP_YELLOW / CONFIG.SHARP_MAX) * 100 + "%";
-  marks[1].style.left = (CONFIG.SHARP_GREEN / CONFIG.SHARP_MAX) * 100 + "%";
 }
 
 /** Debug: every hidden number, logged once per turn. */
@@ -163,7 +163,6 @@ export function renderBattle() {
   hpSlot($("pHp").parentElement).style.width = hpLen(p) + "%";
   setBar($("pHp"), (p.hp / p.maxHp) * 100, HP_COLOR);
   const s = getSharp(p.sharp);
-  setBar($("pSharp"), (p.sharp / CONFIG.SHARP_MAX) * 100, s.color);
   $("pSharpLbl").innerHTML = `<span style="color:${s.text}">${s.name}</span>`;
   $("pGauge").innerHTML =
     WEAPONS[p.weapon].cls === "greatsword"
@@ -396,10 +395,11 @@ export function renderFieldPanel(P) {
     <div class="fmid">
       <div class="fstat">
         <div class="srow"><b>AREA</b>${areaInfo(f.area).name} · ${areaInfo(f.area).sub}</div>
+        <div class="srow">${p.buffs?.might > 0 ? chip("MIGHT", "c-mgt") : ""}${statusChips(p)}</div>
         <div class="srow"><b>HP</b><span class="hpslot"><span class="mbar" style="width:${hpLen(p)}%"><i style="width:${hp}%;background:${HP_COLOR}"></i></span></span></div>
-        <div class="srow"><b>EDGE</b><span class="mbar"><i style="width:${(p.sharp / CONFIG.SHARP_MAX) * 100}%;background:${s.color}"></i></span>${s.name}</div>
-        <div class="srow"><b>COND</b>${G.feast ? chip("FEAST", "c-mgt") : ""}${statusChips(p) || (G.feast ? "" : "NORMAL")}</div>
+        ${inTown() ? "" : `<div class="srow"><b>STA</b><span class="hpslot"><span class="mbar" style="width:${stLen(p)}%"><i id="fSta" class="fSta" style="width:${Math.round(((p.stamina ?? maxStamina(p)) / maxStamina(p)) * 100)}%"></i></span></span></div>`}
         <div class="srow"><b>GEAR</b>${pimg(DATA["wpn_" + p.weapon])}${WEAPONS[p.weapon].name} ${elemTag(p)} · CARTS ${cartsUsed(p.carts)}</div>
+        <div class="srow" style="color:${s.text}">${s.name}</div>
       </div>
       <div class="ss"><button data-act="fstart">START</button><button data-act="fmap">MAP</button><button class="touch-only" data-act="fpouch">POUCH</button></div>
       <div class="keys">ARROWS/WASD move · Z talk/A · X back · ENTER menu · M map · N music</div>

@@ -1,6 +1,6 @@
 # Monster Hunt: Sacred Forest
 
-Turn-based Monster Hunter fan prototype with a Pokémon Gen-3 look.
+Turn-based Monster Hunter fan prototype with a 8-bit.
 Plain HTML/CSS/JS (ES modules). No dependencies, no build step.
 Obviously vibe coded (use AI)
 

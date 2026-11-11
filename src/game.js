@@ -29,6 +29,7 @@ import { putAllInBox } from "./quest/rewards.js";
 import { pouchRemove } from "./core/pouch.js";
 import { applyLook } from "./art/look.js";
 import { questTargets } from "./data/quests.js";
+import { resetStamina } from "./world/stamina.js";
 
 function restorePlayer(p) {
   Object.assign(p, {
@@ -111,6 +112,8 @@ export function newSession() {
     player: {
       maxHp: CONFIG.PLAYER_MAX_HP,
       hp: CONFIG.PLAYER_MAX_HP,
+      maxStamina: CONFIG.STAMINA_MAX,
+      stamina: CONFIG.STAMINA_MAX,
       carts: 0,
       weapon: wk,
       sharp: CONFIG.SHARP_MAX,
@@ -125,6 +128,7 @@ export function newSession() {
       acted: false,
     },
   });
+  resetStamina();
   installMonsterAlias(G);
   applyLook();
   questReset();
@@ -188,6 +192,7 @@ async function departQuest() {
   await pause(400);
   questReset();
   p.maxHp = CONFIG.PLAYER_MAX_HP + (G.feast ? G.feast.hp : 0);
+  p.maxStamina = CONFIG.STAMINA_MAX + (G.feast ? (G.feast.st || 0) : 0);
   restorePlayer(p);
   G.phase = "quest";
   G.monsters = spawnTargets(q.targets);
@@ -202,9 +207,10 @@ async function departQuest() {
     mv: null,
   });
   addLog(
-    `[quest ${q.id} · fee ${q.fee}z ·${G.monsters.map((m) => `m.name@{m.area}`).join(", ")} · max HP ${p.maxHp}${G.feast ? ` (feast +${G.feast.hp})` : ""}]`,
+    `[quest ${q.id} · fee ${q.fee}z ·${G.monsters.map((m) => `m.name@{m.area}`).join(", ")} · max HP ${p.maxHp}${G.feast ? ` (feast +${G.feast.hp} HP, +${G.feast.st || 0} STA)` : ""}]`,
     "dim",
   );
+  resetStamina();
   resetMini();
   buildEntities(true);
   renderPanel();
@@ -266,11 +272,13 @@ export function returnToVillage() {
       hunted: [],
     });
     p.maxHp = CONFIG.PLAYER_MAX_HP;
+    p.maxStamina = CONFIG.STAMINA_MAX;
     restorePlayer(p);
     Object.assign(G.f, { area: home, ...TOWN_SPAWN[home], mv: null });
     UI.mode = "main";
     UI.data = {};
     hideOverlays();
+    resetStamina();
     resetMini();
     buildEntities(true);
     showScreen();

@@ -182,11 +182,19 @@ async function talkChef() {
   G.feast = f;
   G.player.maxHp = CONFIG.PLAYER_MAX_HP + f.hp; // the HP bar grows right away
   G.player.hp = G.player.maxHp;
+  G.player.maxStamina = CONFIG.STAMINA_MAX + (f.st || 0);
+  G.player.stamina = G.player.maxStamina;
   renderPanel();
-  addLog(`[feast ${f.id}: +${f.hp} max HP for the next quest]`, "dim");
+  addLog(
+    `[feast ${f.id || f.name}: +${f.hp} max HP, +${f.st || 0} stamina for the next quest]`,
+    "dim",
+  );
   Audio8.sfx("heal");
   await say(`*munch munch munch*...\nThe ${f.name} was delicious!`, "good");
-  await say("HUNTER feels tougher!\n(HEALTH up for the next quest)", "good");
+  await say(
+    "HUNTER feels tougher!\n(HEALTH & STAMINA up for the next quest)",
+    "good",
+  );
 }
 
 /* ---------- Merchant: purchases go to the ITEM BOX; selling is from the ITEM BOX ---------- */

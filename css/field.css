@@ -394,3 +394,19 @@
   background: #f8f8f8;
   border: 0.15em solid #34402a;
 }
+
+/* Full-length slot for mobile HUD bars */
+.srow .hpslot {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  height: 0.7em;
+  background: #d8dde4;
+  border-radius: 0.3em;
+  overflow: hidden;
+}
+.srow .hpslot .mbar {
+  flex: none !important;
+  height: 100%;
+}

@@ -181,21 +181,24 @@ export const FEASTS = [
     name: "MOUNTAIN STEW",
     price: 120,
     hp: 25,
-    desc: "A warm, hearty stew.<br>HEALTH up for your next quest.",
+    st: 25,
+    desc: "A warm, hearty stew.<br>HEALTH & STAMINA up for your next quest.",
   },
   {
     id: "fish",
     name: "SUSHIFISH PLATTER",
     price: 180,
     hp: 35,
-    desc: "Fresh from the river.<br>HEALTH up for your next quest.",
+    st: 35,
+    desc: "Fresh from the river.<br>HEALTH & STAMINA up for your next quest.",
   },
   {
     id: "steak",
     name: "WYVERN STEAK",
     price: 240,
     hp: 50,
-    desc: "Sizzling and enormous.<br>HEALTH up (large) for your next quest.",
+    st: 50,
+    desc: "Sizzling and enormous.<br>HEALTH & STAMINA up (large) for your next quest.",
   },
 ];
 
