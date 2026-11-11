@@ -624,13 +624,41 @@
   top: 0;
   bottom: 0;
   min-width: 1px;
-  background: #58d080;
+  background: #e03030;
+}
+.mt-near {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: #f08c28;
+}
+.meter.near {
+  border-color: #f08c28;
 }
 .st-guard .mt-zone {
-  background: #58a0e8;
+  background: #2865a3;
+}
+.st-guard .mt-near {
+  background: #68adc9;
 }
 .st-counter .mt-zone {
-  background: #f0c040;
+  background: #2865a3;
+}
+.st-counter .mt-near {
+  background: #68adc9;
+}
+.meter.ok {
+  border-color: #40b060;
+}
+.meter.bad {
+  border-color: #e04040;
+  animation: a-shake 0.3s;
+}
+.st-wake .mt-zone {
+  background: #c080f0;
+}
+.st-fish .mt-zone {
+  background: #58c8e8;
 }
 .mt-ptr {
   position: absolute;
@@ -657,16 +685,6 @@
   border-radius: 0.25em;
   color: #383838;
   cursor: pointer;
-}
-.meter.ok {
-  border-color: #40b060;
-}
-.meter.bad {
-  border-color: #e04040;
-  animation: a-shake 0.3s;
-}
-.st-wake .mt-zone {
-  background: #c080f0;
 }
 .mt-btns {
   display: grid;
@@ -747,9 +765,6 @@
   grid-row: 2;
   align-self: end;
   min-width: 5.5em;
-}
-.st-fish .mt-zone {
-  background: #58c8e8;
 }
 .mt-host {
   position: relative;

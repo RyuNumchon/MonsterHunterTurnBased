@@ -40,7 +40,7 @@ import {
   moodDef,
   moodAcc,
 } from "./mood.js";
-import { timingMeter } from "./meter.js";
+import { timingMeter, timingMeterGrade } from "./meter.js";
 import { overchargeMove } from "../data/moves.js";
 import { RECIPES } from "../data/recipes.js";
 import { craftInBattle } from "../world/inventory.js";
@@ -840,15 +840,17 @@ async function monsterActionPhase() {
   const stance = p.foresight ? "counter" : p.guarding ? "guard" : "evade",
     guard = p.guarding;
   const frozen = frozenBy(p);
-  let ok = false;
+  let grade = "miss";
   if (frozen) {
     addLog(`[no reaction: ${frozen.name}]`, "dim");
     await say(`HUNTER can't react!\n(${frozen.name})`, "bad");
   } else
-    ok = CONFIG.METER
-      ? await timingMeter(m, p, atk, stance)
-      : Math.random() * 100 >= monsterHitChance(m, p);
-  if (ok) {
+    grade = CONFIG.METER
+      ? await timingMeterGrade(m, p, atk, stance)
+      : Math.random() * 100 >= monsterHitChance(m, p)
+        ? "hit"
+        : "miss";
+  if (grade === "hit") {
     if (stance === "counter") {
       const c = p.foresight;
       p.foresight = false;
@@ -881,9 +883,22 @@ async function monsterActionPhase() {
     await inflictAll(atk, m, p, true, CONFIG.GUARDABLE); // area effects land, except the guardable ones
     return noHit();
   }
+  const near = grade === "near";
   if (stance === "counter") {
     p.foresight = false;
-    await say("The counter was mistimed!", "bad");
+    await say(
+      near
+        ? "The counter was a hair too late!\nHUNTER took part of the blow!"
+        : "The counter was mistimed!",
+      near ? "warn" : "bad",
+    );
+  } else if (near) {
+    await say(
+      stance === "guard"
+        ? "HUNTER barely got the guard up!"
+        : "HUNTER almost dodged it!\nIt only grazed them!",
+      "warn",
+    );
   }
 
   let dmg =
@@ -896,11 +911,17 @@ async function monsterActionPhase() {
     rand(0.9, 1.1);
   if (guard) {
     dmg *= CONFIG.GUARD_TAKEN;
-    p.sharp = Math.max(0, p.sharp - guard.sharp);
+    const cost = near
+      ? Math.ceil(guard.sharp * CONFIG.NEAR_SHARP)
+      : guard.sharp;
+    p.sharp = Math.max(0, p.sharp - cost);
     addLog(
-      `[guard: edge -${guard.sharp} → ${p.sharp}/${CONFIG.SHARP_MAX}]`,
+      `[guard${near ? " (near miss)" : ""}: edge -${cost} → ${p.sharp}/${CONFIG.SHARP_MAX}]`,
       "dim",
     );
+  } else if (near) {
+    dmg *= CONFIG.NEAR_DMG;
+    addLog(`[near miss: damage x${CONFIG.NEAR_DMG}]`, "dim");
   }
   dmg = Math.max(1, Math.round(dmg));
   p.hp = Math.max(0, p.hp - dmg);
