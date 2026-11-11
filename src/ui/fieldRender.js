@@ -336,8 +336,10 @@ export function drawField(now) {
         // accepted-quest scroll above the head
         CX.drawImage(
           ART.ic_quest,
-          Math.round(p.x),
-          Math.round(p.y) - 19 - (Math.floor(now / 300) % 2),
+          Math.round(p.x) + 5, // centered slightly above the head
+          Math.round(p.y) - 10 - (Math.floor(now / 300) % 2),
+          6,
+          6,
         );
       // sweat drop
       if (G.player.winded && Math.floor(now / 250) % 2) {

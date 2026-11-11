@@ -33,7 +33,6 @@ export const CONFIG = {
   STAMINA_MAX: 100,
   STAMINA_DRAIN: 30, // per second while running
   STAMINA_REGEN: 40, // per second while not running
-  STAMINA_REGEN_DELAY: 0, // ms after running stops before refilling
   WINDED_RECOVER: 1, // winded: fraction of the bar needed before moving again (1 = full)
 
   // Big monster: fleeing mid-battle, limping, sleeping, healing
