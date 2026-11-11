@@ -788,3 +788,20 @@
   transform: translateY(0.1em);
   box-shadow: none;
 }
+
+/* Full-length slot for player HP in battle */
+.hpr .hpslot {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  height: 0.6em;
+  background: #333a42;
+  border-radius: 0.25em;
+  box-shadow: inset 0 0.12em 0 #0004;
+  overflow: hidden;
+}
+.hpr .hpslot .trk {
+  flex: none !important;
+  height: 100%;
+}

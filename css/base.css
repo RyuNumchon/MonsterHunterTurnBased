@@ -418,6 +418,82 @@ body {
   display: flex;
   align-items: center;
 }
-.hpslot > * {
-  flex: none;
+.hpslot > *,
+.hpslot .mbar,
+.hpslot .trk {
+  flex: none !important;
+}
+/* Quest overworld HUD: bottom-right, no panel */
+#fHud {
+  position: absolute;
+  right: 1em;
+  bottom: 2em;
+  width: 18em;
+  z-index: 20;
+  pointer-events: none;
+  color: #fff;
+  font-size: 0.6em;
+  text-shadow:
+    0.08em 0 0 #000,
+    -0.08em 0 0 #000,
+    0 0.08em 0 #000,
+    0 -0.08em 0 #000;
+}
+#fHud.hidden {
+  display: none;
+}
+.fh-st {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 0.2em;
+  min-height: 1.1em;
+  margin-bottom: 0.15em;
+}
+.fh-row {
+  align-items: center;
+  gap: 0.35em;
+  margin-top: 0.5em;
+}
+.fh-row b {
+  width: 2.3em;
+  font-weight: normal;
+}
+.fh-slot {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  background: #0004;
+  border-radius: 0.15em;
+  height: 0.55em;
+  overflow: hidden;
+}
+.fh-bar {
+  display: block;
+  width: 100%;
+  height: 0.55em;
+  background: #0007;
+  border: 0.1em solid #000;
+  border-radius: 0.15em;
+  overflow: hidden;
+}
+.fh-bar i {
+  display: block;
+  height: 100%;
+}
+#fSta,
+#fHudSta,
+.fSta {
+  background: #e8c040;
+  transition: width 0.1s linear;
+}
+#fSta.winded,
+#fHudSta.winded,
+.fSta.winded {
+  animation: sta-blink 0.5s steps(2) infinite;
+}
+@keyframes sta-blink {
+  50% {
+    opacity: 0.35;
+  }
 }

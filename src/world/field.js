@@ -28,6 +28,7 @@ import { nestCheck, nestTick } from "./nest.js";
 import { staminaTick, syncStamina } from "./stamina.js";
 import { runHeld } from "../ui/display.js";
 import { meterActive } from "../battle/meter.js";
+import { syncFieldHud } from "../ui/fieldHud.js";
 
 const DIRS4 = Object.values(DIRV);
 
@@ -164,8 +165,8 @@ function walkStep(e, M, now, ms, exitOk) {
 
 /* ---------- Per-frame update ---------- */
 export function updateField(dt, now) {
+  syncFieldHud();
   if (!G || G.screen !== "field" || G.over) return;
-
   // NPC wandering, roamClock for each liveBosses(), small-monster movement: always run
   for (const m of liveBosses()) roamClock(m, dt);
 
@@ -180,8 +181,7 @@ export function updateField(dt, now) {
     } else if (now >= e.next) aiStep(e, now);
   }
 
-  // Menu / text / map / meter open: the hunter waits
-  // --- Stamina & Run Management ---
+  // Menu / text / map / meter open: the hunter waits & Stamina & Run Management
   const free = canAct() && !waits.map && !meterActive();
   const dir = free ? input.dirs[input.dirs.length - 1] : null;
   const mult = staminaTick(dt, free && runHeld(), !!dir); // refills even while a menu is open

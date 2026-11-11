@@ -303,16 +303,3 @@
 #fMenu .mi.lk {
   color: #9aa0ac;
 }
-/* Stamina bar */
-#fSta {
-  background: #e8c040;
-  transition: width 0.1s linear;
-}
-#fSta.winded {
-  animation: sta-blink 0.5s steps(2) infinite;
-}
-@keyframes sta-blink {
-  50% {
-    opacity: 0.35;
-  }
-}

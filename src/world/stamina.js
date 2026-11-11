@@ -8,10 +8,17 @@ import { addLog } from "../ui/fx.js";
 
 export const inTown = () => !G || G.phase !== "quest";
 
-export function resetStamina(p = G.player) {
-  p.stamina = CONFIG.STAMINA_MAX;
+export const maxStamina = (p = G?.player) =>
+  p?.maxStamina ??
+  (G?.feast ? CONFIG.STAMINA_MAX + (G.feast.st || 0) : CONFIG.STAMINA_MAX);
+
+export function resetStamina(p = G?.player) {
+  if (!p) return;
+  p.maxStamina = maxStamina(p);
+  p.stamina = p.maxStamina;
   p.winded = false;
   p.runRest = 0;
+  syncStamina();
 }
 
 let running = false;
@@ -21,12 +28,13 @@ export const isRunning = () => running;
 export function staminaTick(dt, wantRun, moving) {
   const p = G.player,
     C = CONFIG,
-    s = dt / 1000;
-  p.stamina ??= C.STAMINA_MAX;
+    s = dt / 1000,
+    max = maxStamina(p);
+  p.stamina ??= max;
 
   if (inTown()) {
     // free running, no drain
-    p.stamina = C.STAMINA_MAX;
+    p.stamina = max;
     p.winded = false;
     running = wantRun && moving;
     return running ? C.HUNTER_RUN_MULT : C.HUNTER_WALK_MULT;
@@ -34,8 +42,8 @@ export function staminaTick(dt, wantRun, moving) {
   if (p.winded) {
     // stopped until refilled
     running = false;
-    p.stamina = Math.min(C.STAMINA_MAX, p.stamina + C.STAMINA_REGEN * s);
-    if (p.stamina >= C.STAMINA_MAX * C.WINDED_RECOVER) {
+    p.stamina = Math.min(max, p.stamina + C.STAMINA_REGEN * s);
+    if (p.stamina >= max * C.WINDED_RECOVER) {
       p.winded = false;
       addLog("[stamina: caught breath]", "dim");
     }
@@ -55,19 +63,25 @@ export function staminaTick(dt, wantRun, moving) {
     return C.HUNTER_RUN_MULT;
   }
   running = false; // walking or standing: refill after a pause
-  p.stamina = Math.min(C.STAMINA_MAX, p.stamina + C.STAMINA_REGEN * s);
+  p.stamina = Math.min(max, p.stamina + C.STAMINA_REGEN * s);
   return C.HUNTER_WALK_MULT;
 }
 
 /** Updates the stamina bar in place (cheap; called every frame). */
 export function syncStamina() {
-  const el = document.getElementById("fSta");
-  if (!el || !G?.player) return;
+  if (!G?.player) return;
+  const els = document.querySelectorAll("#fSta, #fHudSta, .fSta");
+  if (!els.length) return;
   const p = G.player,
-    pct = Math.round((p.stamina / CONFIG.STAMINA_MAX) * 100);
-  if (el.dataset.v !== String(pct)) {
-    el.style.width = pct + "%";
-    el.dataset.v = pct;
+    max = maxStamina(p),
+    pct = Math.round((p.stamina / max) * 100);
+  const v = String(pct);
+  const winded = !!p.winded;
+  for (const el of els) {
+    if (el.dataset.v !== v) {
+      el.style.width = pct + "%";
+      el.dataset.v = v;
+    }
+    el.classList.toggle("winded", winded);
   }
-  el.classList.toggle("winded", !!p.winded);
 }
