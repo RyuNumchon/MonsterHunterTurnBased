@@ -108,10 +108,15 @@ export const CONFIG = {
   WANDER_MS: 300,
   ESCAPE_CHANCE: 0.75,
   GRACE_MS: 2500,
-  BOSS_AGGRO: 5,
+  BOSS_AGGRO: 9,
   GATHER_USES: 2,
   FARM_USES: 1,
   START_ZENNY: 1500,
+
+  // Overworld detection (tiles)
+  DETECT_SMALL: 5,
+  DETECT_LARGE: 7,
+  DETECT_LOSE_MULT: 1.5, // once chasing, gives up only beyond range × this
 
   // Text
   TEXT_SPEED: 14,
