@@ -55,7 +55,7 @@ export const SMALLS = {
     rank: 1,
     spd: 105,
     hp: 80,
-    aggro: 8,
+    aggro: 5,
     parts: { head: 30, body: 40, legs: 30, tail: 25 },
     attacks: [
       { name: "BITE", power: 8 },
@@ -73,7 +73,7 @@ export const SMALLS = {
     rank: 1,
     spd: 95,
     hp: 100,
-    aggro: 4,
+    aggro: 5,
     parts: { head: 35, body: 45, legs: 30, tail: 20 },
     attacks: [
       { name: "TUSK CHARGE", power: 12, heavy: true },
