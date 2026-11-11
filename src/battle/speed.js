@@ -1,4 +1,4 @@
-/* Speed stat (Pokémon-style).
+/* Speed stat.
    Hunter: HUNTER_SPEED × weapon.speed. Monsters: their own `spd`. Slowed (ice / mud) = × SLOW_SPEED_MULT.
    Used for turn order, hit/dodge, escape, and field walking speed. */
 import { CONFIG } from "../core/config.js";

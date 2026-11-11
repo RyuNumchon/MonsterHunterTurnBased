@@ -26,6 +26,12 @@ export const SKILLS = {
     val: [1.05, 1.1, 1.15],
     desc: "Raises speed.",
   },
+  marathon: {
+    name: "MARATHON RUNNER",
+    pts: [2, 4, 6],
+    val: [0.9, 0.8, 0.65],
+    desc: "Running uses less stamina.",
+  },
   accuracy: {
     name: "EAGLE EYE",
     pts: [2, 4, 6],

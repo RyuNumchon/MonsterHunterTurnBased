@@ -1,6 +1,6 @@
 /* Message engine + list menus + flow control.
    say()    : typewriter text (battle -> bottom panel, field -> dialog box)
-   choose() : Pokémon-style list menu; resolves to the picked index (-1 = cancelled)
+   choose() : list menu; resolves to the picked index (-1 = cancelled)
    ask()    : YES/NO prompt
    flow()   : runs an async sequence with input locked, then restores the UI.
    Every wait checks `G !== g` afterwards and throws Abort if the hunt was restarted. */

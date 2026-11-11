@@ -26,6 +26,7 @@ import { pouchCount } from "../core/pouch.js";
 import { RECIPES, needOf } from "../data/recipes.js";
 import { canCraft } from "../world/inventory.js";
 import { itemName } from "../data/items.js";
+import { inTown } from "../world/stamina.js";
 
 /* HP bars never change colour. */
 export const HP_COLOR = "#58d080";
@@ -397,6 +398,7 @@ export function renderFieldPanel(P) {
       <div class="fstat">
         <div class="srow"><b>AREA</b>${areaInfo(f.area).name} · ${areaInfo(f.area).sub}</div>
         <div class="srow"><b>HP</b><span class="hpslot"><span class="mbar" style="width:${hpLen(p)}%"><i style="width:${hp}%;background:${HP_COLOR}"></i></span></span></div>
+        ${inTown() ? "" : `<div class="srow"><b>STA</b><span class="hpslot"><span class="mbar" style="width:100%"><i id="fSta" style="width:${Math.round(((p.stamina ?? CONFIG.STAMINA_MAX) / CONFIG.STAMINA_MAX) * 100)}%"></i></span></span></div>`}
         <div class="srow"><b>EDGE</b><span class="mbar"><i style="width:${(p.sharp / CONFIG.SHARP_MAX) * 100}%;background:${s.color}"></i></span>${s.name}</div>
         <div class="srow"><b>COND</b>${G.feast ? chip("FEAST", "c-mgt") : ""}${statusChips(p) || (G.feast ? "" : "NORMAL")}</div>
         <div class="srow"><b>GEAR</b>${pimg(DATA["wpn_" + p.weapon])}${WEAPONS[p.weapon].name} ${elemTag(p)} · CARTS ${cartsUsed(p.carts)}</div>

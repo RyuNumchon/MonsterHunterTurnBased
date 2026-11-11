@@ -1,6 +1,6 @@
 /* Every balance knob lives here. */
 export const CONFIG = {
-  PLAYER_MAX_HP: 150,
+  PLAYER_MAX_HP: 100,
   MAX_CARTS: 3,
   MAX_ITEMS_PER_TURN: 3,
   // Sharpness: Green 26–40 ×1.2/+10 hit | Yellow 13–25 ×1.0 | Red 0–12 BOUNCE ×0.5/−10 hit + 5% recoil
@@ -26,6 +26,15 @@ export const CONFIG = {
   OVERCHARGE_MULT: 0.8,
   MOVE_SLOTS: 4,
   GUARDABLE: ["stun", "tremor", "wind", "roar"], // blocked by a successful dodge/block/counter
+
+  // Overworld movement + stamina (multipliers of the hunter's old speed)
+  HUNTER_WALK_MULT: 0.75,
+  HUNTER_RUN_MULT: 1.5,
+  STAMINA_MAX: 100,
+  STAMINA_DRAIN: 30, // per second while running
+  STAMINA_REGEN: 40, // per second while not running
+  STAMINA_REGEN_DELAY: 0, // ms after running stops before refilling
+  WINDED_RECOVER: 1, // winded: fraction of the bar needed before moving again (1 = full)
 
   // Big monster: fleeing mid-battle, limping, sleeping, healing
   FLEE_MIN: 4,

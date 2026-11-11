@@ -57,7 +57,7 @@ function blit(img, x, y, flip) {
   CX.drawImage(img, 0, 0);
   CX.restore();
 }
-// Pokémon "!" when a monster spots the hunter
+// "!" mark when a monster spots the hunter
 function drawBang(cx, top) {
   cx = Math.round(cx);
   top = Math.round(top);
@@ -339,6 +339,12 @@ export function drawField(now) {
           Math.round(p.x),
           Math.round(p.y) - 19 - (Math.floor(now / 300) % 2),
         );
+      // sweat drop
+      if (G.player.winded && Math.floor(now / 250) % 2) {
+        CX.fillStyle = "#7ac8f0";
+        CX.fillRect(p.x + 12, p.y - 2, 2, 3);
+        CX.fillRect(p.x + 11, p.y, 4, 2);
+      }
       continue;
     }
     if (e.kind === "npc") {

@@ -29,6 +29,7 @@ import { putAllInBox } from "./quest/rewards.js";
 import { pouchRemove } from "./core/pouch.js";
 import { applyLook } from "./art/look.js";
 import { questTargets } from "./data/quests.js";
+import { resetStamina } from "./world/stamina.js";
 
 function restorePlayer(p) {
   Object.assign(p, {
@@ -125,6 +126,7 @@ export function newSession() {
       acted: false,
     },
   });
+  resetStamina();
   installMonsterAlias(G);
   applyLook();
   questReset();
@@ -205,6 +207,7 @@ async function departQuest() {
     `[quest ${q.id} · fee ${q.fee}z ·${G.monsters.map((m) => `m.name@{m.area}`).join(", ")} · max HP ${p.maxHp}${G.feast ? ` (feast +${G.feast.hp})` : ""}]`,
     "dim",
   );
+  resetStamina();
   resetMini();
   buildEntities(true);
   renderPanel();
@@ -271,6 +274,7 @@ export function returnToVillage() {
     UI.mode = "main";
     UI.data = {};
     hideOverlays();
+    resetStamina();
     resetMini();
     buildEntities(true);
     showScreen();

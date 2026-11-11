@@ -10,6 +10,11 @@ const TEXTBOX = "#fDialog, #panel .tb.adv"; // left-clicking text advances it (n
 const ASPECT = 16 / 9;
 const html = document.documentElement;
 const touchQuery = matchMedia("(hover: none) and (pointer: coarse)");
+const RUN_TOUCH = "#padB"; // mobile: hold this button to run
+let runKey = false,
+  runTouch = false;
+/** True while Left Shift (desktop) or the mobile run button is held. */
+export const runHeld = () => runKey || runTouch;
 
 export const isDesktop = () => html.classList.contains("desktop");
 
@@ -223,4 +228,32 @@ export function initDisplay() {
       )
         setFocus(battleBtns()[0]);
     }).observe(battle, { childList: true, subtree: true });
+  addEventListener(
+    "keydown",
+    (e) => {
+      if (e.code === "ShiftLeft") runKey = true;
+    },
+    true,
+  );
+  addEventListener(
+    "keyup",
+    (e) => {
+      if (e.code === "ShiftLeft") runKey = false;
+    },
+    true,
+  );
+  addEventListener("blur", () => {
+    runKey = runTouch = false;
+  });
+  const rb = document.querySelector(RUN_TOUCH);
+  if (rb) {
+    rb.addEventListener("pointerdown", () => {
+      runTouch = true;
+    });
+    ["pointerup", "pointercancel", "pointerleave"].forEach((t) =>
+      rb.addEventListener(t, () => {
+        runTouch = false;
+      }),
+    );
+  }
 }

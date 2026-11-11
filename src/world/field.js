@@ -25,6 +25,9 @@ import { tickStatuses } from "../battle/status.js";
 import { stepMs } from "../battle/speed.js";
 import { atGate, lockedOut } from "../game.js";
 import { nestCheck, nestTick } from "./nest.js";
+import { staminaTick, syncStamina } from "./stamina.js";
+import { runHeld } from "../ui/display.js";
+import { meterActive } from "../battle/meter.js";
 
 const DIRS4 = Object.values(DIRV);
 
@@ -167,7 +170,6 @@ export function updateField(dt, now) {
   for (const m of liveBosses()) roamClock(m, dt);
 
   for (const e of [...G.ents]) {
-    if (G.busy) return; // an encounter just started
     if (e.mv) {
       e.mv.t += dt / e.mv.dur;
       if (e.mv.t >= 1) {
@@ -179,12 +181,20 @@ export function updateField(dt, now) {
   }
 
   // Menu / text / map / meter open: the hunter waits
-  if (!canAct() || waits.map) return;
+  // --- Stamina & Run Management ---
+  const free = canAct() && !waits.map && !meterActive();
+  const dir = free ? input.dirs[input.dirs.length - 1] : null;
+  const mult = staminaTick(dt, free && runHeld(), !!dir); // refills even while a menu is open
+  syncStamina();
+
+  if (!free) return;
 
   // Hunter movement, then touch checks that start battles
   const f = G.f;
   if (f.mv) {
-    f.mv.t += dt / stepMs(G.player, CONFIG.MOVE_MS);
+    if (mult > 0) {
+      f.mv.t += dt / (stepMs(G.player, CONFIG.MOVE_MS) / mult);
+    }
     if (f.mv.t >= 1) {
       f.x = f.mv.tx;
       f.y = f.mv.ty;
@@ -196,12 +206,10 @@ export function updateField(dt, now) {
         );
       if (onPlayerStep()) return;
     }
-  }
-  if (!f.mv) {
-    const d = input.dirs[input.dirs.length - 1];
-    if (d) {
-      f.dir = d;
-      const [dx, dy] = DIRV[d],
+  } else {
+    if (dir && mult > 0) {
+      f.dir = dir;
+      const [dx, dy] = DIRV[dir],
         tx = f.x + dx,
         ty = f.y + dy,
         e = entAt(tx, ty);
