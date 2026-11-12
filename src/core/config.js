@@ -72,10 +72,9 @@ export const CONFIG = {
 
   // Traps & capture
   CAPTURE_PCT: 0.15,
-  TRAP_TURNS_FIRST: 3,
-  TRAP_TURNS_AFTER: 2,
   TRAP_HIT_BONUS: 25,
   TRANQ_NEEDED: 2,
+  TRAP_TURNS: 3,
 
   // Stun. Hunter: % added per consecutive hit taken, capped. Monsters: blunt weapons only (KO).
   STUN_BUILD: 6,

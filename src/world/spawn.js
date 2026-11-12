@@ -39,7 +39,6 @@ export function makeFoe(key, d, isBoss) {
     fleeAt: randInt(CONFIG.FLEE_MIN, CONFIG.FLEE_MAX),
     lowHpFled: false,
     limping: false,
-    searched: 0,
     warnedCap: false,
     roared: false,
     dead: false,

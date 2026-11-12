@@ -641,10 +641,7 @@ async function hitCalculationPhase(intent) {
   ) {
     m.warnedCap = true;
     renderBattle();
-    await say(
-      `The ${m.name} looks exhausted...\nIt can be CAPTURED now!`,
-      "warn",
-    );
+    await say(`The ${m.name} looks exhausted...!`, "warn");
   }
   if (m.hp > 0) await checkFaint();
 }
@@ -989,7 +986,6 @@ async function monsterFlee(limping) {
     goal: null,
     leaving: null,
     limping: limping || m.limping,
-    searched: 0, // limping -> sleeps after 3 unfound areas
     roamMs: rand(CONFIG.ROAM_MIN_MS, CONFIG.ROAM_MAX_MS),
     fleeAt: randInt(CONFIG.FLEE_MIN, CONFIG.FLEE_MAX),
     fleeLong: randInt(CONFIG.FLEE_LONG_MIN, CONFIG.FLEE_LONG_MAX),
