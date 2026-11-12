@@ -61,7 +61,7 @@ export async function setTrap(m, it) {
     addLog(`[${it.name} replaces trap (${m.trapped}t left)]`, "dim");
     await say("The old trap gave way...", "dim");
   }
-  m.trapped = resistTurns(m, "trap", it.trapTurns ?? CONFIG.TRAP_TURNS);
+  m.trapped = resistTurns(m, "trap", it.trapTurns ?? CONFIG.TRAP_TURNS_FIRST);
   noteResist(m, "trap");
   addLog(
     `[${m.name} trapped ${m.trapped}t${asleep ? " (was asleep: guaranteed)" : ""}]`,

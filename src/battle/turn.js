@@ -985,7 +985,7 @@ async function monsterFlee(limping) {
     area: dest,
     posArea: null,
     turnsInArea: 0,
-    sleeping: false,
+    sleeping: m.area !== NEST && (limping || m.limping),
     goal: null,
     leaving: null,
     limping: limping || m.limping,

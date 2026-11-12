@@ -39,16 +39,15 @@ export const CONFIG = {
   FLEE_MIN: 4,
   FLEE_MAX: 6,
   FLEE_CHANCE: 0.5,
-  LOW_HP_FLEE: 0.25,
+  LOW_HP_FLEE: 0.15,
   LOW_HP_FLEE_CHANCE: 0.4,
-  SLEEP_AFTER_TURNS: 3, // a limping monster sleeps after 3 turns (any kind) without being found
   REST_HEAL_PCT: 0.03, // healed per world turn ONLY while asleep
   WAKE_AFTER: 6, // world turns of sleep before it wakes on its own
 
   // Roaming on the field (real time)
   ROAM_MIN_MS: 20000,
   ROAM_MAX_MS: 35000, // big monster changes area every 20–35 s
-  SMALL_ROAM_RADIUS: 8, // tiles a small monster may wander from home
+  SMALL_ROAM_RADIUS: 10, // tiles a small monster may wander from home
 
   // Large-monster phases
   BOSS_LOW_HP: 0.4, // "low health" for enrage frequency and quick fleeing
