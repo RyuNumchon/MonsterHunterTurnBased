@@ -195,6 +195,9 @@ export function confirmAttack(moveId, part) {
 
 export function confirmRun() {
   const m = G.foe;
+  if (m.isBoss && m.hp > 0 && m.hp / m.maxHp <= CONFIG.CAPTURE_PCT) {
+    m.limping = true;
+  }
   if (runLock(G.player)) return;
   Audio8.sfx("select");
   addLog(
@@ -634,7 +637,7 @@ async function hitCalculationPhase(intent) {
     await applyBreak(hitPart);
   }
   if (
-    boss &&
+    m.isBoss &&
     m.hp > 0 &&
     m.hp / m.maxHp <= CONFIG.CAPTURE_PCT &&
     !m.warnedCap
@@ -778,6 +781,7 @@ async function monsterActionPhase() {
       Math.random() < CONFIG.LOW_HP_FLEE_CHANCE
     ) {
       m.lowHpFled = true;
+      m.limpgin = true;
       await monsterFlee(true);
       return;
     }
@@ -982,7 +986,7 @@ async function monsterFlee(limping) {
     area: dest,
     posArea: null,
     turnsInArea: 0,
-    sleeping: m.area !== NEST && (limping || m.limping),
+    sleeping: false,
     goal: null,
     leaving: null,
     limping: limping || m.limping,

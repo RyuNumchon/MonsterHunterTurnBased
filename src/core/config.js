@@ -154,8 +154,9 @@ export const CONFIG = {
   METER_NEAR_MIN: 0.03, // …plus 3% of the bar
   NEAR_DMG: 0.75, // near-miss dodge/counter: damage ×0.75
   NEAR_SHARP: 0.75, // near-miss guard: sharpness cost ×0.75
-  NEST_SLEEP_TURNS: 3,
-  NEST_HEAL: 0.2, // NEST_AREA: your nest area id, if monsters have no m.nest
+  NEST_SLEEP_TURNS: 8,
+  NEST_HEAL: 0.2,
+  NEST_AREA: 8,
   BATTLE_COMBINE_PAGE: 6,
   PAINT_TURNS: 12, // keep your old value if you had one
   THROW_DMG: 1,
