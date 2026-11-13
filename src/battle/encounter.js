@@ -28,7 +28,6 @@ export function startEncounter(e, how) {
   if (!G || G.busy || G.screen !== "field" || G.over) return;
   G.f.mv = null;
   input.dirs = [];
-  e.mv = null;
   e.alerted = false;
   e.bang = 0;
   e.goal = null;

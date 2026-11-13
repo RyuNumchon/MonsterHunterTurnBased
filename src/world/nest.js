@@ -9,9 +9,18 @@ export const nestOf = (m) => m.nest ?? CONFIG.NEST_AREA; // point this at your n
 
 /** Field tick: falls asleep at once if conditions are met. Returns true if it just fell asleep. */
 export function nestCheck(m) {
-  if (!m.isBoss || m.sleeping || !m.limping || m.area !== nestOf(m))
+  if (!m.isBoss || m.sleeping || !m.limping || m.area !== nestOf(m)) {
+    addLog(
+      `not sleeping condition. !m.isBoss:${!m.isBoss} m.sleeping:${m.sleeping} !m.limping:${!m.limping} m.area:${m.area} nestOf(m):${nestOf(m)}`,
+      "dim",
+    );
     return false;
-  if (G.f && G.f.area === m.area) return false; // the hunter is watching
+  }
+  // the hunter is watching
+  if (G.f && G.f.area === m.area) {
+    addLog(`Monster doesn't sleep - hunter is watching`, "dim");
+    return false;
+  }
   m.sleeping = true;
   m.nestSleep = 0;
   addLog(`[${m.name} fell asleep in the nest (area ${m.area})]`, "dim");

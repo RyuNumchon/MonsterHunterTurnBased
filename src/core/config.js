@@ -39,16 +39,15 @@ export const CONFIG = {
   FLEE_MIN: 4,
   FLEE_MAX: 6,
   FLEE_CHANCE: 0.5,
-  LOW_HP_FLEE: 0.25,
+  LOW_HP_FLEE: 0.15,
   LOW_HP_FLEE_CHANCE: 0.4,
-  SLEEP_AFTER_TURNS: 3, // a limping monster sleeps after 3 turns (any kind) without being found
   REST_HEAL_PCT: 0.03, // healed per world turn ONLY while asleep
   WAKE_AFTER: 6, // world turns of sleep before it wakes on its own
 
   // Roaming on the field (real time)
   ROAM_MIN_MS: 20000,
   ROAM_MAX_MS: 35000, // big monster changes area every 20–35 s
-  SMALL_ROAM_RADIUS: 8, // tiles a small monster may wander from home
+  SMALL_ROAM_RADIUS: 10, // tiles a small monster may wander from home
 
   // Large-monster phases
   BOSS_LOW_HP: 0.4, // "low health" for enrage frequency and quick fleeing
@@ -73,10 +72,9 @@ export const CONFIG = {
 
   // Traps & capture
   CAPTURE_PCT: 0.15,
-  TRAP_TURNS_FIRST: 3,
-  TRAP_TURNS_AFTER: 2,
   TRAP_HIT_BONUS: 25,
   TRANQ_NEEDED: 2,
+  TRAP_TURNS: 3,
 
   // Stun. Hunter: % added per consecutive hit taken, capped. Monsters: blunt weapons only (KO).
   STUN_BUILD: 6,
@@ -108,7 +106,7 @@ export const CONFIG = {
   WANDER_MS: 300,
   ESCAPE_CHANCE: 0.75,
   GRACE_MS: 2500,
-  BOSS_AGGRO: 5,
+  BOSS_AGGRO: 8,
   GATHER_USES: 2,
   FARM_USES: 1,
   START_ZENNY: 1500,
@@ -152,8 +150,13 @@ export const CONFIG = {
   // danger = how much move danger counts, zone = zone-size bonus
   METER_SMALL: { speedMax: 0.7, danger: 0.7, zone: 0.08 },
   METER_LARGE: { speedMax: 0.85, danger: 0.85, zone: 0.04 },
-  NEST_SLEEP_TURNS: 3,
-  NEST_HEAL: 0.2, // NEST_AREA: your nest area id, if monsters have no m.nest
+  METER_NEAR_RATIO: 0.6, // each orange side = 60% of the red zone…
+  METER_NEAR_MIN: 0.03, // …plus 3% of the bar
+  NEAR_DMG: 0.75, // near-miss dodge/counter: damage ×0.75
+  NEAR_SHARP: 0.75, // near-miss guard: sharpness cost ×0.75
+  NEST_SLEEP_TURNS: 8,
+  NEST_HEAL: 0.2,
+  NEST_AREA: 8,
   BATTLE_COMBINE_PAGE: 6,
   PAINT_TURNS: 12, // keep your old value if you had one
   THROW_DMG: 1,

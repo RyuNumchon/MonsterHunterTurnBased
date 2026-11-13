@@ -15,17 +15,8 @@ const START_POUCH = {
 const BASE_WEAPONS = ["greatsword", "longsword"];
 
 export const defaultBox = () => ({
-  items: {
-    "RATHALOS SCALE": 100,
-    "RATHALOS SHELL": 100,
-    "FLAME SAC": 100,
-    "RATHALOS WEBBING": 100,
-    "TIGREX SCALE": 100,
-    "TIGREX SHELL": 100,
-    "TIGREX CLAW": 100,
-    "TIGREX FANG": 100,
-  },
-  zenny: 999999,
+  items: {},
+  zenny: 450,
   hunts: 0,
   weapons: [...BASE_WEAPONS],
   armor: [],
